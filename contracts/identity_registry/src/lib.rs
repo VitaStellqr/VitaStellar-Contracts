@@ -1,7 +1,7 @@
 // Identity Registry - W3C DID Compliant with proper validation throughout
 #![no_std]
-#![allow(clippy::arithmetic_side_effects)]
-#![allow(clippy::unwrap_used)]
+#![deny(clippy::arithmetic_side_effects)]
+#![deny(clippy::unwrap_used)]
 
 pub mod errors;
 pub use errors::Error;
@@ -651,7 +651,8 @@ impl IdentityRegistryContract {
         did_doc.services = new_services;
         did_doc.also_known_as = new_also_known_as;
         did_doc.updated = env.ledger().timestamp();
-        did_doc.version += 1;
+        // SAFETY: version is a u32 monotonic counter; saturation at u32::MAX is acceptable
+        did_doc.version = did_doc.version.saturating_add(1);
         did_doc.previous_hash = prev_hash;
 
         env.storage()
@@ -750,7 +751,8 @@ impl IdentityRegistryContract {
         }
 
         did_doc.updated = timestamp;
-        did_doc.version += 1;
+        // SAFETY: version is a u32 monotonic counter; saturation at u32::MAX is acceptable
+        did_doc.version = did_doc.version.saturating_add(1);
 
         env.storage()
             .persistent()
@@ -797,7 +799,7 @@ impl IdentityRegistryContract {
             .get(&DataKey::LastKeyRotation(subject.clone()))
             .unwrap_or(0);
 
-        if timestamp < last_rotation + cooldown {
+        if timestamp < last_rotation.saturating_add(cooldown) {
             return Err(Error::KeyRotationCooldown);
         }
 
@@ -829,7 +831,8 @@ impl IdentityRegistryContract {
 
         did_doc.verification_methods = updated_methods;
         did_doc.updated = timestamp;
-        did_doc.version += 1;
+        // SAFETY: version is a u32 monotonic counter; saturation at u32::MAX is acceptable
+        did_doc.version = did_doc.version.saturating_add(1);
 
         env.storage()
             .persistent()
@@ -899,7 +902,8 @@ impl IdentityRegistryContract {
 
         did_doc.verification_methods = updated_methods;
         did_doc.updated = env.ledger().timestamp();
-        did_doc.version += 1;
+        // SAFETY: version is a u32 monotonic counter; saturation at u32::MAX is acceptable
+        did_doc.version = did_doc.version.saturating_add(1);
 
         env.storage()
             .persistent()
@@ -1232,8 +1236,9 @@ impl IdentityRegistryContract {
             .storage()
             .persistent()
             .get(&DataKey::RecoveryCounter)
-            .unwrap_or(0)
-            + 1;
+            // SAFETY: counter starts at 0 and increments by 1; saturation at u64::MAX is acceptable
+            .unwrap_or(0u64)
+            .saturating_add(1);
 
         let mut approvals = Vec::new(&env);
         approvals.push_back(guardian.clone());
@@ -1311,7 +1316,9 @@ impl IdentityRegistryContract {
         }
 
         request.approvals.push_back(guardian.clone());
-        request.total_weight += guardian_info.weight;
+        // SAFETY: total_weight accumulates guardian weights; saturation at u32::MAX is acceptable
+        // as threshold checks use < comparison and cannot exceed total possible weight
+        request.total_weight = request.total_weight.saturating_add(guardian_info.weight);
 
         env.storage()
             .persistent()
@@ -1339,7 +1346,8 @@ impl IdentityRegistryContract {
 
         // Check timelock
         let now = env.ledger().timestamp();
-        if now < request.created_at + DEFAULT_RECOVERY_TIMELOCK {
+        // SAFETY: created_at is a ledger timestamp; saturation prevents overflow on addition
+        if now < request.created_at.saturating_add(DEFAULT_RECOVERY_TIMELOCK) {
             return Err(Error::RecoveryTimelockNotElapsed);
         }
 
@@ -1400,7 +1408,8 @@ impl IdentityRegistryContract {
 
         did_doc.status = DIDStatus::Active;
         did_doc.updated = now;
-        did_doc.version += 1;
+        // SAFETY: version is a u32 monotonic counter; saturation at u32::MAX is acceptable
+        did_doc.version = did_doc.version.saturating_add(1);
 
         env.storage()
             .persistent()
@@ -1508,7 +1517,8 @@ impl IdentityRegistryContract {
 
         did_doc.services.push_back(new_service);
         did_doc.updated = env.ledger().timestamp();
-        did_doc.version += 1;
+        // SAFETY: version is a u32 monotonic counter; saturation at u32::MAX is acceptable
+        did_doc.version = did_doc.version.saturating_add(1);
 
         env.storage()
             .persistent()
@@ -1549,7 +1559,8 @@ impl IdentityRegistryContract {
 
         did_doc.services = updated_services;
         did_doc.updated = env.ledger().timestamp();
-        did_doc.version += 1;
+        // SAFETY: version is a u32 monotonic counter; saturation at u32::MAX is acceptable
+        did_doc.version = did_doc.version.saturating_add(1);
 
         env.storage()
             .persistent()
@@ -1850,8 +1861,9 @@ impl IdentityRegistryContract {
 
         let subject_str = subject.to_string();
 
-        let network_len = network_id.len() as usize;
-        let subject_len = subject_str.len() as usize;
+        // SAFETY: len() returns u32 on Soroban String; truncate to MAX_PART_LEN to stay in bounds
+        let network_len = (network_id.len() as usize).min(MAX_PART_LEN);
+        let subject_len = (subject_str.len() as usize).min(MAX_PART_LEN);
 
         let mut network_buf = [0u8; MAX_PART_LEN];
         network_id.copy_into_slice(&mut network_buf[..network_len]);
@@ -1995,7 +2007,8 @@ impl IdentityRegistryContract {
         // FIDO2 devices serve as authentication verification methods.
         did_doc.authentication.push_back(method_id);
         did_doc.updated = timestamp;
-        did_doc.version += 1;
+        // SAFETY: version is a u32 monotonic counter; saturation at u32::MAX is acceptable
+        did_doc.version = did_doc.version.saturating_add(1);
 
         env.storage()
             .persistent()
@@ -2108,5 +2121,21 @@ impl IdentityRegistryContract {
         );
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use soroban_sdk::Env;
+
+    /// Verifies that is_paused returns false when the Paused key has never been written
+    /// (i.e., the contract is freshly deployed and uninitialized).
+    #[test]
+    fn test_is_paused_returns_false_when_storage_empty() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, IdentityRegistryContract);
+        let client = IdentityRegistryContractClient::new(&env, &contract_id);
+        assert!(!client.is_paused());
     }
 }
