@@ -4,11 +4,9 @@
 > Auto-generated from contract source. Keep this file in sync with contract changes.
 
 ## Overview
-
 All VitaStellar contracts use numeric error codes organized by category:
-
-| Range | Category | Description |
 |-------|----------|-------------|
+---
 | 1–99 | Contract-specific | Per-contract errors (unique to each contract) |
 | 100–199 | Access Control | Authorization, authentication, permissions |
 | 200–299 | Input Validation | Invalid arguments, format errors |
@@ -19,10 +17,7 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 700–799 | Cross-Chain | Bridge, oracle, chain operations |
 | 800–899 | Reentrancy & Safety | Locking, circuit breaker |
 
----
-
 ## Access Control (100–199)
-
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
 | 100 | `Unauthorized` | All | Caller lacks permission for this action | Invalid role, expired authorization, not authenticated | Verify caller identity, check role assignments, ensure authentication |
@@ -35,7 +30,6 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 122 | `DuplicateOracleReport` | cross_chain_bridge | Oracle has already submitted a report | Duplicate submission from same oracle | Wait for other oracles to submit |
 
 ## Input Validation (200–299)
-
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
 | 205 | `InvalidAmount` | escrow, healthcare_payment | Invalid amount (zero or negative) | Amount <= 0 | Provide a positive amount |
@@ -44,10 +38,8 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 281 | `InvalidNonce` | cross_chain_bridge | Nonce replay protection triggered | Duplicate nonce or nonce too low | Use a higher nonce value |
 | 282 | `InvalidPayload` | cross_chain_bridge | Message payload is invalid | Malformed data | Check payload format |
 | 290 | `InvalidAddress` | cross_chain_bridge | Chain address format is invalid | Wrong length or prefix | Use correct chain-specific address format |
-| 281 | `PolicyMismatch` | healthcare_payment | Policy ID doesn't match claim | Claim policy mismatch | Verify policy ID |
 
 ## Lifecycle & State (300–399)
-
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
 | 300 | `NotInitialized` | All | Contract has not been initialized | Missing `initialize()` call | Call `initialize()` first |
@@ -62,9 +54,9 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 376 | `NotReady` | timelock | Timelock delay not yet elapsed | Too early to execute | Wait until ETA has passed |
 
 ## Entity Existence (400–499)
-
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
+| 404 | `DIDNotFound` | identity_registry | DID not found | Address has no DID | Create DID first |
 | 470 | `DIDNotFound` | identity_registry | DID document not found | Address has no DID | Create DID first |
 | 471 | `DIDAlreadyExists` | identity_registry | DID already registered | Duplicate DID creation | Use existing DID |
 | 472 | `DIDDeactivated` | identity_registry | DID has been deactivated | DID was intentionally deactivated | Cannot use deactivated DID |
@@ -81,14 +73,8 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 490 | `RollbackNotFound` | cross_chain_bridge | Rollback record not found | Wrong operation ID | Verify operation ID |
 | 491 | `RollbackAlreadyProcessed` | cross_chain_bridge | Rollback already completed | Duplicate rollback | No action needed |
 | 492 | `EventNotFound` | cross_chain_bridge | Cross-chain event not found | Wrong event ID | Verify event ID |
-| 481 | `ClaimSubmissionNotFound` | healthcare_payment | Claim submission not found | No EDI submission for this claim | Submit insurance claim first |
-| 481 | `EscrowNotFound` | escrow | Escrow not found | Wrong order ID | Verify escrow order ID |
-| 482 | `AlreadySettled` | escrow | Escrow already settled | Duplicate settlement attempt | No action needed |
-| 471 | `EscrowExists` | escrow | Escrow order already exists | Duplicate order ID | Use unique order ID |
-| 404 | `DIDNotFound` | identity_registry | DID not found | Address has no DID | Create DID first |
 
 ## Financial & Resource (500–599)
-
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
 | 500 | `InsufficientFunds` | healthcare_payment, timelock | Insufficient funds for operation | Not enough tokens | Add funds |
@@ -98,7 +84,6 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 582 | `UnsupportedTransaction` | healthcare_payment | Unsupported transaction code | Wrong EDI format | Use supported transaction code |
 
 ## Cryptography (600–699)
-
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
 | 600 | `InvalidKey` | crypto_registry | Invalid key format | Key is empty or malformed | Provide valid key data |
@@ -111,7 +96,6 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 611 | `ProofAlreadyVerified` | cross_chain_bridge | Proof already verified | Duplicate verification | No action needed |
 
 ## Cross-Chain (700–799)
-
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
 | 702 | `CrossChainTimeout` | healthcare_payment, timelock | Cross-chain operation timed out | Message not delivered in time | Retry or escalate |
@@ -121,7 +105,6 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 722 | `OracleNotActive` | cross_chain_bridge | Oracle not active | Oracle deactivated | Contact admin to reactivate |
 
 ## Reentrancy & Safety (800–899)
-
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
 | 800 | `Reentrancy` | healthcare_payment | Reentrancy guard triggered | Concurrent call detected | Retry after current operation completes |
@@ -129,7 +112,6 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 802 | `OperationExpired` | cross_chain_bridge | Operation has expired | Deadline passed | Create new operation |
 | 803 | `OperationAlreadyCompleted` | cross_chain_bridge | Operation already completed | Duplicate completion | No action needed |
 | 804 | `MaxExtensionsReached` | cross_chain_bridge | Max timeout extensions reached | Too many extensions | Create new operation |
-| 804 | `RefundFailed` | cross_chain_bridge | Refund processing failed | Cannot transfer refund | Check balance and retry |
 
 ## Per-Contract Error Codes (1–99)
 
@@ -293,11 +275,9 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 702 | `CrossChainTimeout` | Cross-chain timeout | Retry |
 
 ## Script Validation
-
 Run the validation script to check that all error codes are documented:
-
 ```bash
 ./scripts/check_error_codes.sh
 ```
-
 This script scans all `contracts/**/src/**/*.rs` files for `#[contracterror]` enums and validates that every error variant is documented in this file.
+
