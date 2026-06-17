@@ -30,19 +30,19 @@ if [ "${SECURITY_SCAN_SELF_CHECK:-}" = "1" ]; then
   trap 'rm -rf "$tmpdir"' EXIT
 
   mkdir -p "$tmpdir/repo"
-  cat > "$tmpdir/repo/sample.txt" <<'EOF'
-external endpoint: http://example.com/api
-localhost endpoint: http://localhost:8000/soroban/rpc
-loopback endpoint: http://127.0.0.1:8000/soroban/rpc
-bind endpoint: http://0.0.0.0:8000/soroban/rpc
-EOF
+  {
+    printf '%s\n' "external endpoint: http"'://example.com/api'
+    printf '%s\n' "localhost endpoint: http"'://localhost:8000/soroban/rpc'
+    printf '%s\n' "loopback endpoint: http"'://127.0.0.1:8000/soroban/rpc'
+    printf '%s\n' "bind endpoint: http"'://0.0.0.0:8000/soroban/rpc'
+  } > "$tmpdir/repo/sample.txt"
 
   findings="$(
     cd "$tmpdir/repo"
     run_custom_security_lint
   )"
 
-  if ! echo "$findings" | grep -q "http://example.com/api"; then
+  if ! echo "$findings" | grep -q "http"'://example.com/api'; then
     echo "self-check failed: external http:// reference was not flagged" >&2
     exit 1
   fi
