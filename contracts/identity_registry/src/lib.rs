@@ -2429,6 +2429,8 @@ mod tests {
 
         let result = client.try_remove_verifier(&owner);
         assert_eq!(result, Err(Ok(Error::CannotRemoveOwner)));
+    }
+
     #[test]
     fn test_generated_error_reference_is_stable_for_identity_registry() {
         let docs_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/ERROR_CODES.md");

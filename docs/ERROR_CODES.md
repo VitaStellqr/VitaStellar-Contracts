@@ -797,3 +797,11 @@
 | 600 | InvalidProof | Generated from contract source |
 | 601 | VerificationFailed | Generated from contract source |
 
+### zkp_registry
+
+| Code | Symbol | Description |
+|------|--------|-------------|
+| 1 | NotInitialized | Generated from contract source |
+| 2 | AlreadyInitialized | Generated from contract source |
+| 3 | NotFound | Generated from contract source |
+

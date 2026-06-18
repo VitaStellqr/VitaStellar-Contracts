@@ -17,11 +17,11 @@ The fenced `loc-manifest` block below is the authoritative size-of-contract reco
 ```loc-manifest
 audit_forensics: 790
 crypto_registry: 935
-emr_integration: 2147
+emr_integration: 2141
 governor: 451
 homomorphic_registry: 1149
-identity_registry: 3290
-medical_record_backup: 1569
+identity_registry: 3601
+medical_record_backup: 1566
 mpc_manager: 1133
 zk_verifier: 490
 ```
@@ -66,13 +66,13 @@ The VitaStellar deployment is a graph of focused contracts rather than one monol
    - Handles record creation, access, and encryption
    - Manages user roles and permissions
    - Integrates ZK proof verification
-   - ~2,147 lines of Rust code
+   - ~2,141 lines of Rust code
 
 2. **IdentityRegistry** (`contracts/identity_registry/`)
    - Decentralized identity and role-based access control
    - Healthcare-specific roles (provider, patient, admin, auditor, …)
    - Permission assignment, attestation, and lookup
-   - ~3,290 lines of Rust code
+   - ~3,601 lines of Rust code
 
 3. **CryptoRegistry** (`contracts/crypto_registry/`)
    - Manages public key infrastructure
@@ -90,7 +90,7 @@ The VitaStellar deployment is a graph of focused contracts rather than one monol
    - Disaster-recovery and off-chain archival
    - Encrypted backup write/read APIs
    - Retention and rotation policies
-   - ~1,569 lines of Rust code
+   - ~1,566 lines of Rust code
 
 6. **Supporting Contracts (analyzed in this document)**
    - HomomorphicRegistry (`contracts/homomorphic_registry/`) — HE computation coordination
