@@ -1,12 +1,9 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String};
 
 mod validation;
 mod crypto;
-
-pub use validation::validate_record_fields;
-pub use crypto::encrypt_payload;
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -42,30 +39,31 @@ impl MedicalRecords {
         timestamp: u64,
     ) -> Result<(), RecordError> {
         owner.require_auth();
-        
-        validate_record_fields(&env, &patient_id, &record_type, &content, timestamp)?;
-        
+
+        // Validation
+        if patient_id.len() == 0 || record_type.len() == 0 || content.len() == 0 || timestamp == 0 {
+            return Err(RecordError::InvalidInput);
+        }
+
         let record_id = env.ledger().sequence() as u64;
-        let encrypted_content = encrypt_payload(&env, record_id, content.as_str())
-            .map_err(|_| RecordError::EncryptionFailed)?;
-        
+
         let record = Record {
             id: record_id,
             patient_id,
             record_type,
-            content: String::from_str(&env, &format!("encrypted:{}", record_id)),
+            content,
             timestamp,
-            owner,
+            owner: owner.clone(),
         };
-        
+
         env.storage().persistent().set(&record_id, &record);
-        
-        // Emit event
+
+        // Event
         env.events().publish(
             ("record_written", record_id),
-            (record.owner.clone(), record.patient_id.clone(), record.record_type.clone(), record.timestamp),
+            (owner, record.patient_id.clone(), record.record_type.clone(), record.timestamp),
         );
-        
+
         Ok(())
     }
 
@@ -79,16 +77,16 @@ mod tests {
     use super::*;
     use soroban_sdk::testutils::Address as _;
     use soroban_sdk::String;
-    
+
     #[test]
-    fn test_write_record() {
+    fn test_write_record_ok() {
         let env = Env::default();
         let owner = Address::generate(&env);
-        let patient_id = String::from_str(&env, "patient-001");
-        let record_type = String::from_str(&env, "consultation");
-        let content = String::from_str(&env, "Patient reports feeling better");
-        let timestamp = 1718640000;
-        
+        let patient_id = String::from_str(&env, "p1");
+        let record_type = String::from_str(&env, "type1");
+        let content = String::from_str(&env, "content");
+        let timestamp = 1234567890;
+
         let result = MedicalRecords::write_record(
             env,
             owner,
@@ -98,5 +96,25 @@ mod tests {
             timestamp,
         );
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_write_record_invalid_input() {
+        let env = Env::default();
+        let owner = Address::generate(&env);
+        let patient_id = String::from_str(&env, "");
+        let record_type = String::from_str(&env, "type1");
+        let content = String::from_str(&env, "content");
+        let timestamp = 1234567890;
+
+        let result = MedicalRecords::write_record(
+            env,
+            owner,
+            patient_id,
+            record_type,
+            content,
+            timestamp,
+        );
+        assert!(result.is_err());
     }
 }
