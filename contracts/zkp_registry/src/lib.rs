@@ -105,10 +105,7 @@ impl ZkpRegistryContract {
             .ok_or(Error::NotFound)
     }
 
-    pub fn get_circuit_params(
-        env: Env,
-        circuit_id: String,
-    ) -> Result<ZKPCircuitParams, Error> {
+    pub fn get_circuit_params(env: Env, circuit_id: String) -> Result<ZKPCircuitParams, Error> {
         env.storage()
             .persistent()
             .get(&DataKey::CircuitParams(circuit_id))
