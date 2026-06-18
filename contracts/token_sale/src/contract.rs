@@ -190,10 +190,14 @@ impl TokenSaleContract {
         }
 
         let token_client = token::Client::new(&env, &token);
+        let payment_amount = i128::try_from(amount).map_err(|_| Error::Overflow)?;
+        if token_client.balance(&contributor) < payment_amount {
+            return Err(Error::InsufficientFunds);
+        }
         token_client.transfer(
             &contributor,
             &env.current_contract_address(),
-            &(amount as i128),
+            &payment_amount,
         );
 
         phase.sold_tokens = new_sold;

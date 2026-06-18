@@ -85,7 +85,7 @@ All VitaStellar contracts use numeric error codes organized by category:
 
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
-| 500 | `InsufficientFunds` | payment_router, timelock | Insufficient funds for operation | Not enough tokens | Add funds |
+| 500 | `InsufficientFunds` | payment_router, timelock, token_sale | Insufficient funds for operation | Not enough tokens | Add funds |
 | 502 | `StorageFull` | payment_router, timelock | Storage capacity limit reached | Too much data stored | Clean up old data |
 | 580 | `FraudDetected` | payment_router | Fraud report exists for this claim | Claim flagged as fraudulent | Resolve fraud report |
 | 581 | `EscrowFailed` | payment_router | Escrow creation failed | Escrow contract rejected | Check escrow parameters |
