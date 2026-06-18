@@ -1,0 +1,9 @@
+# Global owners
+* @vitastellar/core
+
+# Contract-level ownership
+/contracts/ @vitastellar/contracts-team
+/contracts/identity_registry/ @vitastellar/identity-team
+
+# Security sensitive areas
+/security/ @vitastellar/security-team

@@ -1,0 +1,31 @@
+name: Bug Report
+description: Report a bug in Vitastellar contracts
+title: "[Bug]: "
+labels: ["bug"]
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is the issue?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Deploy contract
+        2. Call function X
+        3. Observe error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
