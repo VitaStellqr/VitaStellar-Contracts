@@ -2,6 +2,9 @@
 
 > **Decentralized Health & Wellness Powered by Stellar**
 
+[![CI](https://github.com/0xVida/VitaStellar-Contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/0xVida/VitaStellar-Contracts/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/0xVida/VitaStellar-Contracts/branch/main/graph/badge.svg)](https://codecov.io/gh/0xVida/VitaStellar-Contracts)
+
 VitaStellar is a decentralized health and wellness platform built on the Stellar ecosystem. The platform enables users to track health goals, manage wellness activities, receive personalized insights, and maintain ownership of health-related data through secure and transparent blockchain infrastructure.
 
 Built on Soroban smart contracts for the Stellar blockchain, VitaStellar provides a comprehensive suite of smart contracts for:

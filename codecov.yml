@@ -1,0 +1,22 @@
+# Codecov configuration — thresholds are informational (non-blocking) initially
+# See CONTRIBUTING.md for the ≥80% overall coverage target
+
+codecov:
+  require_ci_to_pass: false
+
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 1%
+        informational: true
+    patch:
+      default:
+        target: 60%
+        informational: true
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: false
