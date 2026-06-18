@@ -81,3 +81,28 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+  error_codes:
+    name: Error Codes Reference
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Regenerate error codes reference
+        run: python3 scripts/generate_error_codes.py --write
+
+      - name: Check if docs/ERROR_CODES.md is up to date
+        run: |
+          if git diff --quiet docs/ERROR_CODES.md; then
+            echo "✓ docs/ERROR_CODES.md is in sync with contract source"
+          else
+            echo "✗ docs/ERROR_CODES.md is out of sync"
+            echo "Run: python3 scripts/generate_error_codes.py --write"
+            git diff docs/ERROR_CODES.md
+            exit 1
+          fi

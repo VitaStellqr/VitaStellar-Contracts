@@ -2126,8 +2126,11 @@ impl IdentityRegistryContract {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+
     use super::*;
     use soroban_sdk::Env;
+    use std::path::Path;
 
     /// Verifies that is_paused returns false when the Paused key has never been written
     /// (i.e., the contract is freshly deployed and uninitialized).
@@ -2137,5 +2140,25 @@ mod tests {
         let contract_id = env.register_contract(None, IdentityRegistryContract);
         let client = IdentityRegistryContractClient::new(&env, &contract_id);
         assert!(!client.is_paused());
+    }
+
+    #[test]
+    fn test_generated_error_reference_is_stable_for_identity_registry() {
+        let docs_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/ERROR_CODES.md");
+        let docs = std::fs::read_to_string(&docs_path)
+            .unwrap_or_else(|_| panic!("missing generated docs at {}", docs_path.display()));
+
+        assert!(
+            docs.contains("### identity_registry"),
+            "expected generated docs to contain identity_registry section"
+        );
+        assert!(
+            docs.contains("| 100 | Unauthorized |"),
+            "expected generated docs to contain error code 100"
+        );
+        assert!(
+            docs.contains("| 121 | InsufficientGuardianApprovals |"),
+            "expected generated docs to contain error code 121"
+        );
     }
 }
