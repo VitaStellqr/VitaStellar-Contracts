@@ -81,7 +81,7 @@ impl MedicalRecords {
 mod tests {
     use super::*;
     use soroban_sdk::testutils::Address as _;
-    use soroban_sdk::{String, IntoVal};
+    use soroban_sdk::String;
 
     #[test]
     fn test_write_record_ok() {
@@ -93,7 +93,6 @@ mod tests {
         let content = String::from_str(&env, "content");
         let timestamp = 1234567890u64;
 
-        // Wrap storage access in as_contract
         let contract_id = env.register_contract(None, MedicalRecords);
         let result: Result<(), RecordError> = env.as_contract(&contract_id, || {
             MedicalRecords::write_record(
