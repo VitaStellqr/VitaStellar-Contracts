@@ -453,6 +453,29 @@ impl IdentityRegistryContract {
         Ok(())
     }
 
+    /// Returns true when `address` already holds any role that is strictly higher
+    /// than `Staff` in the RBAC hierarchy (Admin > Doctor > Researcher > Staff).
+    ///
+    /// Used by the verifier-management entry points to avoid accidentally
+    /// demoting (or otherwise disturbing) higher-privileged verifiers when the
+    /// caller only intends to flip the `Staff` row. A failure to read the
+    /// RBAC contract is treated as "no higher role present" so that this
+    /// check can never be the reason a verifier is added/removed.
+    fn has_higher_privileged_role(
+        address: &Address,
+        rbac_client: &RbacClient,
+    ) -> bool {
+        rbac_client
+            .has_role(address, &RbacRole::Admin)
+            .unwrap_or(false)
+            || rbac_client
+                .has_role(address, &RbacRole::Doctor)
+                .unwrap_or(false)
+            || rbac_client
+                .has_role(address, &RbacRole::Researcher)
+                .unwrap_or(false)
+    }
+
     pub fn pause(env: Env, caller: Address) -> Result<bool, Error> {
         caller.require_auth();
         Self::require_admin(&env, &caller)?;
@@ -1578,7 +1601,21 @@ impl IdentityRegistryContract {
     // VERIFIER MANAGEMENT
     // ========================================================================
 
-    /// Add a verifier (only owner can do this)
+    /// Add a verifier (only owner can do this).
+    ///
+    /// SECURITY (issue #43): the previously-blind `assign_role(Staff)` call has
+    /// been guarded so that a verifier who already holds a higher-privileged
+    /// role (Admin, Doctor, Researcher) keeps that role untouched. Only
+    /// verifiers without any of those higher roles receive the `Staff` marker.
+    /// Either way, the local `Verifier(addr) -> true` flag is set so the
+    /// contract-level verifier registry stays consistent.
+    ///
+    /// Trade-off (intentional): if a verifier was originally added while only
+    /// holding `Staff` and is later promoted to a higher role (Admin/Doctor
+    /// /Researcher) without an intervening `remove_verifier`, the `Staff`
+    /// row will remain in RBAC. `remove_verifier` will then leave it alone
+    /// because of the higher-role guard. Operators that need the row
+    /// removed should call `remove_verifier` before the promotion.
     pub fn add_verifier(env: Env, verifier: Address) -> Result<(), Error> {
         let owner: Address = env
             .storage()
@@ -1599,7 +1636,11 @@ impl IdentityRegistryContract {
             return Err(Error::Unauthorized);
         }
 
-        rbac_client.assign_role(&verifier, &RbacRole::Staff);
+        // Don't stamp Staff on top of a higher-privileged verifier; doing so
+        // could be misread downstream as a demotion signal.
+        if !Self::has_higher_privileged_role(&verifier, &rbac_client) {
+            rbac_client.assign_role(&verifier, &RbacRole::Staff);
+        }
 
         env.storage()
             .instance()
@@ -1611,7 +1652,21 @@ impl IdentityRegistryContract {
         Ok(())
     }
 
-    /// Remove a verifier (only owner can do this)
+    /// Remove a verifier (only owner can do this).
+    ///
+    /// SECURITY (issue #43): as with `add_verifier`, the `remove_role(Staff)`
+    /// call is now skipped whenever the target already holds a
+    /// higher-privileged role (Admin, Doctor, Researcher). Stripping `Staff`
+    /// from those users could be misinterpreted as a privilege revocation
+    /// and risks disturbing the higher-privileged role state, so the call
+    /// is intentionally a no-op in that case. The local `Verifier(addr)`
+    /// flag is always cleared.
+    ///
+    /// Trade-off (intentional, mirrors `add_verifier`): if a verifier was
+    /// originally added while only holding `Staff` and was later promoted to
+    /// a higher role, the pre-existing `Staff` row is preserved by this
+    /// function alongside the higher role. To clear `Staff` from such an
+    /// address, demote it back to non-staff roles first.
     pub fn remove_verifier(env: Env, verifier: Address) -> Result<(), Error> {
         let owner: Address = env
             .storage()
@@ -1636,7 +1691,10 @@ impl IdentityRegistryContract {
             return Err(Error::Unauthorized);
         }
 
-        rbac_client.remove_role(&verifier, &RbacRole::Staff);
+        // Preserve any higher-privileged role the verifier holds.
+        if !Self::has_higher_privileged_role(&verifier, &rbac_client) {
+            rbac_client.remove_role(&verifier, &RbacRole::Staff);
+        }
 
         env.storage()
             .instance()
@@ -2127,7 +2185,76 @@ impl IdentityRegistryContract {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::Env;
+    use soroban_sdk::{testutils::Address as _, Env, String};
+
+    // -----------------------------------------------------------------------
+    // Mock RBAC contract
+    // -----------------------------------------------------------------------
+    //
+    // Implements the `RbacContract` trait surface used by
+    // `add_verifier`/`remove_verifier` (`has_role`, `assign_role`,
+    // `remove_role`) backed by simple instance storage so we can drive
+    // higher-privileged-role scenarios directly from unit tests without
+    // depending on the full RBAC contract.
+
+    #[contracttype]
+    #[derive(Clone)]
+    pub enum MockRbacKey {
+        Role(Address, RbacRole),
+    }
+
+    #[contract]
+    pub struct MockRbac;
+
+    #[contractimpl]
+    impl MockRbac {
+        pub fn has_role(env: Env, address: Address, role: RbacRole) -> Result<bool, RbacError> {
+            Ok(env
+                .storage()
+                .instance()
+                .has(&MockRbacKey::Role(address, role)))
+        }
+
+        pub fn assign_role(
+            env: Env,
+            address: Address,
+            role: RbacRole,
+        ) -> Result<bool, RbacError> {
+            env.storage()
+                .instance()
+                .set(&MockRbacKey::Role(address, role), &true);
+            Ok(true)
+        }
+
+        pub fn remove_role(
+            env: Env,
+            address: Address,
+            role: RbacRole,
+        ) -> Result<bool, RbacError> {
+            env.storage()
+                .instance()
+                .remove(&MockRbacKey::Role(address, role));
+            Ok(true)
+        }
+    }
+
+    /// Deploys `MockRbac` and `IdentityRegistryContract`, assigns the owner
+    /// the `Admin` role in RBAC and initialises the identity registry so a
+    /// freshly generated verifier address can be used as a target.
+    fn setup_with_rbac()
+    -> (Env, IdentityRegistryContractClient<'static>, MockRbacClient<'static>, Address) {
+        let env = Env::default();
+        env.mock_all_auths();
+        let rbac_id = env.register_contract(None, MockRbac);
+        let rbac_client = MockRbacClient::new(&env, &rbac_id);
+        let contract_id = env.register_contract(None, IdentityRegistryContract);
+        let client = IdentityRegistryContractClient::new(&env, &contract_id);
+        let owner = Address::generate(&env);
+        let _ = rbac_client.assign_role(&owner, &RbacRole::Admin);
+        let network = String::from_str(&env, "testnet");
+        client.initialize(&owner, &network, &rbac_id);
+        (env, client, rbac_client, owner)
+    }
 
     /// Verifies that is_paused returns false when the Paused key has never been written
     /// (i.e., the contract is freshly deployed and uninitialized).
@@ -2137,5 +2264,156 @@ mod tests {
         let contract_id = env.register_contract(None, IdentityRegistryContract);
         let client = IdentityRegistryContractClient::new(&env, &contract_id);
         assert!(!client.is_paused());
+    }
+
+    // ========================================================================
+    // SECURITY (issue #43): `add_verifier`/`remove_verifier` must respect the
+    // RBAC role hierarchy (Admin > Doctor > Researcher > Staff) so that adding
+    // or removing a verifier never silently demotes a higher-privileged user.
+    // ========================================================================
+
+    /// Baseline: when the verifier has no higher-privileged role, the
+    /// `Staff` role must be assigned.
+    #[test]
+    fn test_add_verifier_without_higher_role_assigns_staff() {
+        let (env, client, rbac_client, _owner) = setup_with_rbac();
+        let verifier = Address::generate(&env);
+
+        client.add_verifier(&verifier);
+
+        assert!(rbac_client.has_role(&verifier, &RbacRole::Staff));
+        assert!(client.is_verifier(&verifier));
+    }
+
+    /// When the verifier already holds `Admin`, `add_verifier` must leave
+    /// the `Admin` role untouched and must NOT stamp `Staff` on top of it.
+    #[test]
+    fn test_add_verifier_with_admin_preserves_admin_and_skips_staff() {
+        let (env, client, rbac_client, _owner) = setup_with_rbac();
+        let verifier = Address::generate(&env);
+        let _ = rbac_client.assign_role(&verifier, &RbacRole::Admin);
+
+        client.add_verifier(&verifier);
+
+        assert!(rbac_client.has_role(&verifier, &RbacRole::Admin));
+        assert!(!rbac_client.has_role(&verifier, &RbacRole::Staff));
+        assert!(client.is_verifier(&verifier));
+    }
+
+    /// When the verifier already holds `Doctor`, `add_verifier` must leave
+    /// `Doctor` untouched and must NOT stamp `Staff`.
+    #[test]
+    fn test_add_verifier_with_doctor_preserves_doctor_and_skips_staff() {
+        let (env, client, rbac_client, _owner) = setup_with_rbac();
+        let verifier = Address::generate(&env);
+        let _ = rbac_client.assign_role(&verifier, &RbacRole::Doctor);
+
+        client.add_verifier(&verifier);
+
+        assert!(rbac_client.has_role(&verifier, &RbacRole::Doctor));
+        assert!(!rbac_client.has_role(&verifier, &RbacRole::Staff));
+    }
+
+    /// When the verifier already holds `Researcher`, `add_verifier` must
+    /// leave `Researcher` untouched and must NOT stamp `Staff`.
+    #[test]
+    fn test_add_verifier_with_researcher_preserves_researcher_and_skips_staff() {
+        let (env, client, rbac_client, _owner) = setup_with_rbac();
+        let verifier = Address::generate(&env);
+        let _ = rbac_client.assign_role(&verifier, &RbacRole::Researcher);
+
+        client.add_verifier(&verifier);
+
+        assert!(rbac_client.has_role(&verifier, &RbacRole::Researcher));
+        assert!(!rbac_client.has_role(&verifier, &RbacRole::Staff));
+    }
+
+    /// Baseline: when the verifier has no higher-privileged role, the
+    /// `Staff` role must be removed on `remove_verifier`.
+    #[test]
+    fn test_remove_verifier_without_higher_role_removes_staff() {
+        let (env, client, rbac_client, _owner) = setup_with_rbac();
+        let verifier = Address::generate(&env);
+
+        client.add_verifier(&verifier);
+        assert!(rbac_client.has_role(&verifier, &RbacRole::Staff));
+
+        client.remove_verifier(&verifier);
+        assert!(!rbac_client.has_role(&verifier, &RbacRole::Staff));
+        assert!(!client.is_verifier(&verifier));
+    }
+
+    /// When the verifier holds `Admin`, `remove_verifier` must NOT touch
+    /// any RBAC role and must keep the contract-level verifier flag in sync.
+    #[test]
+    fn test_remove_verifier_with_admin_preserves_admin_and_skips_staff() {
+        let (env, client, rbac_client, _owner) = setup_with_rbac();
+        let verifier = Address::generate(&env);
+        let _ = rbac_client.assign_role(&verifier, &RbacRole::Admin);
+        client.add_verifier(&verifier); // Staff was never stamped.
+
+        client.remove_verifier(&verifier);
+
+        // Admin preserved.
+        assert!(rbac_client.has_role(&verifier, &RbacRole::Admin));
+        // Staff was never set, and we never asked RBAC to remove it.
+        assert!(!rbac_client.has_role(&verifier, &RbacRole::Staff));
+        // Contract-level verifier flag is cleared.
+        assert!(!client.is_verifier(&verifier));
+    }
+
+    /// When the verifier holds `Doctor`, `remove_verifier` must NOT touch
+    /// the `Doctor` role or any RBAC row for that verifier.
+    #[test]
+    fn test_remove_verifier_with_doctor_preserves_doctor() {
+        let (env, client, rbac_client, _owner) = setup_with_rbac();
+        let verifier = Address::generate(&env);
+        let _ = rbac_client.assign_role(&verifier, &RbacRole::Doctor);
+        client.add_verifier(&verifier); // Staff was never stamped.
+
+        client.remove_verifier(&verifier);
+
+        assert!(rbac_client.has_role(&verifier, &RbacRole::Doctor));
+        assert!(!rbac_client.has_role(&verifier, &RbacRole::Staff));
+    }
+
+    /// When the verifier holds `Researcher`, `remove_verifier` must NOT
+    /// touch the `Researcher` role or any RBAC row for that verifier.
+    #[test]
+    fn test_remove_verifier_with_researcher_preserves_researcher() {
+        let (env, client, rbac_client, _owner) = setup_with_rbac();
+        let verifier = Address::generate(&env);
+        let _ = rbac_client.assign_role(&verifier, &RbacRole::Researcher);
+        client.add_verifier(&verifier); // Staff was never stamped.
+
+        client.remove_verifier(&verifier);
+
+        assert!(rbac_client.has_role(&verifier, &RbacRole::Researcher));
+        assert!(!rbac_client.has_role(&verifier, &RbacRole::Staff));
+    }
+
+    /// Add-then-remove cycle for a low-role verifier must fully clear the
+    /// `Staff` role.
+    #[test]
+    fn test_add_then_remove_verifier_clears_staff() {
+        let (env, client, rbac_client, _owner) = setup_with_rbac();
+        let verifier = Address::generate(&env);
+
+        client.add_verifier(&verifier);
+        assert!(rbac_client.has_role(&verifier, &RbacRole::Staff));
+
+        client.remove_verifier(&verifier);
+        assert!(!rbac_client.has_role(&verifier, &RbacRole::Staff));
+    }
+
+    /// Sanity check: even though issue #43 deals with role hierarchy, the
+    /// existing invariant that the owner cannot be removed via
+    /// `remove_verifier` must still hold.
+    #[test]
+    fn test_remove_owner_as_verifier_still_blocked() {
+        let (_env, client, _rbac_client, owner) = setup_with_rbac();
+
+        let result = client.try_remove_verifier(&owner);
+        assert_eq!(result, Err(Ok(Error::CannotRemoveOwner)));
     }
 }
