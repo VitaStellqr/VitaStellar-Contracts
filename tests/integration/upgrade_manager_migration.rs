@@ -10,9 +10,8 @@
 #![allow(clippy::unwrap_used)]
 
 use soroban_sdk::{
-    contract, contractimpl, symbol_short,
-    testutils::Address as _,
-    Address, BytesN, Env, Map, Symbol,
+    contract, contractimpl, symbol_short, testutils::Address as _, Address, BytesN, Env, Map,
+    Symbol,
 };
 use upgradeability::{
     migration::{Migratable, UpgradeValidation},
@@ -167,12 +166,7 @@ fn test_version_mismatch_error() {
 
     // Downgrade (2 → 1) must also be rejected.
     let result_down = env.as_contract(&contract_id, || {
-        upgradeability::execute_upgrade::<NoOpMigration>(
-            &env,
-            dummy_hash,
-            1,
-            symbol_short!("down"),
-        )
+        upgradeability::execute_upgrade::<NoOpMigration>(&env, dummy_hash, 1, symbol_short!("down"))
     });
     assert_eq!(
         result_down,
