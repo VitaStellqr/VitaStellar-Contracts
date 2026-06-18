@@ -17,3 +17,6 @@ mod unit_tests {
         assert_eq!(env.ledger().sequence(), 0);
     }
 }
+
+// Integration tests for medical_records contract (Issue #65)
+mod medical_records;

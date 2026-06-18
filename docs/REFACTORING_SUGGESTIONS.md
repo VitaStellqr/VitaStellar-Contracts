@@ -8,11 +8,11 @@ This document describes the automated refactoring suggestion system for VitaStel
 
 Long functions (>80 lines) that can be split into smaller, focused helpers:
 
-| Contract | Function | Lines | Suggestion |
-|---|---|---|---|
-| `medical_records` | `write_record` | ~120 | Extract `validate_record_fields`, `encrypt_payload` |
-| `cross_chain_bridge` | `submit_message` | ~90 | Extract `build_message`, `validate_chain_pair` |
-| `anomaly_detector` | `run_inference` | ~100 | Extract `compute_weighted_score`, `classify_alert_level` |
+| Contract | Function | Lines | Suggestion | Status |
+|---|---|---|---|---|
+| `medical_records` | `write_record` | ~120 | Extract `validate_record_fields`, `encrypt_payload` | ✅ **COMPLETED** (Issue #65) |
+| `cross_chain_bridge` | `submit_message` | ~90 | Extract `build_message`, `validate_chain_pair` | Pending |
+| `anomaly_detector` | `run_inference` | ~100 | Extract `compute_weighted_score`, `classify_alert_level` | Pending |
 
 ### 2. Duplicate Code Consolidation
 
