@@ -21,23 +21,23 @@ All VitaStellar contracts use numeric error codes organized by category:
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
 | 100 | `Unauthorized` | All | Caller lacks permission for this action | Invalid role, expired authorization, not authenticated | Verify caller identity, check role assignments, ensure authentication |
-| 101 | `UnauthorizedCaller` | healthcare_payment | Specific caller not authorized | Wrong address calling restricted function | Check caller address matches expected admin/operator |
-| 102 | `NotAuthorizedPauser` | healthcare_payment | Not authorized to pause | Caller is not admin or authorized pauser | Add address to authorized pausers list |
+| 101 | `UnauthorizedCaller` | payment_router | Specific caller not authorized | Wrong address calling restricted function | Check caller address matches expected admin/operator |
+| 102 | `NotAuthorizedPauser` | payment_router | Not authorized to pause | Caller is not admin or authorized pauser | Add address to authorized pausers list |
 | 110 | `NotVerifier` | identity_registry | Caller is not a registered verifier | Address not in verifier registry | Register address as verifier first |
 | 111 | `CannotRemoveOwner` | identity_registry | Cannot remove the owner as verifier | Attempt to remove the contract owner | Owner must remain a verifier |
-| 120 | `InsufficientConfirmations` | cross_chain_bridge | Not enough validator confirmations | Message/operation has fewer confirmations than required threshold | Wait for more validators to confirm |
-| 121 | `InsufficientOracleReports` | cross_chain_bridge | Insufficient oracle reports for consensus | Fewer reports received than MIN_ORACLE_REPORTS | Submit more oracle reports |
-| 122 | `DuplicateOracleReport` | cross_chain_bridge | Oracle has already submitted a report | Duplicate submission from same oracle | Wait for other oracles to submit |
+| 120 | `InsufficientConfirmations` | cross_chain_access | Not enough validator confirmations | Message/operation has fewer confirmations than required threshold | Wait for more validators to confirm |
+| 121 | `InsufficientOracleReports` | cross_chain_access | Insufficient oracle reports for consensus | Fewer reports received than MIN_ORACLE_REPORTS | Submit more oracle reports |
+| 122 | `DuplicateOracleReport` | cross_chain_access | Oracle has already submitted a report | Duplicate submission from same oracle | Wait for other oracles to submit |
 
 ## Input Validation (200–299)
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
-| 205 | `InvalidAmount` | escrow, healthcare_payment | Invalid amount (zero or negative) | Amount <= 0 | Provide a positive amount |
-| 207 | `InvalidSignature` | cross_chain_bridge, timelock | Cryptographic signature validation failed | Corrupted signature, wrong key | Verify signing key and regenerate signature |
-| 280 | `InvalidCoverage` | healthcare_payment | Coverage policy validation failed | Missing policy data, invalid coverage BPS | Check policy parameters |
-| 281 | `InvalidNonce` | cross_chain_bridge | Nonce replay protection triggered | Duplicate nonce or nonce too low | Use a higher nonce value |
-| 282 | `InvalidPayload` | cross_chain_bridge | Message payload is invalid | Malformed data | Check payload format |
-| 290 | `InvalidAddress` | cross_chain_bridge | Chain address format is invalid | Wrong length or prefix | Use correct chain-specific address format |
+| 205 | `InvalidAmount` | escrow, payment_router | Invalid amount (zero or negative) | Amount <= 0 | Provide a positive amount |
+| 207 | `InvalidSignature` | cross_chain_access, cross_chain_identity, timelock | Cryptographic signature validation failed | Corrupted signature, wrong key | Verify signing key and regenerate signature |
+| 280 | `InvalidCoverage` | payment_router | Coverage policy validation failed | Missing policy data, invalid coverage BPS | Check policy parameters |
+| 281 | `InvalidNonce` | cross_chain_access, cross_chain_identity | Nonce replay protection triggered | Duplicate nonce or nonce too low | Use a higher nonce value |
+| 282 | `InvalidPayload` | cross_chain_access, cross_chain_identity | Message payload is invalid | Malformed data | Check payload format |
+| 290 | `InvalidAddress` | cross_chain_access, cross_chain_identity | Chain address format is invalid | Wrong length or prefix | Use correct chain-specific address format |
 
 ## Lifecycle & State (300–399)
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
@@ -45,10 +45,10 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 300 | `NotInitialized` | All | Contract has not been initialized | Missing `initialize()` call | Call `initialize()` first |
 | 301 | `AlreadyInitialized` | All | Contract already initialized | Duplicate initialization attempt | Contract can only be initialized once |
 | 302 | `ContractPaused` | All | Contract is paused; no state-changing calls allowed | Emergency pause or maintenance | Wait for unpause or contact admin |
-| 303 | `CircuitOpen` | healthcare_payment | Circuit breaker is open | Too many recent failures | Wait for recovery or admin intervention |
-| 304 | `InvalidStatus` | healthcare_payment | Claim/entity in wrong status for this operation | Wrong workflow step | Check current status and required transition |
-| 305 | `AlreadyInState` | healthcare_payment | Already in the requested state | Redundant state transition | No action needed |
-| 306 | `DeadlineExceeded` | healthcare_payment, timelock | Operation deadline/timelock has passed | Operation timed out | Retry with fresh operation |
+| 303 | `CircuitOpen` | payment_router | Circuit breaker is open | Too many recent failures | Wait for recovery or admin intervention |
+| 304 | `InvalidStatus` | payment_router | Claim/entity in wrong status for this operation | Wrong workflow step | Check current status and required transition |
+| 305 | `AlreadyInState` | payment_router | Already in the requested state | Redundant state transition | No action needed |
+| 306 | `DeadlineExceeded` | payment_router, timelock | Operation deadline/timelock has passed | Operation timed out | Retry with fresh operation |
 | 372 | `NotQueued` | timelock | Transaction not in timelock queue | Wrong ID or already executed | Check queue ID |
 | 375 | `AlreadyQueued` | timelock | Transaction already queued | Duplicate queue attempt | Use a different ID |
 | 376 | `NotReady` | timelock | Timelock delay not yet elapsed | Too early to execute | Wait until ETA has passed |
@@ -60,28 +60,28 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 470 | `DIDNotFound` | identity_registry | DID document not found | Address has no DID | Create DID first |
 | 471 | `DIDAlreadyExists` | identity_registry | DID already registered | Duplicate DID creation | Use existing DID |
 | 472 | `DIDDeactivated` | identity_registry | DID has been deactivated | DID was intentionally deactivated | Cannot use deactivated DID |
-| 480 | `ClaimNotFound` | healthcare_payment | Claim not found | Wrong claim ID | Verify claim ID |
-| 481 | `MessageNotFound` | cross_chain_bridge | Cross-chain message not found | Wrong message ID | Verify message ID |
-| 482 | `PreAuthNotFound` | healthcare_payment | Pre-authorization not found | Wrong pre-auth ID | Verify pre-auth ID |
-| 483 | `PaymentPlanNotFound` | healthcare_payment | Payment plan not found | Wrong plan ID | Verify plan ID |
-| 484 | `InsuranceProviderNotFound` | healthcare_payment | Insurance provider not found | Wrong provider ID | Verify provider ID |
-| 485 | `CoveragePolicyNotFound` | healthcare_payment | Coverage policy not found | Wrong policy ID | Verify policy ID |
-| 486 | `EligibilityCheckNotFound` | healthcare_payment | Eligibility check not found | No eligibility check performed | Run eligibility check first |
-| 487 | `EobNotFound` | healthcare_payment | Explanation of benefits not found | EOB not processed yet | Process claim to generate EOB |
-| 488 | `AtomicTxNotFound` | cross_chain_bridge | Atomic transaction not found | Wrong transaction ID | Verify tx ID |
-| 489 | `RecordRefNotFound` | cross_chain_bridge | Cross-chain record reference not found | Wrong record/chain pair | Register record reference first |
-| 490 | `RollbackNotFound` | cross_chain_bridge | Rollback record not found | Wrong operation ID | Verify operation ID |
-| 491 | `RollbackAlreadyProcessed` | cross_chain_bridge | Rollback already completed | Duplicate rollback | No action needed |
-| 492 | `EventNotFound` | cross_chain_bridge | Cross-chain event not found | Wrong event ID | Verify event ID |
+| 480 | `ClaimNotFound` | payment_router | Claim not found | Wrong claim ID | Verify claim ID |
+| 481 | `MessageNotFound` | cross_chain_access, cross_chain_identity | Cross-chain message not found | Wrong message ID | Verify message ID |
+| 482 | `PreAuthNotFound` | payment_router | Pre-authorization not found | Wrong pre-auth ID | Verify pre-auth ID |
+| 483 | `PaymentPlanNotFound` | payment_router | Payment plan not found | Wrong plan ID | Verify plan ID |
+| 484 | `InsuranceProviderNotFound` | payment_router | Insurance provider not found | Wrong provider ID | Verify provider ID |
+| 485 | `CoveragePolicyNotFound` | payment_router | Coverage policy not found | Wrong policy ID | Verify policy ID |
+| 486 | `EligibilityCheckNotFound` | payment_router | Eligibility check not found | No eligibility check performed | Run eligibility check first |
+| 487 | `EobNotFound` | payment_router | Explanation of benefits not found | EOB not processed yet | Process claim to generate EOB |
+| 488 | `AtomicTxNotFound` | cross_chain_access, cross_chain_identity | Atomic transaction not found | Wrong transaction ID | Verify tx ID |
+| 489 | `RecordRefNotFound` | cross_chain_access, cross_chain_identity | Cross-chain record reference not found | Wrong record/chain pair | Register record reference first |
+| 490 | `RollbackNotFound` | cross_chain_access, cross_chain_identity | Rollback record not found | Wrong operation ID | Verify operation ID |
+| 491 | `RollbackAlreadyProcessed` | cross_chain_access, cross_chain_identity | Rollback already completed | Duplicate rollback | No action needed |
+| 492 | `EventNotFound` | cross_chain_access, cross_chain_identity | Cross-chain event not found | Wrong event ID | Verify event ID |
 
 ## Financial & Resource (500–599)
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
-| 500 | `InsufficientFunds` | healthcare_payment, timelock | Insufficient funds for operation | Not enough tokens | Add funds |
-| 502 | `StorageFull` | healthcare_payment, timelock | Storage capacity limit reached | Too much data stored | Clean up old data |
-| 580 | `FraudDetected` | healthcare_payment | Fraud report exists for this claim | Claim flagged as fraudulent | Resolve fraud report |
-| 581 | `EscrowFailed` | healthcare_payment | Escrow creation failed | Escrow contract rejected | Check escrow parameters |
-| 582 | `UnsupportedTransaction` | healthcare_payment | Unsupported transaction code | Wrong EDI format | Use supported transaction code |
+| 500 | `InsufficientFunds` | payment_router, timelock | Insufficient funds for operation | Not enough tokens | Add funds |
+| 502 | `StorageFull` | payment_router, timelock | Storage capacity limit reached | Too much data stored | Clean up old data |
+| 580 | `FraudDetected` | payment_router | Fraud report exists for this claim | Claim flagged as fraudulent | Resolve fraud report |
+| 581 | `EscrowFailed` | payment_router | Escrow creation failed | Escrow contract rejected | Check escrow parameters |
+| 582 | `UnsupportedTransaction` | payment_router | Unsupported transaction code | Wrong EDI format | Use supported transaction code |
 
 ## Cryptography (600–699)
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
@@ -92,26 +92,26 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 603 | `InvalidKeyLength` | crypto_registry | Key length doesn't match algorithm | Wrong key size for algorithm | Use correct key length |
 | 604 | `CredentialNotFound` | identity_registry | Credential not found | Wrong credential ID | Verify credential ID |
 | 605 | `CredentialExpired` | identity_registry | Credential has expired | Past expiration date | Renew credential |
-| 610 | `ProofNotFound` | cross_chain_bridge | Cryptographic proof not found | Wrong proof ID | Verify proof ID |
-| 611 | `ProofAlreadyVerified` | cross_chain_bridge | Proof already verified | Duplicate verification | No action needed |
+| 610 | `ProofNotFound` | cross_chain_access | Cryptographic proof not found | Wrong proof ID | Verify proof ID |
+| 611 | `ProofAlreadyVerified` | cross_chain_access | Proof already verified | Duplicate verification | No action needed |
 
 ## Cross-Chain (700–799)
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
-| 702 | `CrossChainTimeout` | healthcare_payment, timelock | Cross-chain operation timed out | Message not delivered in time | Retry or escalate |
-| 703 | `InvalidChain` | cross_chain_bridge | Invalid chain identifier | Chain not recognized | Check chain ID |
-| 720 | `ChainNotSupported` | cross_chain_bridge | Chain not in supported list | Chain not configured | Add chain to supported list |
-| 721 | `OracleNotFound` | cross_chain_bridge | Oracle node not found | Wrong oracle address | Verify oracle address |
-| 722 | `OracleNotActive` | cross_chain_bridge | Oracle not active | Oracle deactivated | Contact admin to reactivate |
+| 702 | `CrossChainTimeout` | payment_router, timelock | Cross-chain operation timed out | Message not delivered in time | Retry or escalate |
+| 703 | `InvalidChain` | cross_chain_access | Invalid chain identifier | Chain not recognized | Check chain ID |
+| 720 | `ChainNotSupported` | cross_chain_access | Chain not in supported list | Chain not configured | Add chain to supported list |
+| 721 | `OracleNotFound` | cross_chain_access | Oracle node not found | Wrong oracle address | Verify oracle address |
+| 722 | `OracleNotActive` | cross_chain_access | Oracle not active | Oracle deactivated | Contact admin to reactivate |
 
 ## Reentrancy & Safety (800–899)
 | Code | Symbol | Contract(s) | Description | Common Causes | Remediation |
 |------|--------|-------------|-------------|---------------|-------------|
-| 800 | `Reentrancy` | healthcare_payment | Reentrancy guard triggered | Concurrent call detected | Retry after current operation completes |
-| 801 | `OperationNotFound` | cross_chain_bridge | Cross-chain operation not found | Wrong operation ID | Verify operation ID |
-| 802 | `OperationExpired` | cross_chain_bridge | Operation has expired | Deadline passed | Create new operation |
-| 803 | `OperationAlreadyCompleted` | cross_chain_bridge | Operation already completed | Duplicate completion | No action needed |
-| 804 | `MaxExtensionsReached` | cross_chain_bridge | Max timeout extensions reached | Too many extensions | Create new operation |
+| 800 | `Reentrancy` | payment_router | Reentrancy guard triggered | Concurrent call detected | Retry after current operation completes |
+| 801 | `OperationNotFound` | cross_chain_access | Cross-chain operation not found | Wrong operation ID | Verify operation ID |
+| 802 | `OperationExpired` | cross_chain_access | Operation has expired | Deadline passed | Create new operation |
+| 803 | `OperationAlreadyCompleted` | cross_chain_access | Operation already completed | Duplicate completion | No action needed |
+| 804 | `MaxExtensionsReached` | cross_chain_access | Max timeout extensions reached | Too many extensions | Create new operation |
 
 ## Per-Contract Error Codes (1–99)
 
@@ -201,7 +201,7 @@ All VitaStellar contracts use numeric error codes organized by category:
 | 800 | `ReentrancyGuard` | Reentrancy guard triggered | Wait for completion |
 | 580 | `Overflow` | Arithmetic overflow | Use smaller values |
 
-### cross_chain_bridge
+### cross_chain_access
 
 | Code | Symbol | Description | Remediation |
 |------|--------|-------------|-------------|
