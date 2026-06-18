@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Security scan wrapper for dependency, unsafe-code, and custom lint checks.
+#
+# Custom lint intentionally flags plain http:// references, except local
+# development endpoints: http://localhost, http://127.0.0.1, and http://0.0.0.0.
 set -euo pipefail
 
 REPORT_DIR="${1:-security-reports}"
@@ -11,6 +15,47 @@ SUMMARY_MD="$REPORT_DIR/security-summary.md"
 
 critical=0
 medium=0
+
+CUSTOM_LINT_PATTERN="(api[_-]?key|secret[_-]?key|private[_-]?key|BEGIN (RSA|EC|OPENSSH) PRIVATE KEY|password[[:space:]]*=[[:space:]]*['\\\"][^'\\\"]+['\\\"]|http://)"
+LOCAL_HTTP_WHITELIST_PATTERN="http://(localhost|127\.0\.0\.1|0\.0\.0\.0)([:/]|$)"
+
+run_custom_security_lint() {
+  grep -RInE --exclude-dir=.git --exclude-dir=target --exclude-dir=security-reports \
+    "$CUSTOM_LINT_PATTERN" \
+    . | grep -Ev "$LOCAL_HTTP_WHITELIST_PATTERN" || true
+}
+
+if [ "${SECURITY_SCAN_SELF_CHECK:-}" = "1" ]; then
+  tmpdir="$(mktemp -d)"
+  trap 'rm -rf "$tmpdir"' EXIT
+
+  mkdir -p "$tmpdir/repo"
+  {
+    printf '%s\n' "external endpoint: http"'://example.com/api'
+    printf '%s\n' "localhost endpoint: http"'://localhost:8000/soroban/rpc'
+    printf '%s\n' "loopback endpoint: http"'://127.0.0.1:8000/soroban/rpc'
+    printf '%s\n' "bind endpoint: http"'://0.0.0.0:8000/soroban/rpc'
+  } > "$tmpdir/repo/sample.txt"
+
+  findings="$(
+    cd "$tmpdir/repo"
+    run_custom_security_lint
+  )"
+
+  if ! echo "$findings" | grep -q "http"'://example.com/api'; then
+    echo "self-check failed: external http:// reference was not flagged" >&2
+    exit 1
+  fi
+
+  if echo "$findings" | grep -Eq "http://(localhost|127\.0\.0\.1|0\.0\.0\.0)"; then
+    echo "self-check failed: local http:// reference was flagged" >&2
+    echo "$findings" >&2
+    exit 1
+  fi
+
+  echo "security-scan self-check passed"
+  exit 0
+fi
 
 echo "Running cargo-audit..."
 if ! cargo audit --json > "$AUDIT_JSON"; then
@@ -54,9 +99,7 @@ fi
 echo "Running custom security lint rules..."
 {
   echo "Potential hardcoded secrets and weak patterns"
-  grep -RInE --exclude-dir=.git --exclude-dir=target --exclude-dir=security-reports \
-    "(api[_-]?key|secret[_-]?key|private[_-]?key|BEGIN (RSA|EC|OPENSSH) PRIVATE KEY|password[[:space:]]*=[[:space:]]*['\\\"][^'\\\"]+['\\\"]|http://)" \
-    . || true
+  run_custom_security_lint
 } > "$CUSTOM_OUT"
 
 custom_findings="$(grep -c ":" "$CUSTOM_OUT" || true)"
