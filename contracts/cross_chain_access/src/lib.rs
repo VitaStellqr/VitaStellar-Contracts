@@ -991,8 +991,7 @@ impl CrossChainAccessContract {
     // ==================== Admin Functions ====================
 
     pub fn pause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         env.storage().persistent().set(&DataKey::Paused, &true);
 
@@ -1005,8 +1004,7 @@ impl CrossChainAccessContract {
     }
 
     pub fn unpause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         env.storage().persistent().set(&DataKey::Paused, &false);
 

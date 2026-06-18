@@ -15,6 +15,7 @@ vitastellar-sanitization = { path = "../sanitization" }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+access_utils = { workspace = true }
 
 [features]
 default = []

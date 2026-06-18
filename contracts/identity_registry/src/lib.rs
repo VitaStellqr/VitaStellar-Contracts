@@ -454,8 +454,7 @@ impl IdentityRegistryContract {
     }
 
     pub fn pause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage().instance().set(&DataKey::Paused, &true);
         env.events().publish(
             (Symbol::new(&env, "Paused"),),
@@ -465,8 +464,7 @@ impl IdentityRegistryContract {
     }
 
     pub fn unpause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage().instance().set(&DataKey::Paused, &false);
         env.events().publish(
             (Symbol::new(&env, "Unpaused"),),

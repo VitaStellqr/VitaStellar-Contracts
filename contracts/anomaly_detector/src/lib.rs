@@ -210,8 +210,7 @@ impl AnomalyDetectorContract {
     }
 
     pub fn add_validator(env: Env, caller: Address, validator: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage()
             .instance()
             .set(&DataKey::Validator(validator.clone()), &true);
@@ -221,8 +220,7 @@ impl AnomalyDetectorContract {
     }
 
     pub fn remove_validator(env: Env, caller: Address, validator: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage()
             .instance()
             .remove(&DataKey::Validator(validator.clone()));
@@ -231,16 +229,14 @@ impl AnomalyDetectorContract {
     }
 
     pub fn pause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage().instance().set(&DataKey::Paused, &true);
         env.events().publish((symbol_short!("Paused"),), caller);
         Ok(true)
     }
 
     pub fn unpause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage().instance().set(&DataKey::Paused, &false);
         env.events().publish((symbol_short!("Unpaused"),), caller);
         Ok(true)
@@ -254,8 +250,7 @@ impl AnomalyDetectorContract {
         model_id: BytesN<32>,
         threshold_bps: u32,
     ) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         if threshold_bps == 0 || threshold_bps >= 10_000 {
             return Err(Error::InvalidThreshold);
         }
@@ -277,8 +272,7 @@ impl AnomalyDetectorContract {
     /// Clear active alerts up to `count` (admin only). Pass 0 to clear all.
     /// Marks each active alert as Resolved and emits a ClearAlerts event.
     pub fn clear_alerts(env: Env, caller: Address, count: u64) -> Result<u64, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         let total: u64 = env
             .storage()
             .instance()

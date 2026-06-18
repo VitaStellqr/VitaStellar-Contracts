@@ -14,6 +14,7 @@ soroban-sdk.workspace = true
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+access_utils = { workspace = true }
 healthcare_reputation = { path = "../healthcare_reputation" }
 
 [features]
