@@ -217,8 +217,7 @@ impl ReputationIntegration {
         healthcare_weight: u32,
         adjustment_factor: i32,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         if base_weight.checked_add(healthcare_weight) != Some(100) {
             return Err(Error::InvalidScoreMapping);
@@ -248,8 +247,7 @@ impl ReputationIntegration {
         admin: Address,
         settings: SyncSettings,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         env.storage()
             .instance()

@@ -468,8 +468,7 @@ impl IdentityRegistryContract {
     }
 
     pub fn pause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage().instance().set(&DataKey::Paused, &true);
         env.events().publish(
             (Symbol::new(&env, "Paused"),),
@@ -479,8 +478,7 @@ impl IdentityRegistryContract {
     }
 
     pub fn unpause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage().instance().set(&DataKey::Paused, &false);
         env.events().publish(
             (Symbol::new(&env, "Unpaused"),),
@@ -489,24 +487,44 @@ impl IdentityRegistryContract {
         Ok(true)
     }
 
-    /// Legacy initialize for backward compatibility
+    /// Legacy initialize for backward compatibility.
+    ///
+    /// **Deprecated**: Use [`initialize`] instead. The legacy 2-argument
+    /// signature is preserved only for callers that pre-date the introduction
+    /// of the `network_id` parameter. This entry point now delegates to
+    /// [`initialize`] (using `"testnet"` as the default network id, matching
+    /// the fallback used by `create_did` when no `NetworkId` has been
+    /// recorded yet) so that initialization semantics are unified across
+    /// both paths. The original silent-fail behavior on re-initialization
+    /// is preserved by discarding the `Result`; new integrators should
+    /// call [`initialize`] directly and handle `AlreadyInitialized`
+    /// explicitly.
+    ///
+    /// **Event-name change**: This wrapper used to publish an `"Init"`
+    /// event; it now delegates and therefore emits the standard
+    /// `"Initialized"` event from [`initialize`]. Off-chain consumers
+    /// should migrate to listening for `"Initialized"`.
+    ///
+    /// Scheduled for removal in v0.4.0.
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use `initialize` instead; this entry point will be removed in v0.4.0"
+    )]
+    // Suppress internal uses: the `#[contractimpl]` macro auto-generates
+    // spec / XDR helpers that reference this method, which would otherwise
+    // trip `unused_deprecated` (errored by `-D warnings`). External callers
+    // in other crates still see the deprecation warning.
+    #[allow(deprecated, clippy::let_underscore_must_use)]
     pub fn initialize_legacy(env: Env, owner: Address, rbac_contract: Address) {
         owner.require_auth();
-
-        if env.storage().instance().has(&DataKey::Owner) {
-            return; // Contract already initialized
-        }
-
-        env.storage().instance().set(&DataKey::Owner, &owner);
-        env.storage()
-            .instance()
-            .set(&DataKey::RbacContract, &rbac_contract);
-        env.storage()
-            .instance()
-            .set(&DataKey::Verifier(owner.clone()), &true);
-
-        env.events()
-            .publish((symbol_short!("Init"),), owner.clone());
+        // Route through `initialize` to unify init semantics. Use `"testnet"`
+        // as a default network id, matching the fallback used by `create_did`
+        // when no `NetworkId` has been recorded yet.
+        let network_id = String::from_str(&env, "testnet");
+        // Silent-fail: legacy callers expect `()` regardless of state, so we
+        // intentionally discard the `Result` here (preserving the original
+        // "swallowed re-init" semantics behind a unified code path).
+        let _ = Self::initialize(env, owner, network_id, rbac_contract);
     }
 
     // ========================================================================
@@ -2175,6 +2193,8 @@ impl IdentityRegistryContract {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+
     use super::*;
     use soroban_sdk::{testutils::Address as _, Env, String};
 
@@ -2242,6 +2262,7 @@ mod tests {
         client.initialize(&owner, &network, &rbac_id);
         (env, client, rbac_client, owner)
     }
+    use std::path::Path;
 
     /// Verifies that is_paused returns false when the Paused key has never been written
     /// (i.e., the contract is freshly deployed and uninitialized).
@@ -2408,5 +2429,23 @@ mod tests {
 
         let result = client.try_remove_verifier(&owner);
         assert_eq!(result, Err(Ok(Error::CannotRemoveOwner)));
+    #[test]
+    fn test_generated_error_reference_is_stable_for_identity_registry() {
+        let docs_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/ERROR_CODES.md");
+        let docs = std::fs::read_to_string(&docs_path)
+            .unwrap_or_else(|_| panic!("missing generated docs at {}", docs_path.display()));
+
+        assert!(
+            docs.contains("### identity_registry"),
+            "expected generated docs to contain identity_registry section"
+        );
+        assert!(
+            docs.contains("| 100 | Unauthorized |"),
+            "expected generated docs to contain error code 100"
+        );
+        assert!(
+            docs.contains("| 121 | InsufficientGuardianApprovals |"),
+            "expected generated docs to contain error code 121"
+        );
     }
 }

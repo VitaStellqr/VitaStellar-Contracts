@@ -6,9 +6,25 @@ This master threat model consolidates all security threat analyses for the VitaS
 
 **Version**: 1.0  
 **Last Updated**: 2026-04-25  
-**Scope**: All VitaStellar smart contracts (medical_records, crypto_registry, governor, rbac, and related contracts)  
+**Scope**: All VitaStellar smart contracts (emr_integration, identity_registry, crypto_registry, governor, and related contracts)
 **Blockchain**: Soroban (Stellar)  
 **Asset Classification**: Critical Healthcare Infrastructure
+
+## LOC Manifest
+
+The fenced `loc-manifest` block below is the authoritative size-of-contract record cited by this threat model. It is validated by `scripts/loc_report.sh --check` (invoked by the `loc-check` CI job in `.github/workflows/ci.yml`) against `wc -l` on `contracts/<name>/src/**/*.rs` — tests and `target/` are excluded. Drift fails CI; to update intentionally, regenerate with `./scripts/loc_report.sh --emit-manifest` and paste the result into the block.
+
+```loc-manifest
+audit_forensics: 790
+crypto_registry: 935
+emr_integration: 2147
+governor: 451
+homomorphic_registry: 1149
+identity_registry: 3290
+medical_record_backup: 1569
+mpc_manager: 1133
+zk_verifier: 490
+```
 
 ## Executive Summary
 
@@ -43,37 +59,46 @@ This document follows STRIDE methodology adapted for blockchain smart contracts:
 
 ### Core Contracts
 
-1. **MedicalRecordsContract** (`contracts/medical_records/`)
-   - Main contract for medical record management
+The VitaStellar deployment is a graph of focused contracts rather than one monolithic record store. The seven contracts below carry the bulk of the attack surface analyzed in this document; the rest of the workspace (identity, payment, governance auxiliary, telemetry, etc.) is referenced where relevant but not analyzed in depth here. LOC numbers in this section are produced by `scripts/loc_report.sh --check` and validated by CI.
+
+1. **EmrIntegration** (`contracts/emr_integration/`)
+   - Primary contract for electronic medical record management
    - Handles record creation, access, and encryption
    - Manages user roles and permissions
    - Integrates ZK proof verification
-   - ~5,600 lines of Rust code
+   - ~2,147 lines of Rust code
 
-2. **CryptoRegistry** (`contracts/crypto_registry/`)
+2. **IdentityRegistry** (`contracts/identity_registry/`)
+   - Decentralized identity and role-based access control
+   - Healthcare-specific roles (provider, patient, admin, auditor, …)
+   - Permission assignment, attestation, and lookup
+   - ~3,290 lines of Rust code
+
+3. **CryptoRegistry** (`contracts/crypto_registry/`)
    - Manages public key infrastructure
    - Supports classical and post-quantum algorithms
    - Key versioning and rotation
-   - ~417 lines of Rust code
+   - ~935 lines of Rust code
 
-3. **Governor** (`contracts/governor/`)
+4. **Governor** (`contracts/governor/`)
    - On-chain governance for upgrades
    - Proposal and voting mechanism
    - Timelock execution
-   - ~13,587 lines of Rust code
+   - ~451 lines of Rust code
 
-4. **RBAC** (`contracts/rbac/`)
-   - Role-based access control
-   - 8 healthcare-specific roles
-   - Permission assignment and queries
-   - ~479 lines of Rust code (documentation)
+5. **MedicalRecordBackup** (`contracts/medical_record_backup/`)
+   - Disaster-recovery and off-chain archival
+   - Encrypted backup write/read APIs
+   - Retention and rotation policies
+   - ~1,569 lines of Rust code
 
-5. **Supporting Contracts**
-   - HomomorphicRegistry (HE computation coordination)
-   - MPCManager (secure multi-party computation)
-   - ZKVerifier (zero-knowledge proof verification)
-   - EmergencyAccessOverride (emergency procedures)
-   - AuditForensics (security monitoring)
+6. **Supporting Contracts (analyzed in this document)**
+   - HomomorphicRegistry (`contracts/homomorphic_registry/`) — HE computation coordination
+   - MPCManager (`contracts/mpc_manager/`) — secure multi-party computation
+   - ZKVerifier (`contracts/zk_verifier/`) — zero-knowledge proof verification
+   - AuditForensics (`contracts/audit_forensics/`) — security monitoring and forensics
+
+The `check_permission()`, `manage_user()`, and `grant_permission()` function names cited in §1 below are illustrative attack-vector patterns — VitaStellar contracts use Soroban authorization primitives (`require_auth()`, role attributes, capability checks) rather than those specific function names. See `docs/AUTH_PATTERNS.md` for the real API surface.
 
 ### Data Flow
 
@@ -101,7 +126,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Attack Vectors**:
 - Impersonation of authorized users
-- Bypassing `check_permission()` logic
+- Bypassing the centralized permission-check layer (see `docs/AUTH_PATTERNS.md`)
 - Exploiting DID verification weaknesses
 - ZK proof forgery
 - Emergency access abuse
@@ -128,7 +153,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 **Threat Description**: Attackers gain higher privileges than assigned, potentially achieving admin access.
 
 **Attack Vectors**:
-- Exploiting `manage_user()` or `grant_permission()` flaws
+- Exploiting user-management or permission-grant flaws
 - Admin key compromise
 - Delegation chain attacks
 - Storage manipulation

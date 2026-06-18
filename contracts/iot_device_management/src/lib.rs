@@ -249,16 +249,14 @@ impl IoTDeviceManagement {
     }
 
     pub fn pause(env: Env, admin: Address) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         env.storage().instance().set(&DataKey::Paused, &true);
         events::emit_paused(&env, &admin);
         Ok(())
     }
 
     pub fn unpause(env: Env, admin: Address) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         let paused: bool = env
             .storage()
             .instance()
@@ -277,8 +275,7 @@ impl IoTDeviceManagement {
     // ============================================================
 
     pub fn set_role(env: Env, admin: Address, user: Address, role: Role) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         Self::check_not_paused(&env)?;
         env.storage()
             .persistent()
@@ -348,8 +345,7 @@ impl IoTDeviceManagement {
         name: String,
         certification_hash: BytesN<32>,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         Self::check_not_paused(&env)?;
         validation::validate_name(&name)?;
 
@@ -403,8 +399,7 @@ impl IoTDeviceManagement {
         admin: Address,
         manufacturer_id: BytesN<32>,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         Self::check_not_paused(&env)?;
 
         let mut mfr: Manufacturer = env
@@ -642,8 +637,7 @@ impl IoTDeviceManagement {
         admin: Address,
         device_id: BytesN<32>,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         Self::check_not_paused(&env)?;
 
         let mut device: Device = env
@@ -740,8 +734,7 @@ impl IoTDeviceManagement {
         manufacturer_id: BytesN<32>,
         version: u32,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         Self::check_not_paused(&env)?;
 
         let mut fw: FirmwareVersion = env
@@ -777,8 +770,7 @@ impl IoTDeviceManagement {
         manufacturer_id: BytesN<32>,
         version: u32,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         let mut fw: FirmwareVersion = env
             .storage()
@@ -1057,8 +1049,7 @@ impl IoTDeviceManagement {
         admin: Address,
         interval_secs: u64,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         env.storage()
             .persistent()
             .set(&DataKey::HeartbeatMinInterval, &interval_secs);
@@ -1186,8 +1177,7 @@ impl IoTDeviceManagement {
         admin: Address,
         interval_secs: u64,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         env.storage()
             .persistent()
             .set(&DataKey::KeyRotationMinInterval, &interval_secs);
