@@ -16,6 +16,7 @@ pub enum Error {
 pub enum DataKey {
     Admin,
     RateLimitConfig,
+    OnboardingConfig,
     SearchRateLimit(Address),
     ExemptInstitution(Address),
 }
@@ -24,6 +25,14 @@ pub enum DataKey {
 pub struct RateLimitConfig {
     pub max_searches: u32,
     pub window_secs: u64,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct OnboardingConfig {
+    pub enabled: bool,
+    pub max_providers: u32,
+    pub min_rating: u32,
 }
 
 #[contracttype]
@@ -53,6 +62,16 @@ impl ProviderDirectoryContract {
         env.storage()
             .instance()
             .set(&DataKey::RateLimitConfig, &default_config);
+
+        // Set default onboarding config (immutable after init)
+        let default_onboarding = OnboardingConfig {
+            enabled: true,
+            max_providers: 1000,
+            min_rating: 0,
+        };
+        env.storage()
+            .instance()
+            .set(&DataKey::OnboardingConfig, &default_onboarding);
 
         Ok(())
     }
@@ -111,6 +130,13 @@ impl ProviderDirectoryContract {
         Ok(())
     }
 
+    pub fn get_onboarding_config(env: Env) -> Result<OnboardingConfig, Error> {
+        env.storage()
+            .instance()
+            .get(&DataKey::OnboardingConfig)
+            .ok_or(Error::NotInitialized)
+    }
+
     pub fn search_providers(
         env: Env,
         caller: Address,
@@ -167,3 +193,7 @@ impl ProviderDirectoryContract {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test;
+

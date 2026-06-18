@@ -255,3 +255,88 @@ fn test_update_profile_rejects_injection_in_name() {
     );
     assert_eq!(result, Err(Ok(Error::InvalidInput)));
 }
+
+// ============================================================================
+// OnboardingConfig Storage Optimization Tests
+// Tests for Instance Storage (reduced per-ledger costs)
+// ============================================================================
+
+#[test]
+fn test_onboarding_config_initialized_in_instance_storage() {
+    let env = Env::default();
+    let admin = Address::generate(&env);
+    
+    let contract_id = env.register_contract(None, ProviderDirectoryContract);
+    let contract = ProviderDirectoryContract;
+    
+    // Initialize the contract
+    contract.initialize(&env, admin.clone()).expect("initialization should succeed");
+    
+    // Verify onboarding config is properly initialized
+    let config = contract.get_onboarding_config(&env)
+        .expect("onboarding config should be initialized");
+    
+    assert_eq!(config.enabled, true, "onboarding should be enabled by default");
+    assert_eq!(config.max_providers, 1000, "max_providers should be 1000");
+    assert_eq!(config.min_rating, 0, "min_rating should be 0");
+}
+
+#[test]
+fn test_onboarding_config_not_found_before_init() {
+    let env = Env::default();
+    
+    let contract = ProviderDirectoryContract;
+    
+    // Try to get onboarding config before initialization
+    let result = contract.get_onboarding_config(&env);
+    
+    assert_eq!(result, Err(Error::NotInitialized), 
+        "getting onboarding config before init should return NotInitialized");
+}
+
+#[test]
+fn test_onboarding_config_immutable_after_init() {
+    let env = Env::default();
+    env.mock_all_auths();
+    
+    let admin = Address::generate(&env);
+    
+    let contract_id = env.register_contract(None, ProviderDirectoryContract);
+    let contract = ProviderDirectoryContract;
+    
+    // Initialize with default config
+    contract.initialize(&env, admin.clone()).expect("initialization should succeed");
+    
+    // Get the config
+    let config1 = contract.get_onboarding_config(&env)
+        .expect("onboarding config should exist");
+    
+    // Get again to verify immutability
+    let config2 = contract.get_onboarding_config(&env)
+        .expect("onboarding config should still exist");
+    
+    // Verify configs are identical (immutable)
+    assert_eq!(config1.enabled, config2.enabled, "enabled field should remain unchanged");
+    assert_eq!(config1.max_providers, config2.max_providers, "max_providers should remain unchanged");
+    assert_eq!(config1.min_rating, config2.min_rating, "min_rating should remain unchanged");
+}
+
+#[test]
+fn test_double_initialization_prevented() {
+    let env = Env::default();
+    let admin = Address::generate(&env);
+    
+    let contract_id = env.register_contract(None, ProviderDirectoryContract);
+    let contract = ProviderDirectoryContract;
+    
+    // First initialization should succeed
+    contract.initialize(&env, admin.clone())
+        .expect("first initialization should succeed");
+    
+    // Second initialization should fail
+    let result = contract.initialize(&env, admin.clone());
+    
+    assert_eq!(result, Err(Error::AlreadyInitialized), 
+        "double initialization should be prevented");
+}
+
