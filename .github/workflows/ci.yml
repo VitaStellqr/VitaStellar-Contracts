@@ -81,3 +81,12 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+  naming:
+    name: Naming Convention Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run naming convention check
+        run: bash scripts/check-naming.sh
