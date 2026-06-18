@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use soroban_sdk::{Env, String};
 use crate::RecordError;
 

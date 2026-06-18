@@ -26,7 +26,7 @@ pub enum RecordError {
 }
 
 #[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone)]
 pub enum DataKey {
     Record(u64),
 }
@@ -55,8 +55,8 @@ impl MedicalRecords {
 
         let record = Record {
             id: record_id,
-            patient_id: patient_id.clone(),
-            record_type: record_type.clone(),
+            patient_id,
+            record_type,
             content,
             timestamp,
             owner: owner.clone(),
@@ -67,7 +67,7 @@ impl MedicalRecords {
         // Event
         env.events().publish(
             (symbol_short!("record"), symbol_short!("write")),
-            (owner, patient_id, record_type, timestamp),
+            (owner, record.patient_id.clone(), record.record_type.clone(), record.timestamp),
         );
 
         Ok(())
@@ -81,17 +81,21 @@ impl MedicalRecords {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::testutils::{Address as _, Env as _};
     use soroban_sdk::String;
 
     #[test]
     fn test_write_record_ok() {
         let env = Env::default();
         let owner = Address::generate(&env);
+
+        // Set the source account to owner so require_auth() passes
+        env.set_source_account(&owner);
+
         let patient_id = String::from_str(&env, "p1");
         let record_type = String::from_str(&env, "type1");
         let content = String::from_str(&env, "content");
-        let timestamp = 1234567890;
+        let timestamp = 1234567890u64;
 
         let result = MedicalRecords::write_record(
             env,
@@ -108,10 +112,14 @@ mod tests {
     fn test_write_record_invalid_input() {
         let env = Env::default();
         let owner = Address::generate(&env);
+
+        // Set the source account to owner so require_auth() passes
+        env.set_source_account(&owner);
+
         let patient_id = String::from_str(&env, "");
         let record_type = String::from_str(&env, "type1");
         let content = String::from_str(&env, "content");
-        let timestamp = 1234567890;
+        let timestamp = 1234567890u64;
 
         let result = MedicalRecords::write_record(
             env,
