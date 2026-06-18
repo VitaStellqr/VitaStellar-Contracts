@@ -1,3 +1,5 @@
+pub mod upgrade_manager_migration;
+
 /// Basic environment integration tests
 #[cfg(test)]
 mod unit_tests {
