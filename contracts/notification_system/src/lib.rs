@@ -125,8 +125,7 @@ impl NotificationContract {
     /// Authorise `sender` to create notifications on behalf of integrated contracts.
     pub fn add_authorized_sender(env: Env, caller: Address, sender: Address) -> Result<(), Error> {
         Self::require_initialized(&env)?;
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         let mut senders = Self::read_authorized_senders(&env);
         if senders.contains(sender.clone()) {
@@ -151,8 +150,7 @@ impl NotificationContract {
         sender: Address,
     ) -> Result<(), Error> {
         Self::require_initialized(&env)?;
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         let senders = Self::read_authorized_senders(&env);
         let mut updated = Vec::new(&env);
@@ -587,8 +585,7 @@ impl NotificationContract {
         recipients: Vec<Address>,
     ) -> Result<u64, Error> {
         Self::require_initialized(&env)?;
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         if name.len() > MAX_RULE_NAME_LEN {
             return Err(Error::NameTooLong);
@@ -636,8 +633,7 @@ impl NotificationContract {
         recipients: Vec<Address>,
     ) -> Result<(), Error> {
         Self::require_initialized(&env)?;
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         if recipients.len() > MAX_RULE_RECIPIENTS {
             return Err(Error::BatchTooLarge);
@@ -666,8 +662,7 @@ impl NotificationContract {
     /// Permanently delete an alert rule.
     pub fn delete_alert_rule(env: Env, caller: Address, rule_id: u64) -> Result<(), Error> {
         Self::require_initialized(&env)?;
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         // Verify it exists before deleting.
         Self::load_rule(&env, rule_id)?;
@@ -695,8 +690,7 @@ impl NotificationContract {
     /// Returns all non-deleted alert rules. Admin only.
     pub fn get_alert_rules(env: Env, caller: Address) -> Result<Vec<AlertRule>, Error> {
         Self::require_initialized(&env)?;
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         let ids = Self::read_active_rule_ids(&env);
         let mut rules = Vec::new(&env);
@@ -794,8 +788,7 @@ impl NotificationContract {
         template: NotificationTemplate,
     ) -> Result<(), Error> {
         Self::require_initialized(&env)?;
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         if template.locale.len() > MAX_LOCALE_LEN {
             return Err(Error::LocaleTooLong);
@@ -845,8 +838,7 @@ impl NotificationContract {
     /// Returns aggregated send/read/pending counters. Admin only.
     pub fn get_analytics(env: Env, caller: Address) -> Result<NotificationAnalytics, Error> {
         Self::require_initialized(&env)?;
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         let total_sent: u64 = env
             .storage()
