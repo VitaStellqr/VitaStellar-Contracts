@@ -2,7 +2,6 @@ use soroban_sdk::{Bytes, Env, Vec};
 
 pub fn encrypt_payload(env: &Env, record_id: u64, plaintext: &str) -> Result<Vec<u8>, ()> {
     let mut encrypted = Vec::new(env);
-    // Simple XOR encryption for demo (replace with real encryption in production)
     let key = record_id.to_le_bytes();
     let plaintext_bytes = plaintext.as_bytes();
     
@@ -12,4 +11,19 @@ pub fn encrypt_payload(env: &Env, record_id: u64, plaintext: &str) -> Result<Vec
     }
     
     Ok(encrypted)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use soroban_sdk::Env;
+
+    #[test]
+    fn test_encrypt_payload() {
+        let env = Env::default();
+        let result = encrypt_payload(&env, 123, "test");
+        assert!(result.is_ok());
+        let encrypted = result.unwrap();
+        assert!(encrypted.len() > 0);
+    }
 }

@@ -2,7 +2,7 @@ use soroban_sdk::{Env, String};
 use crate::RecordError;
 
 pub fn validate_record_fields(
-    env: &Env,
+    _env: &Env,
     patient_id: &String,
     record_type: &String,
     content: &String,

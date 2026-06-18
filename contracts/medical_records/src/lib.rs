@@ -46,16 +46,16 @@ impl MedicalRecords {
         validate_record_fields(&env, &patient_id, &record_type, &content, timestamp)?;
         
         let record_id = env.ledger().sequence() as u64;
-        let encrypted_content = encrypt_payload(&env, record_id, &content)
+        let encrypted_content = encrypt_payload(&env, record_id, content.as_str())
             .map_err(|_| RecordError::EncryptionFailed)?;
         
         let record = Record {
             id: record_id,
-            patient_id: patient_id.clone(),
-            record_type: record_type.clone(),
+            patient_id,
+            record_type,
             content: String::from_str(&env, &format!("encrypted:{}", record_id)),
             timestamp,
-            owner: owner.clone(),
+            owner,
         };
         
         env.storage().persistent().set(&record_id, &record);
@@ -63,7 +63,7 @@ impl MedicalRecords {
         // Emit event
         env.events().publish(
             ("record_written", record_id),
-            (owner, patient_id, record_type, timestamp),
+            (record.owner.clone(), record.patient_id.clone(), record.record_type.clone(), record.timestamp),
         );
         
         Ok(())
@@ -77,7 +77,7 @@ impl MedicalRecords {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::testutils::{Address as _, Env as _};
+    use soroban_sdk::testutils::Address as _;
     use soroban_sdk::String;
     
     #[test]
@@ -90,11 +90,11 @@ mod tests {
         let timestamp = 1718640000;
         
         let result = MedicalRecords::write_record(
-            env.clone(),
-            owner.clone(),
-            patient_id.clone(),
-            record_type.clone(),
-            content.clone(),
+            env,
+            owner,
+            patient_id,
+            record_type,
+            content,
             timestamp,
         );
         assert!(result.is_ok());
