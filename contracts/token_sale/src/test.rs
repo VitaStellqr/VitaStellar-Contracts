@@ -4,7 +4,7 @@ use crate::{contract::TokenSaleContractClient, vesting::VestingContractClient};
 
 use super::*;
 use soroban_sdk::{
-    testutils::{Address as _, Ledger},
+    testutils::{Address as _, Events, Ledger},
     token, Address, Env,
 };
 
@@ -248,6 +248,49 @@ fn test_buy_wraps_nonce_at_u64_max() {
 
     let replay = client.try_buy(&buyer, &0, &payment_token_address, &1u128, &u64::MAX);
     assert_eq!(replay, Err(Ok(Error::ReplayDetected)));
+}
+
+#[test]
+fn test_buy_under_balance_returns_insufficient_funds_without_failure_event() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let owner = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let buyer = Address::generate(&env);
+
+    let (sut_token_address, _sut_token_client, _sut_token_admin) =
+        create_token_contract(&env, &owner);
+    let (payment_token_address, payment_token_client, payment_token_admin) =
+        create_token_contract(&env, &owner);
+
+    let contract_id = env.register_contract(None, TokenSaleContract);
+    let client = TokenSaleContractClient::new(&env, &contract_id);
+
+    client.initialize(&owner, &sut_token_address, &treasury, &500, &10000, &6u32);
+    client.add_supported_token(&payment_token_address);
+
+    env.ledger().with_mut(|li| {
+        li.timestamp = 1500;
+    });
+    client.add_sale_phase(&1000, &2000, &100, &50000000, &1000);
+
+    payment_token_admin.mint(&buyer, &499);
+
+    let event_count_before = env.events().all().len();
+    let result = client.try_buy(&buyer, &0, &payment_token_address, &500, &1u64);
+
+    assert_eq!(result, Err(Ok(Error::InsufficientFunds)));
+    assert_eq!(Error::InsufficientFunds as u32, 500);
+    assert_eq!(env.events().all().len(), event_count_before);
+    assert_eq!(payment_token_client.balance(&buyer), 499);
+    assert_eq!(payment_token_client.balance(&contract_id), 0);
+    assert_eq!(client.get_total_raised(), 0);
+    assert_eq!(client.get_nonce(&buyer), 0);
+
+    let phase = client.get_sale_phase(&0).unwrap();
+    assert_eq!(phase.sold_tokens, 0);
+    assert!(client.get_contribution(&buyer).is_none());
 }
 
 #[test]

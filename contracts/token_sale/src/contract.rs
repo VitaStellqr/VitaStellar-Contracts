@@ -151,6 +151,7 @@ impl TokenSaleContract {
     ) -> Result<(), Error> {
         contributor.require_auth();
         Self::validate_contribution(&env, &contributor, phase_id, &token, amount)?;
+        Self::validate_payment_balance(&env, &contributor, &token, amount)?;
         Self::apply_contribution(&env, &contributor, phase_id, &token, amount)
     }
 
@@ -165,6 +166,8 @@ impl TokenSaleContract {
     ) -> Result<(), Error> {
         buyer.require_auth();
         Self::validate_contribution(&env, &buyer, phase_id, &token, amount)?;
+        Self::validate_nonce(&env, &buyer, next_nonce)?;
+        Self::validate_payment_balance(&env, &buyer, &token, amount)?;
 
         Self::consume_nonce(&env, &buyer, next_nonce)?;
         Self::apply_contribution(&env, &buyer, phase_id, &token, amount)
@@ -226,6 +229,25 @@ impl TokenSaleContract {
         Ok(())
     }
 
+    fn validate_payment_balance(
+        env: &Env,
+        contributor: &Address,
+        token: &Address,
+        amount: u128,
+    ) -> Result<(), Error> {
+        let payment_amount = Self::payment_amount_i128(amount)?;
+        let token_client = token::Client::new(env, token);
+        if token_client.balance(contributor) < payment_amount {
+            return Err(Error::InsufficientFunds);
+        }
+
+        Ok(())
+    }
+
+    fn payment_amount_i128(amount: u128) -> Result<i128, Error> {
+        i128::try_from(amount).map_err(|_| Error::Overflow)
+    }
+
     fn apply_contribution(
         env: &Env,
         contributor: &Address,
@@ -258,10 +280,11 @@ impl TokenSaleContract {
         }
 
         let token_client = token::Client::new(env, token);
+        let payment_amount = Self::payment_amount_i128(amount)?;
         token_client.transfer(
             contributor,
             &env.current_contract_address(),
-            &(amount as i128),
+            &payment_amount,
         );
 
         phase.sold_tokens = new_sold;
@@ -302,14 +325,20 @@ impl TokenSaleContract {
     }
 
     fn consume_nonce(env: &Env, buyer: &Address, next_nonce: u64) -> Result<(), Error> {
+        Self::validate_nonce(env, buyer, next_nonce)?;
+
+        set_nonce(env, buyer, next_nonce);
+        env.events()
+            .publish(("NonceConsumed",), (buyer.clone(), next_nonce));
+        Ok(())
+    }
+
+    fn validate_nonce(env: &Env, buyer: &Address, next_nonce: u64) -> Result<(), Error> {
         let stored_nonce = get_nonce(env, buyer);
         if !Self::nonce_is_newer(next_nonce, stored_nonce) {
             return Err(Error::ReplayDetected);
         }
 
-        set_nonce(env, buyer, next_nonce);
-        env.events()
-            .publish(("NonceConsumed",), (buyer.clone(), next_nonce));
         Ok(())
     }
 

@@ -15,4 +15,5 @@ pub enum Error {
     RefundsNotEnabled = 9,
     Paused = 10,
     ReplayDetected = 11,
+    InsufficientFunds = 500,
 }
