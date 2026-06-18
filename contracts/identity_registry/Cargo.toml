@@ -12,10 +12,10 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 soroban-sdk.workspace = true
 vitastellar-sanitization = { path = "../sanitization" }
+access_utils = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
-access_utils = { workspace = true }
 
 [features]
 default = []
