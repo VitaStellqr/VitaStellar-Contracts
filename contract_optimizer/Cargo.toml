@@ -5,8 +5,8 @@ edition = "2021"
 
 [features]
 default = []
-# CLI pulls in tokio/network crates that do not build for wasm32-unknown-unknown.
-cli = ["dep:clap", "dep:tokio", "dep:reqwest", "dep:octocrab"]
+# CLI pulls in the runtime crates needed by the binary entrypoint.
+cli = ["dep:clap", "dep:tokio"]
 
 [[bin]]
 name = "contract_optimizer"
@@ -24,5 +24,3 @@ walkdir = "2.3"
 regex = "1.5"
 clap = { version = "4.0", features = ["derive"], optional = true }
 tokio = { version = "1.0", features = ["rt-multi-thread", "macros"], optional = true }
-reqwest = { version = "0.11", features = ["json"], optional = true }
-octocrab = { version = "0.53", optional = true }
