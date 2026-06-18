@@ -10,13 +10,13 @@ pub fn validate_record_fields(
     content: &String,
     timestamp: u64,
 ) -> Result<(), RecordError> {
-    if patient_id.len() == 0 {
+    if patient_id.is_empty() {
         return Err(RecordError::InvalidInput);
     }
-    if record_type.len() == 0 {
+    if record_type.is_empty() {
         return Err(RecordError::InvalidInput);
     }
-    if content.len() == 0 {
+    if content.is_empty() {
         return Err(RecordError::InvalidInput);
     }
     if timestamp == 0 {

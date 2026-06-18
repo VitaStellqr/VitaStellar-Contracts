@@ -8,7 +8,7 @@ fn test_medical_records_integration() {
     let patient_id = String::from_str(&env, "patient-001");
     let record_type = String::from_str(&env, "consultation");
     let content = String::from_str(&env, "Test content");
-    let timestamp = 1234567890;
+    let timestamp = 1234567890u64;
     
     // Test will be implemented when contract is fully ready
     assert!(true);

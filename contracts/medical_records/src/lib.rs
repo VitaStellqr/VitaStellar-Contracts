@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String};
+use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Env, String};
 
 mod validation;
 mod crypto;
@@ -25,6 +25,12 @@ pub enum RecordError {
     EncryptionFailed,
 }
 
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum DataKey {
+    Record(u64),
+}
+
 #[contract]
 pub struct MedicalRecords;
 
@@ -41,7 +47,7 @@ impl MedicalRecords {
         owner.require_auth();
 
         // Validation
-        if patient_id.len() == 0 || record_type.len() == 0 || content.len() == 0 || timestamp == 0 {
+        if patient_id.is_empty() || record_type.is_empty() || content.is_empty() || timestamp == 0 {
             return Err(RecordError::InvalidInput);
         }
 
@@ -49,26 +55,26 @@ impl MedicalRecords {
 
         let record = Record {
             id: record_id,
-            patient_id,
-            record_type,
+            patient_id: patient_id.clone(),
+            record_type: record_type.clone(),
             content,
             timestamp,
             owner: owner.clone(),
         };
 
-        env.storage().persistent().set(&record_id, &record);
+        env.storage().persistent().set(&DataKey::Record(record_id), &record);
 
         // Event
         env.events().publish(
-            ("record_written", record_id),
-            (owner, record.patient_id.clone(), record.record_type.clone(), record.timestamp),
+            (symbol_short!("record"), symbol_short!("write")),
+            (owner, patient_id, record_type, timestamp),
         );
 
         Ok(())
     }
 
     pub fn get_record(env: Env, record_id: u64) -> Option<Record> {
-        env.storage().persistent().get(&record_id)
+        env.storage().persistent().get(&DataKey::Record(record_id))
     }
 }
 
