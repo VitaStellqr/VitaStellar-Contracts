@@ -33,24 +33,13 @@ pub struct AlertConfig {
 }
 
 /// Per-function call statistics.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 #[contracttype]
 pub struct FunctionStats {
     pub call_count: u64,
     pub error_count: u64,
     pub total_gas: u64,
     pub last_called_at: u64,
-}
-
-impl Default for FunctionStats {
-    fn default() -> Self {
-        Self {
-            call_count: 0,
-            error_count: 0,
-            total_gas: 0,
-            last_called_at: 0,
-        }
-    }
 }
 
 /// Top-level dashboard snapshot returned by `get_dashboard`.

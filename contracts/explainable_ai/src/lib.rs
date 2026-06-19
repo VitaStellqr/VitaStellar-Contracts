@@ -557,7 +557,7 @@ impl ExplainableAiContract {
     // Helper functions
     fn next_shap_id(env: &Env) -> u64 {
         let key = DataKey::ShapCounter;
-        let id: u64 = read_or_default(&env, &key);
+        let id: u64 = read_or_default(env, &key);
         env.storage().instance().set(&key, &(id + 1));
         id + 1
     }
