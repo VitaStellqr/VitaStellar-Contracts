@@ -198,8 +198,7 @@ impl MedicalRecordSearchContract {
     }
 
     pub fn set_paused(env: Env, caller: Address, paused: bool) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage().instance().set(&PAUSED, &paused);
         Ok(true)
     }
@@ -210,8 +209,7 @@ impl MedicalRecordSearchContract {
         user: Address,
         role_mask: u32,
     ) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage()
             .persistent()
             .set(&DataKey::Roles(user), &(role_mask & ALL_ROLES));
@@ -219,8 +217,7 @@ impl MedicalRecordSearchContract {
     }
 
     pub fn set_cache_policy(env: Env, caller: Address, policy: CachePolicy) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         if policy.ttl_seconds == 0 || policy.max_entries == 0 {
             return Err(Error::InvalidInput);
         }
@@ -231,8 +228,7 @@ impl MedicalRecordSearchContract {
     }
 
     pub fn set_ranking(env: Env, caller: Address, cfg: RankingConfig) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         let total = cfg
             .required_weight_bps
             .saturating_add(cfg.optional_weight_bps)
@@ -405,8 +401,7 @@ impl MedicalRecordSearchContract {
     }
 
     pub fn invalidate_cache(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         let order: Vec<BytesN<32>> = env
             .storage()
             .persistent()

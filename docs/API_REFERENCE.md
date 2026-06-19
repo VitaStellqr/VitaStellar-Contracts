@@ -12836,7 +12836,9 @@ let env = Env::default();
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
 | `get_fee_config` | `env: Env` | `Option<RouterFeeConfig>` | — |
+| `get_nonce` | `env: Env, caller: Address` | `u64` | — |
 | `compute_split` | `env: Env, amount: i128` | `Result<(i128, i128), Error>` | — |
+| `route_payment` | `env: Env, payer: Address, recipient: Address, amount: i128, next_nonce: u64` | `Result<(), Error>` | — |
 
 ### Types
 
@@ -12854,6 +12856,7 @@ let env = Env::default();
 | `ContractPaused` | 14 | — |
 | `StorageFull` | 15 | — |
 | `CrossChainTimeout` | 16 | — |
+| `ReplayDetected` | 17 | — |
 
 #### `struct RouterFeeConfig`
 
@@ -14951,6 +14954,27 @@ let ctx = TestContext::new();
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
+| `buy` | `env: Env, buyer: Address, phase_id: u32, token: Address, amount: u128, next_nonce: u64` | `Result<(), Error>` | Buy sale tokens with caller nonce replay protection |
+| `contribute` | `env: Env, contributor: Address, phase_id: u32, token: Address, amount: u128` | `Result<(), Error>` | Legacy contribution entrypoint |
+| `get_nonce` | `env: Env, user: Address` | `u64` | Return caller nonce sequence |
+
+### Types
+
+#### `enum Error`
+
+| Variant | Value | Description |
+|---|---|---|
+| `AlreadyInitialized` | 1 | — |
+| `InvalidArgument` | 2 | — |
+| `Overflow` | 3 | — |
+| `PhaseNotFound` | 4 | — |
+| `PhaseClosed` | 5 | — |
+| `CapExceeded` | 6 | — |
+| `NotFinalized` | 7 | — |
+| `AlreadyClaimed` | 8 | — |
+| `RefundsNotEnabled` | 9 | — |
+| `Paused` | 10 | — |
+| `ReplayDetected` | 11 | — |
 
 ### Examples
 

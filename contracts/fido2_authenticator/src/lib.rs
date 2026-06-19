@@ -313,8 +313,7 @@ impl Fido2AuthenticatorContract {
         caller: Address,
         contract_id: Address,
     ) -> Result<(), Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage()
             .instance()
             .set(&DataKey::IdentityRegistry, &contract_id);
@@ -323,8 +322,7 @@ impl Fido2AuthenticatorContract {
 
     /// Configures the ZK verifier contract used for ES256 (P-256) assertions.
     pub fn set_zk_verifier(env: Env, caller: Address, contract_id: Address) -> Result<(), Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage()
             .instance()
             .set(&DataKey::ZkVerifier, &contract_id);

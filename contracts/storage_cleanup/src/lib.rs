@@ -88,8 +88,7 @@ impl StorageCleanup {
     }
 
     pub fn set_paused(env: Env, caller: Address, paused: bool) -> Result<(), Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage().instance().set(&DataKey::Paused, &paused);
         Ok(())
     }
@@ -99,8 +98,7 @@ impl StorageCleanup {
         caller: Address,
         config: RetentionConfig,
     ) -> Result<(), Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage()
             .instance()
             .set(&DataKey::RetentionConfig, &config);
