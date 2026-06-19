@@ -59,7 +59,7 @@ jobs:
         run: cargo install cargo-tarpaulin --locked
 
       - name: Generate coverage report
-        run: cargo tarpaulin --workspace --out Xml --timeout 1200
+        run: cargo tarpaulin --workspace --out Xml --out Html --timeout 1200
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -67,6 +67,13 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: cobertura.xml
           fail_ci_if_error: false
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html-report
+          path: tarpaulin-report.html
+          retention-days: 30
 
   loc-check:
     name: LOC Manifest Check
