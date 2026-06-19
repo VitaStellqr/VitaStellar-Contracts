@@ -1,4 +1,4 @@
-// Cross-Chain Identity Contract - Identity verification across blockchains
+﻿// Cross-Chain Identity Contract - Identity verification across blockchains
 #![no_std]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::needless_borrow)]
@@ -198,7 +198,7 @@ impl CrossChainIdentityContract {
             .set(&DataKey::IdentityTtl, &DEFAULT_IDENTITY_TTL);
 
         env.events().publish(
-            (Symbol::new(&env, "IdentityContractInitialized"),),
+            (String::from_str(&env, "vst/cross_chain_identity"), Symbol::new(&env, "id_initialized")),
             (admin.clone(),),
         );
 
@@ -232,7 +232,7 @@ impl CrossChainIdentityContract {
             .set(&DataKey::Validator(validator_address.clone()), &validator);
 
         env.events()
-            .publish((Symbol::new(&env, "ValidatorAdded"),), (validator_address,));
+            .publish((String::from_str(&env, "vst/cross_chain_identity"), Symbol::new(&env, "val_added")), (validator_address,));
 
         Ok(true)
     }
@@ -255,7 +255,7 @@ impl CrossChainIdentityContract {
             env.storage().persistent().set(&key, &validator);
 
             env.events().publish(
-                (Symbol::new(&env, "ValidatorDeactivated"),),
+                (String::from_str(&env, "vst/cross_chain_identity"), Symbol::new(&env, "val_deactivated")),
                 (validator_address,),
             );
 
@@ -373,7 +373,7 @@ impl CrossChainIdentityContract {
             .set(&DataKey::Request(request_id), &request);
 
         env.events().publish(
-            (Symbol::new(&env, "VerificationRequested"),),
+            (String::from_str(&env, "vst/cross_chain_identity"), Symbol::new(&env, "verify_req")),
             (stellar_address, external_chain, request_id),
         );
 
@@ -446,7 +446,7 @@ impl CrossChainIdentityContract {
             Self::create_verified_identity(&env, &request)?;
 
             env.events().publish(
-                (Symbol::new(&env, "VerificationApproved"),),
+                (String::from_str(&env, "vst/cross_chain_identity"), Symbol::new(&env, "verify_appr")),
                 (
                     request.stellar_address.clone(),
                     request.external_chain.clone(),
@@ -458,7 +458,7 @@ impl CrossChainIdentityContract {
         env.storage().persistent().set(&req_key, &request);
 
         env.events().publish(
-            (Symbol::new(&env, "AttestationAdded"),),
+            (String::from_str(&env, "vst/cross_chain_identity"), Symbol::new(&env, "attest_added")),
             (validator, request_id, is_valid),
         );
 
@@ -489,7 +489,7 @@ impl CrossChainIdentityContract {
             env.storage().persistent().set(&identity_key, &identity);
 
             env.events().publish(
-                (Symbol::new(&env, "IdentityRevoked"),),
+                (String::from_str(&env, "vst/cross_chain_identity"), Symbol::new(&env, "id_revoked")),
                 (stellar_address, external_chain),
             );
 
@@ -544,7 +544,7 @@ impl CrossChainIdentityContract {
             .set(&DataKey::Sync(sync_id), &sync);
 
         env.events().publish(
-            (Symbol::new(&env, "SyncInitiated"),),
+            (String::from_str(&env, "vst/cross_chain_identity"), Symbol::new(&env, "sync_init")),
             (stellar_address, source_chain, dest_chain, sync_id),
         );
 
@@ -576,7 +576,7 @@ impl CrossChainIdentityContract {
         env.storage().persistent().set(&sync_key, &sync);
 
         env.events()
-            .publish((Symbol::new(&env, "SyncStatusUpdated"),), (sync_id, status));
+            .publish((String::from_str(&env, "vst/cross_chain_identity"), Symbol::new(&env, "sync_upd")), (sync_id, status));
 
         Ok(true)
     }
@@ -731,7 +731,7 @@ impl CrossChainIdentityContract {
         );
 
         env.events().publish(
-            (Symbol::new(&env, "IdentityVerified"),),
+            (String::from_str(&env, "vst/cross_chain_identity"), Symbol::new(&env, "id_verified")),
             (
                 request.stellar_address.clone(),
                 request.external_chain.clone(),

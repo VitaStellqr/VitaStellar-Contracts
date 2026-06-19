@@ -4,7 +4,7 @@ pub mod errors;
 pub use errors::Error;
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env,
+    contract, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env, String, Symbol,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -80,7 +80,7 @@ impl ZkVerifierContract {
             .set(&DataKey::DefaultTtl, &default_ttl);
 
         env.events()
-            .publish((symbol_short!("ZKVER"), symbol_short!("INIT")), admin);
+            .publish((String::from_str(&env, "vst/zk_verifier"), Symbol::new(&env, "init")), admin);
         Ok(())
     }
 
@@ -94,7 +94,7 @@ impl ZkVerifierContract {
         }
         env.storage().instance().set(&DataKey::DefaultTtl, &ttl);
         env.events()
-            .publish((symbol_short!("ZKVER"), symbol_short!("TTL")), ttl);
+            .publish((String::from_str(&env, "vst/zk_verifier"), Symbol::new(&env, "ttl")), ttl);
         Ok(true)
     }
 
@@ -141,7 +141,10 @@ impl ZkVerifierContract {
             .set(&DataKey::CurrentVersion, &next);
 
         env.events().publish(
-            (symbol_short!("ZKVER"), symbol_short!("VKREG")),
+            (
+                String::from_str(&env, "vst/zk_verifier"),
+                Symbol::new(&env, "vk_reg"),
+            ),
             (next, attestor),
         );
         Ok(next)
@@ -170,7 +173,7 @@ impl ZkVerifierContract {
             .set(&DataKey::VerifyingKey(version), &key);
 
         env.events()
-            .publish((symbol_short!("ZKVER"), symbol_short!("VKOFF")), version);
+            .publish((String::from_str(&env, "vst/zk_verifier"), Symbol::new(&env, "vk_off")), version);
         Ok(true)
     }
 
@@ -232,7 +235,10 @@ impl ZkVerifierContract {
             .set(&DataKey::Attestation(attestation_key), &attestation);
 
         env.events().publish(
-            (symbol_short!("ZKVER"), symbol_short!("ATTEST")),
+            (
+                String::from_str(&env, "vst/zk_verifier"),
+                Symbol::new(&env, "attest"),
+            ),
             (vk_version, verified),
         );
         Ok(true)

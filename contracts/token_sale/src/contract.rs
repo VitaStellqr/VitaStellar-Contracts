@@ -2,7 +2,7 @@
 use crate::errors::Error;
 use crate::storage::*;
 use crate::types::*;
-use soroban_sdk::{contract, contractimpl, contractmeta, token, Address, Env};
+use soroban_sdk::{contract, contractimpl, contractmeta, token, Address, Env, String, Symbol};
 extern crate fp_math;
 
 // Metadata that is added on to every WASM custom section
@@ -53,7 +53,7 @@ impl TokenSaleContract {
         set_phase_count(&env, 0);
 
         env.events().publish(
-            ("sale_initialized",),
+            (String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "sale_init")),
             (token_address, treasury, soft_cap, hard_cap),
         );
     }
@@ -89,7 +89,7 @@ impl TokenSaleContract {
         set_phase_count(&env, phase_id + 1);
 
         env.events().publish(
-            ("phase_added",),
+            (String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "phase_added")),
             (phase_id, start_time, end_time, price_per_token, max_tokens),
         );
     }
@@ -101,7 +101,7 @@ impl TokenSaleContract {
 
         set_supported_token(&env, &token, true);
 
-        env.events().publish(("token_added",), (token,));
+        env.events().publish((String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "token_added")), (token,));
     }
 
     /// Pause the sale
@@ -110,7 +110,7 @@ impl TokenSaleContract {
         owner.require_auth();
 
         set_paused(&env, true);
-        env.events().publish(("sale_paused",), ());
+        env.events().publish((String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "sale_paused")), ());
     }
 
     /// Unpause the sale
@@ -119,7 +119,7 @@ impl TokenSaleContract {
         owner.require_auth();
 
         set_paused(&env, false);
-        env.events().publish(("sale_unpaused",), ());
+        env.events().publish((String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "sale_unpaused")), ());
     }
 
     /// Emergency withdraw tokens
@@ -136,7 +136,7 @@ impl TokenSaleContract {
         );
 
         env.events()
-            .publish(("emergency_withdraw",), (token, amount));
+            .publish((String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "emrg_withdraw")), (token, amount));
     }
 
     /// Contribute to the sale using ERC20 tokens
@@ -226,7 +226,7 @@ impl TokenSaleContract {
         set_contribution(&env, &contributor, &contribution);
 
         env.events().publish(
-            ("contribution",),
+            (String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "contribution")),
             (contributor, phase_id, amount, tokens_to_allocate),
         );
 
@@ -252,7 +252,7 @@ impl TokenSaleContract {
         set_config(&env, &config);
 
         env.events()
-            .publish(("sale_finalized",), (total_raised, success));
+            .publish((String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "sale_finalized")), (total_raised, success));
     }
 
     /// Claim allocated tokens
@@ -283,7 +283,7 @@ impl TokenSaleContract {
         );
 
         env.events().publish(
-            ("tokens_claimed",),
+            (String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "tokens_claimed")),
             (claimer, contribution.tokens_allocated),
         );
     }
@@ -312,7 +312,7 @@ impl TokenSaleContract {
         );
 
         env.events()
-            .publish(("refund_claimed",), (claimer, contribution.amount));
+            .publish((String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "refund_claimed")), (claimer, contribution.amount));
     }
 
     // View functions

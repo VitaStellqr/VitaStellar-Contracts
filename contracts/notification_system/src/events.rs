@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, symbol_short, Address, Env, String};
+use soroban_sdk::{contracttype, Address, Env, String};
 
 // ==================== Event Payload Structs ====================
 // Each struct is a compact, typed payload published to the Soroban event log.
@@ -91,7 +91,10 @@ pub fn emit_notification_created(
     reference_id: Option<u64>,
 ) {
     env.events().publish(
-        ("NOTIF", symbol_short!("NOTIF_NEW")),
+        (
+            soroban_sdk::String::from_str(env, "vst/notification_system"),
+            soroban_sdk::Symbol::new(env, "notif_new"),
+        ),
         NotifCreatedEvent {
             notif_id,
             recipient,
@@ -106,7 +109,10 @@ pub fn emit_notification_created(
 
 pub fn emit_notification_read(env: &Env, notif_id: u64, user: Address) {
     env.events().publish(
-        ("NOTIF", symbol_short!("NOTIF_RD")),
+        (
+            soroban_sdk::String::from_str(env, "vst/notification_system"),
+            soroban_sdk::Symbol::new(env, "notif_rd"),
+        ),
         NotifStatusEvent {
             notif_id,
             user,
@@ -117,7 +123,10 @@ pub fn emit_notification_read(env: &Env, notif_id: u64, user: Address) {
 
 pub fn emit_notification_archived(env: &Env, notif_id: u64, user: Address) {
     env.events().publish(
-        ("NOTIF", symbol_short!("NOTIF_ARC")),
+        (
+            soroban_sdk::String::from_str(env, "vst/notification_system"),
+            soroban_sdk::Symbol::new(env, "notif_arc"),
+        ),
         NotifStatusEvent {
             notif_id,
             user,
@@ -134,7 +143,10 @@ pub fn emit_alert_rule_created(
     admin: Address,
 ) {
     env.events().publish(
-        ("NOTIF", symbol_short!("ALRT_NEW")),
+        (
+            soroban_sdk::String::from_str(env, "vst/notification_system"),
+            soroban_sdk::Symbol::new(env, "alrt_new"),
+        ),
         AlertRuleEvent {
             rule_id,
             watches_type,
@@ -155,7 +167,10 @@ pub fn emit_alert_rule_updated(
     admin: Address,
 ) {
     env.events().publish(
-        ("NOTIF", symbol_short!("ALRT_UPD")),
+        (
+            soroban_sdk::String::from_str(env, "vst/notification_system"),
+            soroban_sdk::Symbol::new(env, "alrt_upd"),
+        ),
         AlertRuleEvent {
             rule_id,
             watches_type,
@@ -169,7 +184,10 @@ pub fn emit_alert_rule_updated(
 
 pub fn emit_alert_rule_deleted(env: &Env, rule_id: u64, admin: Address) {
     env.events().publish(
-        ("NOTIF", symbol_short!("ALRT_DEL")),
+        (
+            soroban_sdk::String::from_str(env, "vst/notification_system"),
+            soroban_sdk::Symbol::new(env, "alrt_del"),
+        ),
         AlertRuleEvent {
             rule_id,
             watches_type: 0,
@@ -189,7 +207,10 @@ pub fn emit_alert_triggered(
     reference_id: Option<u64>,
 ) {
     env.events().publish(
-        ("NOTIF", symbol_short!("ALRT_TRG")),
+        (
+            soroban_sdk::String::from_str(env, "vst/notification_system"),
+            soroban_sdk::Symbol::new(env, "alrt_trg"),
+        ),
         AlertTriggeredEvent {
             rule_id,
             sender,
@@ -202,7 +223,10 @@ pub fn emit_alert_triggered(
 
 pub fn emit_preferences_updated(env: &Env, user: Address, enabled: bool, min_priority: u32) {
     env.events().publish(
-        ("NOTIF", symbol_short!("PREF_UPD")),
+        (
+            soroban_sdk::String::from_str(env, "vst/notification_system"),
+            soroban_sdk::Symbol::new(env, "pref_upd"),
+        ),
         PrefsUpdatedEvent {
             user,
             enabled,
@@ -214,7 +238,10 @@ pub fn emit_preferences_updated(env: &Env, user: Address, enabled: bool, min_pri
 
 pub fn emit_sender_authorized(env: &Env, sender: Address, admin: Address) {
     env.events().publish(
-        ("NOTIF", symbol_short!("SNDR_ADD")),
+        (
+            soroban_sdk::String::from_str(env, "vst/notification_system"),
+            soroban_sdk::Symbol::new(env, "sndr_add"),
+        ),
         SenderAuthEvent {
             sender,
             admin,
@@ -226,7 +253,10 @@ pub fn emit_sender_authorized(env: &Env, sender: Address, admin: Address) {
 
 pub fn emit_sender_revoked(env: &Env, sender: Address, admin: Address) {
     env.events().publish(
-        ("NOTIF", symbol_short!("SNDR_RMV")),
+        (
+            soroban_sdk::String::from_str(env, "vst/notification_system"),
+            soroban_sdk::Symbol::new(env, "sndr_rmv"),
+        ),
         SenderAuthEvent {
             sender,
             admin,
@@ -238,7 +268,10 @@ pub fn emit_sender_revoked(env: &Env, sender: Address, admin: Address) {
 
 pub fn emit_template_set(env: &Env, notif_type: u32, locale: String, admin: Address) {
     env.events().publish(
-        ("NOTIF", symbol_short!("TMPL_SET")),
+        (
+            soroban_sdk::String::from_str(env, "vst/notification_system"),
+            soroban_sdk::Symbol::new(env, "tmpl_set"),
+        ),
         TemplateSetEvent {
             notif_type,
             locale,

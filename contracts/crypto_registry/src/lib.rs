@@ -1,4 +1,4 @@
-#![no_std]
+﻿#![no_std]
 #![allow(clippy::too_many_arguments)]
 
 #[cfg(test)]
@@ -143,7 +143,7 @@ impl CryptoRegistry {
         env.storage().persistent().set(&INIT, &true);
 
         env.events()
-            .publish((symbol_short!("crypto"), symbol_short!("init")), admin);
+            .publish((String::from_str(&env, "vst/crypto_registry"), Symbol::new(&env, "init")), admin);
         Ok(())
     }
 
@@ -214,7 +214,7 @@ impl CryptoRegistry {
             .set(&DataKey::CurrentVersion(owner.clone()), &next_version);
 
         env.events().publish(
-            (symbol_short!("crypto"), symbol_short!("bundle")),
+            (String::from_str(&env, "vst/crypto_registry"), Symbol::new(&env, "bundle")),
             (owner, next_version),
         );
 
@@ -239,7 +239,7 @@ impl CryptoRegistry {
         env.storage().persistent().set(&key, &bundle);
 
         env.events().publish(
-            (symbol_short!("crypto"), symbol_short!("revoke")),
+            (String::from_str(&env, "vst/crypto_registry"), Symbol::new(&env, "revoke")),
             (owner, version),
         );
 

@@ -226,7 +226,7 @@ impl ExplainableAiContract {
             .set(&DataKey::Request(request_id), &request);
 
         env.events().publish(
-            (symbol_short!("ExpReq"),),
+            (String::from_str(&env, "vst/explainable_ai"), Symbol::new(&env, "exp_req")),
             (request_id, ai_insight_id, caller),
         );
 
@@ -299,7 +299,7 @@ impl ExplainableAiContract {
             .set(&DataKey::Request(request_id), &request);
 
         env.events().publish(
-            (symbol_short!("ExpFull"),),
+            (String::from_str(&env, "vst/explainable_ai"), Symbol::new(&env, "exp_full")),
             (request_id, explanation_id, request.patient),
         );
 
@@ -369,7 +369,7 @@ impl ExplainableAiContract {
             .set(&DataKey::BiasAudit(model_id.clone()), &audit_result);
 
         env.events()
-            .publish((symbol_short!("BiasAudit"),), (audit_id, model_id));
+            .publish((String::from_str(&env, "vst/explainable_ai"), Symbol::new(&env, "bias_audit")), (audit_id, model_id));
 
         Ok(audit_id)
     }
@@ -470,7 +470,7 @@ impl ExplainableAiContract {
             .set(&DataKey::ShapExplanation(shap_id), &shap_explanation);
 
         env.events().publish(
-            (symbol_short!("shap"), symbol_short!("created")),
+            (String::from_str(&env, "vst/explainable_ai"), Symbol::new(&env, "shap_created")),
             (shap_id, caller),
         );
 
@@ -543,7 +543,7 @@ impl ExplainableAiContract {
             .set(&DataKey::Counterfactual(cf_id), &cf_explanation);
 
         env.events().publish(
-            (symbol_short!("cf"), symbol_short!("created")),
+            (String::from_str(&env, "vst/explainable_ai"), Symbol::new(&env, "cf_created")),
             (cf_id, caller),
         );
 

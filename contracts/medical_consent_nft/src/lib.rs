@@ -1,4 +1,4 @@
-// Medical Consent NFT - Advanced Patient consent management with dynamic features
+﻿// Medical Consent NFT - Advanced Patient consent management with dynamic features
 #![no_std]
 #![allow(clippy::arithmetic_side_effects)]
 #![allow(clippy::unwrap_used)]
@@ -419,7 +419,7 @@ impl PatientConsentToken {
 
         // Emit event
         env.events().publish(
-            (symbol_short!("consent"), symbol_short!("issued")),
+            (String::from_str(&env, "vst/medical_consent_nft"), Symbol::new(&env, "issued")),
             (token_id, patient, consent_type, metadata_uri),
         );
 
@@ -487,7 +487,7 @@ impl PatientConsentToken {
 
         // Emit event
         env.events().publish(
-            (symbol_short!("consent"), symbol_short!("updated")),
+            (String::from_str(&env, "vst/medical_consent_nft"), Symbol::new(&env, "updated")),
             (token_id, metadata.version, new_metadata_uri),
         );
         Ok(())
@@ -569,7 +569,7 @@ impl PatientConsentToken {
 
         // Emit event
         env.events().publish(
-            (symbol_short!("consent"), symbol_short!("revoked")),
+            (String::from_str(&env, "vst/medical_consent_nft"), Symbol::new(&env, "revoked")),
             (token_id, patient),
         );
 
@@ -641,7 +641,7 @@ impl PatientConsentToken {
 
         // Emit event
         env.events().publish(
-            (symbol_short!("consent"), symbol_short!("transfer")),
+            (String::from_str(&env, "vst/medical_consent_nft"), Symbol::new(&env, "transfer")),
             (token_id, from, to),
         );
         Ok(())
@@ -778,7 +778,7 @@ impl PatientConsentToken {
             .set(&DataKey::ConsentHistory(token_id), &history);
 
         env.events().publish(
-            (symbol_short!("consent"), symbol_short!("perm_upd")),
+            (String::from_str(&env, "vst/medical_consent_nft"), Symbol::new(&env, "perm_upd")),
             (token_id, caller.clone()),
         );
 
@@ -1079,7 +1079,7 @@ impl PatientConsentToken {
             .set(&DataKey::ConsentHistory(token_id), &history);
 
         env.events().publish(
-            (symbol_short!("consent"), symbol_short!("delegated")),
+            (String::from_str(&env, "vst/medical_consent_nft"), Symbol::new(&env, "delegated")),
             (token_id, metadata.patient, delegate),
         );
 
@@ -1343,7 +1343,7 @@ impl PatientConsentToken {
             .set(&DataKey::ConsentHistory(token_id), &history);
 
         env.events().publish(
-            (symbol_short!("consent"), symbol_short!("emerg_ovr")),
+            (String::from_str(&env, "vst/medical_consent_nft"), Symbol::new(&env, "emerg_ovr")),
             (token_id, caller, reason),
         );
 
@@ -1448,7 +1448,7 @@ impl PatientConsentToken {
             .set(&DataKey::ConsentHistory(token_id), &history);
 
         env.events().publish(
-            (symbol_short!("consent"), symbol_short!("mkt_list")),
+            (String::from_str(&env, "vst/medical_consent_nft"), Symbol::new(&env, "mkt_list")),
             (token_id, price, research_purpose),
         );
 
@@ -1512,7 +1512,7 @@ impl PatientConsentToken {
         )?;
 
         env.events().publish(
-            (symbol_short!("consent"), symbol_short!("mkt_purch")),
+            (String::from_str(&env, "vst/medical_consent_nft"), Symbol::new(&env, "mkt_purch")),
             (token_id, listing.listed_by, buyer),
         );
 
@@ -1591,7 +1591,7 @@ impl PatientConsentToken {
             .set(&DataKey::ConsentHistory(token_id), &history);
 
         env.events().publish(
-            (symbol_short!("consent"), symbol_short!("upd_dyn")),
+            (String::from_str(&env, "vst/medical_consent_nft"), Symbol::new(&env, "upd_dyn")),
             (token_id, new_metadata.version, change_summary),
         );
 

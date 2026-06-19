@@ -1,4 +1,4 @@
-#![no_std]
+﻿#![no_std]
 #![allow(clippy::arithmetic_side_effects)]
 
 use soroban_sdk::{
@@ -202,7 +202,7 @@ impl HealthcareReputationSystem {
         env.storage().instance().set(&DataKey::Initialized, &true);
 
         env.events()
-            .publish((symbol_short!("HLTHREP"), symbol_short!("INIT")), admin);
+            .publish((String::from_str(&env, "vst/healthcare_reputation"), Symbol::new(&env, "init")), admin);
         Ok(())
     }
 
@@ -266,7 +266,7 @@ impl HealthcareReputationSystem {
         );
 
         env.events().publish(
-            (symbol_short!("HLTHREP"), symbol_short!("CRED_ADD")),
+            (String::from_str(&env, "vst/healthcare_reputation"), Symbol::new(&env, "cred_add")),
             (provider, credential_id),
         );
 
@@ -309,7 +309,7 @@ impl HealthcareReputationSystem {
         Self::update_reputation_score(&env, provider.clone())?;
 
         env.events().publish(
-            (symbol_short!("HLTHREP"), symbol_short!("CRED_VER")),
+            (String::from_str(&env, "vst/healthcare_reputation"), Symbol::new(&env, "cred_ver")),
             (provider, credential_id, verified),
         );
 
@@ -401,7 +401,7 @@ impl HealthcareReputationSystem {
         Self::update_reputation_score(&env, provider.clone())?;
 
         env.events().publish(
-            (symbol_short!("HLTHREP"), symbol_short!("FEEDBACK")),
+            (String::from_str(&env, "vst/healthcare_reputation"), Symbol::new(&env, "feedback")),
             (provider, feedback_id, rating),
         );
 
@@ -496,7 +496,7 @@ impl HealthcareReputationSystem {
         Self::update_reputation_score(&env, provider.clone())?;
 
         env.events().publish(
-            (symbol_short!("HLTHREP"), symbol_short!("CONDUCT")),
+            (String::from_str(&env, "vst/healthcare_reputation"), Symbol::new(&env, "conduct")),
             (provider, entry_id, conduct_type),
         );
 
@@ -582,7 +582,7 @@ impl HealthcareReputationSystem {
             .set(&DataKey::ProviderDisputes(provider.clone()), &dispute_list);
 
         env.events().publish(
-            (symbol_short!("HLTHREP"), symbol_short!("DISPUTE")),
+            (String::from_str(&env, "vst/healthcare_reputation"), Symbol::new(&env, "dispute")),
             (provider, dispute_id, dispute_type),
         );
 
@@ -623,7 +623,7 @@ impl HealthcareReputationSystem {
         }
 
         env.events().publish(
-            (symbol_short!("HLTHREP"), symbol_short!("DISP_RES")),
+            (String::from_str(&env, "vst/healthcare_reputation"), Symbol::new(&env, "disp_res")),
             (dispute_id, approved),
         );
 

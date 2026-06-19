@@ -14,7 +14,7 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String,
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String, Symbol,
 };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -208,8 +208,10 @@ impl ContractMonitoring {
         env.storage().instance().set(&key, &stats);
 
         // Emit error event.
-        env.events()
-            .publish((symbol_short!("MON"), symbol_short!("ERROR")), errors + 1);
+        env.events().publish(
+            (String::from_str(&env, "vst/contract_mon"), Symbol::new(&env, "error")),
+            errors + 1,
+        );
 
         Ok(())
     }
@@ -224,7 +226,7 @@ impl ContractMonitoring {
         let config: AlertConfig = env.storage().instance().get(&DataKey::AlertConfig).unwrap();
         if config.max_storage_entries > 0 && count > config.max_storage_entries {
             env.events().publish(
-                (symbol_short!("MON"), symbol_short!("ALERT")),
+                (String::from_str(env, "vst/contract_mon"), Symbol::new(env, "alert")),
                 symbol_short!("STORAGE"),
             );
         }
@@ -357,14 +359,14 @@ impl ContractMonitoring {
 
         if config.max_error_rate_pct > 0 && error_rate > config.max_error_rate_pct {
             env.events().publish(
-                (symbol_short!("MON"), symbol_short!("ALERT")),
+                (String::from_str(env, "vst/contract_mon"), Symbol::new(env, "alert")),
                 symbol_short!("ERRRATE"),
             );
         }
 
         if config.max_gas_per_window > 0 && total_gas > config.max_gas_per_window {
             env.events().publish(
-                (symbol_short!("MON"), symbol_short!("ALERT")),
+                (String::from_str(env, "vst/contract_mon"), Symbol::new(env, "alert")),
                 symbol_short!("GAS"),
             );
         }

@@ -7,7 +7,7 @@ pub mod errors;
 pub use errors::Error;
 use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env,
+    contract, contracterror, contractimpl, contracttype, Address, Bytes, BytesN, Env,
     String, Symbol, Vec,
 };
 use vitastellar_sanitization::{
@@ -367,7 +367,10 @@ impl IdentityRegistryContract {
         );
 
         env.events().publish(
-            (Symbol::new(&env, "Initialized"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "Initialized"),
+            ),
             (owner.clone(), network_id),
         );
 
@@ -397,7 +400,10 @@ impl IdentityRegistryContract {
         let timestamp = env.ledger().timestamp();
 
         env.events().publish(
-            (Symbol::new(&env, "HealthCheck"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "HealthCheck"),
+            ),
             (status.clone(), version, timestamp),
         );
 
@@ -458,7 +464,10 @@ impl IdentityRegistryContract {
         Self::require_admin(&env, &caller)?;
         env.storage().instance().set(&DataKey::Paused, &true);
         env.events().publish(
-            (Symbol::new(&env, "Paused"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "Paused"),
+            ),
             (caller.clone(), env.ledger().timestamp()),
         );
         Ok(true)
@@ -469,7 +478,10 @@ impl IdentityRegistryContract {
         Self::require_admin(&env, &caller)?;
         env.storage().instance().set(&DataKey::Paused, &false);
         env.events().publish(
-            (Symbol::new(&env, "Unpaused"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "Unpaused"),
+            ),
             (caller.clone(), env.ledger().timestamp()),
         );
         Ok(true)
@@ -491,8 +503,13 @@ impl IdentityRegistryContract {
             .instance()
             .set(&DataKey::Verifier(owner.clone()), &true);
 
-        env.events()
-            .publish((symbol_short!("Init"),), owner.clone());
+        env.events().publish(
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "Init"),
+            ),
+            owner.clone(),
+        );
     }
 
     // ========================================================================
@@ -593,7 +610,10 @@ impl IdentityRegistryContract {
         );
 
         env.events().publish(
-            (Symbol::new(&env, "DIDCreated"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "DIDCreated"),
+            ),
             (subject, did_string.clone()),
         );
 
@@ -660,7 +680,10 @@ impl IdentityRegistryContract {
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
 
         env.events().publish(
-            (Symbol::new(&env, "DIDUpdated"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "DIDUpdated"),
+            ),
             (subject, did_doc.version),
         );
 
@@ -684,8 +707,13 @@ impl IdentityRegistryContract {
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
 
-        env.events()
-            .publish((Symbol::new(&env, "DIDDeactivated"),), subject);
+        env.events().publish(
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "DIDDeactivated"),
+            ),
+            subject,
+        );
 
         Ok(())
     }
@@ -759,7 +787,10 @@ impl IdentityRegistryContract {
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
 
         env.events().publish(
-            (Symbol::new(&env, "VerificationMethodAdded"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "VMethodAdded"),
+            ),
             (subject, method_id),
         );
 
@@ -841,8 +872,13 @@ impl IdentityRegistryContract {
             .persistent()
             .set(&DataKey::LastKeyRotation(subject.clone()), &timestamp);
 
-        env.events()
-            .publish((Symbol::new(&env, "KeyRotated"),), (subject, method_id));
+        env.events().publish(
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "KeyRotated"),
+            ),
+            (subject, method_id),
+        );
 
         Ok(())
     }
@@ -910,7 +946,10 @@ impl IdentityRegistryContract {
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
 
         env.events().publish(
-            (Symbol::new(&env, "VerificationMethodRevoked"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "VMethodRevoked"),
+            ),
             (subject, method_id),
         );
 
@@ -990,7 +1029,10 @@ impl IdentityRegistryContract {
             .set(&DataKey::IssuerCredentials(issuer.clone()), &issuer_creds);
 
         env.events().publish(
-            (Symbol::new(&env, "CredentialIssued"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "CredIssued"),
+            ),
             (issuer, subject, credential_id.clone(), credential_type),
         );
 
@@ -1066,7 +1108,10 @@ impl IdentityRegistryContract {
             .set(&DataKey::Credential(credential_id.clone()), &credential);
 
         env.events().publish(
-            (Symbol::new(&env, "CredentialRevoked"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "CredRevoked"),
+            ),
             (issuer, credential_id),
         );
 
@@ -1145,7 +1190,10 @@ impl IdentityRegistryContract {
             .set(&DataKey::RecoveryGuardians(subject.clone()), &guardians);
 
         env.events().publish(
-            (Symbol::new(&env, "GuardianAdded"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "GuardianAdded"),
+            ),
             (subject, guardian, weight),
         );
 
@@ -1178,8 +1226,13 @@ impl IdentityRegistryContract {
             .persistent()
             .set(&DataKey::RecoveryGuardians(subject.clone()), &new_guardians);
 
-        env.events()
-            .publish((Symbol::new(&env, "GuardianRemoved"),), (subject, guardian));
+        env.events().publish(
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "GuardianRmvd"),
+            ),
+            (subject, guardian),
+        );
 
         Ok(())
     }
@@ -1194,7 +1247,10 @@ impl IdentityRegistryContract {
             .set(&DataKey::RecoveryThreshold(subject.clone()), &threshold);
 
         env.events().publish(
-            (Symbol::new(&env, "ThresholdUpdated"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "ThreshUpd"),
+            ),
             (subject, threshold),
         );
 
@@ -1276,7 +1332,10 @@ impl IdentityRegistryContract {
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
 
         env.events().publish(
-            (Symbol::new(&env, "RecoveryInitiated"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "RecoveryInit"),
+            ),
             (subject, request_id),
         );
 
@@ -1325,7 +1384,10 @@ impl IdentityRegistryContract {
             .set(&DataKey::RecoveryRequest(request_id), &request);
 
         env.events().publish(
-            (Symbol::new(&env, "RecoveryApproved"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "RecoveryAppr"),
+            ),
             (guardian, request_id),
         );
 
@@ -1427,7 +1489,10 @@ impl IdentityRegistryContract {
             .remove(&DataKey::ActiveRecovery(request.subject.clone()));
 
         env.events().publish(
-            (Symbol::new(&env, "RecoveryExecuted"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "RecoveryExec"),
+            ),
             (request.subject, request_id),
         );
 
@@ -1472,7 +1537,10 @@ impl IdentityRegistryContract {
             .remove(&DataKey::ActiveRecovery(subject.clone()));
 
         env.events().publish(
-            (Symbol::new(&env, "RecoveryCancelled"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "RecoveryCanc"),
+            ),
             (subject, request_id),
         );
 
@@ -1524,8 +1592,13 @@ impl IdentityRegistryContract {
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
 
-        env.events()
-            .publish((Symbol::new(&env, "ServiceAdded"),), (subject, service_id));
+        env.events().publish(
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "ServiceAdded"),
+            ),
+            (subject, service_id),
+        );
 
         Ok(())
     }
@@ -1567,7 +1640,10 @@ impl IdentityRegistryContract {
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
 
         env.events().publish(
-            (Symbol::new(&env, "ServiceRemoved"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "ServiceRmvd"),
+            ),
             (subject, service_id),
         );
 
@@ -1605,8 +1681,13 @@ impl IdentityRegistryContract {
             .instance()
             .set(&DataKey::Verifier(verifier.clone()), &true);
 
-        env.events()
-            .publish((Symbol::new(&env, "VerifierAdded"),), verifier);
+        env.events().publish(
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "VerifierAdd"),
+            ),
+            verifier,
+        );
 
         Ok(())
     }
@@ -1642,8 +1723,13 @@ impl IdentityRegistryContract {
             .instance()
             .set(&DataKey::Verifier(verifier.clone()), &false);
 
-        env.events()
-            .publish((Symbol::new(&env, "VerifierRemoved"),), verifier);
+        env.events().publish(
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "VerifierRmvd"),
+            ),
+            verifier,
+        );
 
         Ok(())
     }
@@ -1698,8 +1784,13 @@ impl IdentityRegistryContract {
             .instance()
             .set(&DataKey::IdentityHash(subject.clone()), &identity_record);
 
-        env.events()
-            .publish((symbol_short!("IdReg"),), (subject, hash, meta));
+        env.events().publish(
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "IdReg"),
+            ),
+            (subject, hash, meta),
+        );
 
         Ok(())
     }
@@ -1744,7 +1835,10 @@ impl IdentityRegistryContract {
         );
 
         env.events().publish(
-            (symbol_short!("Attested"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "Attested"),
+            ),
             (subject, verifier, claim_hash),
         );
 
@@ -1779,8 +1873,13 @@ impl IdentityRegistryContract {
             &attestation,
         );
 
-        env.events()
-            .publish((symbol_short!("Revoked"),), (subject, verifier, claim_hash));
+        env.events().publish(
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "Revoked"),
+            ),
+            (subject, verifier, claim_hash),
+        );
 
         Ok(())
     }
@@ -2053,7 +2152,10 @@ impl IdentityRegistryContract {
 
         // Emit stake deposited event
         env.events().publish(
-            (Symbol::new(&env, "StakeDeposited"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "StakeDeposit"),
+            ),
             (provider, amount, lock_until),
         );
 
@@ -2087,7 +2189,10 @@ impl IdentityRegistryContract {
             .remove(&DataKey::StakeInfo(provider.clone()));
 
         env.events().publish(
-            (Symbol::new(&env, "StakeWithdrawn"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "StakeWithdrw"),
+            ),
             (provider.clone(), stake_info.amount),
         );
 
@@ -2116,7 +2221,10 @@ impl IdentityRegistryContract {
             .set(&DataKey::StakeInfo(provider.clone()), &stake_info);
 
         env.events().publish(
-            (Symbol::new(&env, "StakeSlashed"),),
+            (
+                String::from_str(&env, "vst/identity_registry"),
+                Symbol::new(&env, "StakeSlashed"),
+            ),
             (provider, amount, reason),
         );
 

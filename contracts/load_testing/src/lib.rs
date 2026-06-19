@@ -16,7 +16,7 @@
 
 pub mod scenarios;
 
-use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, vec, Env, Vec};
+use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, vec, Env, String, Symbol, Vec};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -143,7 +143,7 @@ impl LoadTestRunner {
             .set(&DataKey::RunCount, &(run_count + 1));
 
         env.events().publish(
-            (symbol_short!("LOAD"), symbol_short!("DONE")),
+            (String::from_str(&env, "vst/load_testing"), Symbol::new(&env, "done")),
             result.passed,
         );
 

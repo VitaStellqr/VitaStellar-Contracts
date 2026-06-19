@@ -1,4 +1,4 @@
-#![no_std]
+﻿#![no_std]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::needless_borrow)]
 #![allow(clippy::match_like_matches_macro)]
@@ -272,7 +272,7 @@ impl CrossChainAccessContract {
         env.storage().persistent().set(&DataKey::SwapCount, &0u64);
 
         env.events().publish(
-            (Symbol::new(&env, "AccessControlInitialized"),),
+            (String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "ac_initialized")),
             (admin.clone(),),
         );
 
@@ -320,7 +320,7 @@ impl CrossChainAccessContract {
         env.storage().persistent().set(&DataKey::Grants, &grants);
 
         env.events().publish(
-            (Symbol::new(&env, "AccessGranted"),),
+            (String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "access_granted")),
             (grantor, grantee_chain, grantee_address, grant_id),
         );
 
@@ -348,7 +348,7 @@ impl CrossChainAccessContract {
         env.storage().persistent().set(&DataKey::Grants, &grants);
 
         env.events()
-            .publish((Symbol::new(&env, "AccessRevoked"),), (caller, grant_id));
+            .publish((String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "access_revoked")), (caller, grant_id));
 
         Ok(true)
     }
@@ -458,7 +458,7 @@ impl CrossChainAccessContract {
         }
 
         env.events().publish(
-            (Symbol::new(&env, "AccessRequested"),),
+            (String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "access_req")),
             (
                 requester_chain,
                 requester_address,
@@ -529,7 +529,7 @@ impl CrossChainAccessContract {
         }
 
         env.events().publish(
-            (Symbol::new(&env, "RequestProcessed"),),
+            (String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "req_processed")),
             (request_id, approve, caller),
         );
 
@@ -576,7 +576,7 @@ impl CrossChainAccessContract {
         );
 
         env.events().publish(
-            (Symbol::new(&env, "DelegationCreated"),),
+            (String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "deleg_created")),
             (delegator, delegate),
         );
 
@@ -602,7 +602,7 @@ impl CrossChainAccessContract {
             env.storage().persistent().set(&deleg_key, &delegation);
 
             env.events().publish(
-                (Symbol::new(&env, "DelegationRevoked"),),
+                (String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "deleg_revoked")),
                 (delegator, delegate),
             );
 
@@ -641,7 +641,7 @@ impl CrossChainAccessContract {
             .set(&DataKey::EmergencyConfig(patient.clone()), &config);
 
         env.events().publish(
-            (Symbol::new(&env, "EmergencyConfigured"),),
+            (String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "emrg_cfg")),
             (patient, is_enabled),
         );
 
@@ -689,7 +689,7 @@ impl CrossChainAccessContract {
             .set(&DataKey::AuditLog, &audit_log);
 
         env.events().publish(
-            (Symbol::new(&env, "AccessLogged"),),
+            (String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "access_logged")),
             (accessor_chain, patient, record_id, action, success),
         );
 
@@ -751,7 +751,7 @@ impl CrossChainAccessContract {
             .set(&DataKey::Swap(swap_id), &swap);
 
         env.events().publish(
-            (Symbol::new(&env, "SwapProposed"),),
+            (String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "swap_proposed")),
             (swap_id, initiator, counterpart_chain, counterpart_address),
         );
 
@@ -804,7 +804,7 @@ impl CrossChainAccessContract {
         env.storage().persistent().set(&swap_key, &swap);
 
         env.events().publish(
-            (Symbol::new(&env, "SwapAccepted"),),
+            (String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "swap_accepted")),
             (swap_id, acceptor, offered_grant_id),
         );
 
@@ -854,7 +854,7 @@ impl CrossChainAccessContract {
         env.storage().persistent().set(&swap_key, &swap);
 
         env.events()
-            .publish((Symbol::new(&env, "SwapCompleted"),), (swap_id, caller));
+            .publish((String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "swap_completed")), (swap_id, caller));
 
         Ok(true)
     }
@@ -891,7 +891,7 @@ impl CrossChainAccessContract {
         env.storage().persistent().set(&swap_key, &swap);
 
         env.events()
-            .publish((Symbol::new(&env, "SwapCancelled"),), (swap_id, caller));
+            .publish((String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "swap_cancelled")), (swap_id, caller));
 
         Ok(true)
     }
@@ -1180,7 +1180,7 @@ impl CrossChainAccessContract {
                         .set(&DataKey::Requests, &requests);
 
                     env.events().publish(
-                        (Symbol::new(&env, "EmergencyAutoApproved"),),
+                        (String::from_str(&env, "vst/cross_chain_access"), Symbol::new(&env, "emrg_auto_appr")),
                         (request_id, patient.clone()),
                     );
                 }

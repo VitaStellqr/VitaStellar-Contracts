@@ -1,4 +1,4 @@
-use soroban_sdk::{symbol_short, Address, BytesN, Env};
+use soroban_sdk::{symbol_short, Address, BytesN, Env, String, Symbol};
 
 use crate::{
     types::{DataKey, Error, PredictionConfig, PredictionMetrics},
@@ -69,7 +69,7 @@ pub fn update_config(
     }
 
     env.storage().instance().set(&DataKey::Config, &config);
-    env.events().publish((symbol_short!("CfgUpdate"),), true);
+    env.events().publish((String::from_str(&env, "vst/pred_analytics"), Symbol::new(&env, "cfg_update")), true);
 
     Ok(true)
 }
@@ -103,7 +103,7 @@ pub fn update_model_metrics(
         .set(&DataKey::ModelMetrics(model_id.clone()), &metrics);
 
     env.events()
-        .publish((symbol_short!("MdlMetric"),), model_id);
+        .publish((String::from_str(&env, "vst/pred_analytics"), Symbol::new(&env, "mdl_metric")), model_id);
 
     Ok(true)
 }
@@ -121,7 +121,7 @@ pub fn whitelist_predictor(
         .set(&DataKey::Whitelist(predictor_addr.clone()), &true);
 
     env.events()
-        .publish((symbol_short!("PredictWL"),), predictor_addr);
+        .publish((String::from_str(&env, "vst/pred_analytics"), Symbol::new(&env, "predict_wl")), predictor_addr);
 
     Ok(true)
 }

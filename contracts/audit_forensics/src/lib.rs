@@ -6,7 +6,7 @@ mod test;
 use soroban_sdk::{
     contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map, String, Symbol,
     Vec,
-};
+, String, Symbol};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[contracttype]
@@ -162,7 +162,7 @@ impl AuditForensicsContract {
             .persistent()
             .set(&DataKey::Rule(rule_id), &rule);
         env.events()
-            .publish((symbol_short!("AUDIT"), symbol_short!("RULE")), rule_id);
+            .publish((String::from_str(&env, "vst/audit_forensics"), Symbol::new(&env, "rule")), rule_id);
 
         rule_id
     }
@@ -219,7 +219,7 @@ impl AuditForensicsContract {
             .set(&DataKey::NextAuditId, &id.saturating_add(1));
 
         env.events().publish(
-            (symbol_short!("AUDIT"), symbol_short!("LOG")),
+            (String::from_str(&env, "vst/audit_forensics"), Symbol::new(&env, "log")),
             (id, entry.timestamp, entry.action),
         );
 
@@ -300,7 +300,7 @@ impl AuditForensicsContract {
 
         Self::log_internal(&env, caller, AuditAction::AnomalyDetected, None);
         env.events().publish(
-            (symbol_short!("AUDIT"), symbol_short!("RUN")),
+            (String::from_str(&env, "vst/audit_forensics"), Symbol::new(&env, "run")),
             (execution_id, execution.duration_minutes, execution.passed),
         );
 
@@ -505,7 +505,7 @@ impl AuditForensicsContract {
         Self::log_internal(&env, admin, AuditAction::AlertTriggered, None);
 
         env.events().publish(
-            (symbol_short!("AUDIT"), symbol_short!("COMPRESS")),
+            (String::from_str(&env, "vst/audit_forensics"), Symbol::new(&env, "compress")),
             (before_timestamp, count, last_hash.clone()),
         );
 
@@ -517,7 +517,7 @@ impl AuditForensicsContract {
         Self::require_admin(&env, &admin);
 
         env.events().publish(
-            (symbol_short!("AUDIT"), symbol_short!("ARCHIVE")),
+            (String::from_str(&env, "vst/audit_forensics"), Symbol::new(&env, "archive")),
             archive_ref,
         );
     }
@@ -532,7 +532,7 @@ impl AuditForensicsContract {
         Self::require_admin(&env, &admin);
 
         env.events().publish(
-            (symbol_short!("AUDIT"), symbol_short!("XCSYNC")),
+            (String::from_str(&env, "vst/audit_forensics"), Symbol::new(&env, "xcsync")),
             (target_chain, audit_root),
         );
     }
@@ -549,7 +549,7 @@ impl AuditForensicsContract {
         Self::require_admin(&env, &admin);
 
         env.events().publish(
-            (symbol_short!("AUDIT"), symbol_short!("SHARE")),
+            (String::from_str(&env, "vst/audit_forensics"), Symbol::new(&env, "share")),
             (regulator, filter_start, filter_end, proof_ref),
         );
 
@@ -592,7 +592,7 @@ impl AuditForensicsContract {
                     }
                     if count >= threshold {
                         env.events()
-                            .publish((symbol_short!("ALERT"), k), (action, count));
+                            .publish((String::from_str(&env, "vst/audit_forensics"), Symbol::new(&env, "alert")), (action, count));
                         break;
                     }
                 }

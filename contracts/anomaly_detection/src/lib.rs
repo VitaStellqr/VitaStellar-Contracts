@@ -202,7 +202,7 @@ impl AnomalyDetectionContract {
         }
 
         env.storage().instance().set(&DataKey::Config, &config);
-        env.events().publish((symbol_short!("CfgUpdate"),), true);
+        env.events().publish((String::from_str(&env, "vst/anomaly_detection"), Symbol::new(&env, "cfg_update")), true);
 
         Ok(true)
     }
@@ -339,7 +339,7 @@ impl AnomalyDetectionContract {
 
         // Emit event
         env.events().publish(
-            (symbol_short!("AnomDet"),),
+            (String::from_str(&env, "vst/anomaly_det"), Symbol::new(&env, "anom_det")),
             (anomaly_id, record_id, score_bps, severity),
         );
 
@@ -387,7 +387,7 @@ impl AnomalyDetectionContract {
             .set(&DataKey::Whitelist(detector_addr.clone()), &true);
 
         env.events()
-            .publish((symbol_short!("DetectWL"),), detector_addr);
+            .publish((String::from_str(&env, "vst/anomaly_detection"), Symbol::new(&env, "detect_wl")), detector_addr);
 
         Ok(true)
     }
@@ -443,7 +443,7 @@ impl AnomalyDetectionContract {
             .set(&DataKey::Alert(alert_id), &alert);
 
         env.events()
-            .publish((symbol_short!("AlertCrt"),), (alert_id, anomaly_id));
+            .publish((String::from_str(&env, "vst/anomaly_detection"), Symbol::new(&env, "alert_crt")), (alert_id, anomaly_id));
 
         Ok(alert_id)
     }
@@ -469,7 +469,7 @@ impl AnomalyDetectionContract {
             .instance()
             .set(&DataKey::Alert(alert_id), &alert);
 
-        env.events().publish((symbol_short!("AlertAck"),), alert_id);
+        env.events().publish((String::from_str(&env, "vst/anomaly_detection"), Symbol::new(&env, "alert_ack")), alert_id);
         Ok(true)
     }
 
@@ -500,7 +500,7 @@ impl AnomalyDetectionContract {
             .instance()
             .set(&DataKey::Alert(alert_id), &alert);
 
-        env.events().publish((symbol_short!("AlertRes"),), alert_id);
+        env.events().publish((String::from_str(&env, "vst/anomaly_detection"), Symbol::new(&env, "alert_res")), alert_id);
         Ok(true)
     }
 
@@ -530,7 +530,7 @@ impl AnomalyDetectionContract {
         env.storage().instance().set(&DataKey::Config, &config);
 
         env.events().publish(
-            (symbol_short!("FalsePos"),),
+            (String::from_str(&env, "vst/anomaly_det"), Symbol::new(&env, "false_pos")),
             (alert_id, config.threshold_bps),
         );
         Ok(true)
@@ -564,7 +564,7 @@ impl AnomalyDetectionContract {
         env.storage().instance().set(&DataKey::Config, &config);
 
         env.events().publish(
-            (symbol_short!("Feedback"),),
+            (String::from_str(&env, "vst/anomaly_det"), Symbol::new(&env, "feedback")),
             (anomaly_id, confirmed, config.threshold_bps),
         );
         Ok(true)

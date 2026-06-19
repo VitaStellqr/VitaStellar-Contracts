@@ -497,7 +497,7 @@ impl IHEIntegrationContract {
             .set(&DataKey::NextTestResultId, &0u64);
 
         env.events()
-            .publish((symbol_short!("IHE"), symbol_short!("INIT")), admin);
+            .publish((String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "init")), admin);
 
         Ok(())
     }
@@ -558,7 +558,7 @@ impl IHEIntegrationContract {
         );
 
         env.events().publish(
-            (symbol_short!("XDS"), symbol_short!("REG")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "xds_reg")),
             (doc_id, entry.submission_set_id.clone(), author.clone()),
         );
 
@@ -596,7 +596,7 @@ impl IHEIntegrationContract {
         );
 
         env.events().publish(
-            (symbol_short!("XDS"), symbol_short!("DEPR")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "xds_depr")),
             (document_id, author),
         );
 
@@ -693,7 +693,7 @@ impl IHEIntegrationContract {
             .set(&DataKey::XDSSubmissionSet(ss_id.clone()), &submission_set);
 
         env.events().publish(
-            (symbol_short!("XDS"), symbol_short!("SUBMIT")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "xds_submit")),
             (ss_id, author),
         );
 
@@ -750,7 +750,7 @@ impl IHEIntegrationContract {
         );
 
         env.events().publish(
-            (symbol_short!("PIX"), symbol_short!("REG")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "pix_reg")),
             (ref_id, actor),
         );
 
@@ -840,7 +840,7 @@ impl IHEIntegrationContract {
             .set(&DataKey::PIXCrossRef(subsumed_ref_id), &subsumed);
 
         env.events().publish(
-            (symbol_short!("PIX"), symbol_short!("MERGE")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "pix_merge")),
             (surviving_ref_id, subsumed_ref_id),
         );
 
@@ -875,7 +875,7 @@ impl IHEIntegrationContract {
         );
 
         env.events()
-            .publish((symbol_short!("PDQ"), symbol_short!("REG")), (pid, actor));
+            .publish((String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "pdq_reg")), (pid, actor));
 
         Ok(())
     }
@@ -988,7 +988,7 @@ impl IHEIntegrationContract {
             .set(&DataKey::ATNAEvent(event_id), &event);
 
         env.events().publish(
-            (symbol_short!("ATNA"), symbol_short!("LOG")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "atna_log")),
             (event_id, event_type, event_outcome),
         );
 
@@ -1046,7 +1046,7 @@ impl IHEIntegrationContract {
             .set(&DataKey::ATNAEvent(event_id), &event);
 
         env.events().publish(
-            (symbol_short!("ATNA"), symbol_short!("AUTH")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "atna_auth")),
             (event_id, certificate_hash),
         );
 
@@ -1080,7 +1080,7 @@ impl IHEIntegrationContract {
             .set(&DataKey::XCAGateway(gw_id.clone()), &gateway);
 
         env.events()
-            .publish((symbol_short!("XCA"), symbol_short!("REG")), (gw_id, admin));
+            .publish((String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "xca_reg")), (gw_id, admin));
 
         Ok(())
     }
@@ -1113,7 +1113,7 @@ impl IHEIntegrationContract {
         );
 
         env.events()
-            .publish((symbol_short!("XCA"), symbol_short!("QUERY")), patient_id);
+            .publish((String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "xca_query")), patient_id);
 
         Ok(gateway)
     }
@@ -1152,7 +1152,7 @@ impl IHEIntegrationContract {
         );
 
         env.events().publish(
-            (symbol_short!("MPI"), symbol_short!("REG")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "mpi_reg")),
             (master_id, global_patient_id),
         );
 
@@ -1196,7 +1196,7 @@ impl IHEIntegrationContract {
         Self::xds_store_document(&env, &sender, &entry)?;
 
         env.events().publish(
-            (symbol_short!("XDR"), symbol_short!("SEND")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "xdr_send")),
             (entry.document_id, intended_recipient, sender),
         );
 
@@ -1235,7 +1235,7 @@ impl IHEIntegrationContract {
             .set(&DataKey::XDSSubmissionSet(package_id.clone()), &ss);
 
         env.events().publish(
-            (symbol_short!("XDM"), symbol_short!("PKG")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "xdm_pkg")),
             (package_id, content_hash, actor),
         );
 
@@ -1262,7 +1262,7 @@ impl IHEIntegrationContract {
         };
 
         env.events().publish(
-            (symbol_short!("CT"), symbol_short!("SYNC")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "ct_sync")),
             (node_id, ledger_time, reported_time, drift),
         );
 
@@ -1323,7 +1323,7 @@ impl IHEIntegrationContract {
         );
 
         env.events().publish(
-            (symbol_short!("BPPC"), symbol_short!("REG")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "bppc_reg")),
             (consent_id, author),
         );
 
@@ -1346,7 +1346,7 @@ impl IHEIntegrationContract {
         env.storage().persistent().set(&key, &consent);
 
         env.events().publish(
-            (symbol_short!("BPPC"), symbol_short!("REVOKE")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "bppc_revoke")),
             (consent_id, author),
         );
 
@@ -1430,7 +1430,7 @@ impl IHEIntegrationContract {
         );
 
         env.events().publish(
-            (symbol_short!("DSG"), symbol_short!("SIGN")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "dsg_sign")),
             (sig_id, document_id, signer),
         );
 
@@ -1503,7 +1503,7 @@ impl IHEIntegrationContract {
             .set(&DataKey::HPDProvider(provider_id), &stored);
 
         env.events().publish(
-            (symbol_short!("HPD"), symbol_short!("REG")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "hpd_reg")),
             (provider_id, actor),
         );
 
@@ -1554,7 +1554,7 @@ impl IHEIntegrationContract {
             .set(&DataKey::SVSValueSetByOid(oid.clone()), &vs_id);
 
         env.events().publish(
-            (symbol_short!("SVS"), symbol_short!("REG")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "svs_reg")),
             (vs_id, oid, actor),
         );
 
@@ -1620,7 +1620,7 @@ impl IHEIntegrationContract {
             .set(&DataKey::ProfileTestIds(profile), &profile_tests);
 
         env.events().publish(
-            (symbol_short!("CONN"), symbol_short!("TEST")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "conn_test")),
             (test_id, profile, passed),
         );
 
@@ -1742,7 +1742,7 @@ impl IHEIntegrationContract {
             .set(&DataKey::NextAtnaEventId, &event_id.saturating_add(1));
 
         env.events().publish(
-            (symbol_short!("ATNA"), symbol_short!("AUTO")),
+            (String::from_str(&env, "vst/ihe_integration"), Symbol::new(&env, "atna_auto")),
             (event_id, event_type, actor),
         );
     }

@@ -182,7 +182,7 @@ impl MPCManager {
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().persistent().set(&ADMIN, &admin);
         env.events()
-            .publish((symbol_short!("mpc"), symbol_short!("init")), admin);
+            .publish((String::from_str(&env, "vst/mpc_manager"), Symbol::new(&env, "init")), admin);
         Ok(())
     }
 
@@ -244,7 +244,7 @@ impl MPCManager {
             .persistent()
             .set(&DataKey::Session(session_id.clone()), &session);
         env.events().publish(
-            (symbol_short!("mpc"), symbol_short!("start")),
+            (String::from_str(&env, "vst/mpc_manager"), Symbol::new(&env, "start")),
             (initiator, session_id),
         );
         Ok(())
@@ -291,7 +291,7 @@ impl MPCManager {
             .set(&DataKey::Session(session_id.clone()), &session);
 
         env.events().publish(
-            (symbol_short!("mpc"), symbol_short!("commit")),
+            (String::from_str(&env, "vst/mpc_manager"), Symbol::new(&env, "commit")),
             (participant, session_id),
         );
         Ok(())
@@ -341,7 +341,7 @@ impl MPCManager {
             .set(&DataKey::Session(session_id.clone()), &session);
 
         env.events().publish(
-            (symbol_short!("mpc"), symbol_short!("reveal")),
+            (String::from_str(&env, "vst/mpc_manager"), Symbol::new(&env, "reveal")),
             (participant, session_id),
         );
         Ok(())
@@ -401,7 +401,7 @@ impl MPCManager {
             .set(&DataKey::Session(session_id.clone()), &session);
 
         env.events().publish(
-            (symbol_short!("mpc"), symbol_short!("final")),
+            (String::from_str(&env, "vst/mpc_manager"), Symbol::new(&env, "finalized")),
             (initiator, session_id),
         );
         Ok(())
@@ -558,7 +558,7 @@ impl MPCManager {
         );
 
         env.events().publish(
-            (symbol_short!("mpc"), symbol_short!("proof")),
+            (String::from_str(&env, "vst/mpc_manager"), Symbol::new(&env, "proof")),
             (participant, session_id),
         );
 
@@ -609,7 +609,7 @@ impl MPCManager {
         );
 
         env.events().publish(
-            (symbol_short!("mpc"), symbol_short!("stats")),
+            (String::from_str(&env, "vst/mpc_manager"), Symbol::new(&env, "stats")),
             (
                 participant,
                 session_id,
@@ -666,7 +666,7 @@ impl MPCManager {
         );
 
         env.events().publish(
-            (symbol_short!("mpc"), symbol_short!("ml")),
+            (String::from_str(&env, "vst/mpc_manager"), Symbol::new(&env, "ml")),
             (
                 participant,
                 session_id,

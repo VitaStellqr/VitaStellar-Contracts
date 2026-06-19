@@ -276,8 +276,7 @@ impl EscrowContract {
         update_stats(&env, amount, true, false, false, false, 0);
 
         // event
-        let topics = (symbol_short!("EscNew"), order_id);
-        env.events().publish(topics, (payer, payee, amount, token));
+        env.events().publish((String::from_str(&env, "vst/escrow"), Symbol::new(&env, "esc_new")), (order_id, payer, payee, amount, token));
         Ok(true)
     }
 
@@ -300,8 +299,7 @@ impl EscrowContract {
 
         update_stats(&env, 0, false, false, false, true, 0);
 
-        env.events()
-            .publish((symbol_short!("EscDisput"), order_id), ());
+        env.events().publish((String::from_str(&env, "vst/escrow"), Symbol::new(&env, "esc_disput")), (order_id,));
         Ok(())
     }
 
@@ -381,8 +379,7 @@ impl EscrowContract {
 
         update_stats(&env, 0, false, true, false, false, -1);
 
-        env.events().publish(
-            (symbol_short!("EscRel"), order_id),
+        env.events().publish((String::from_str(&env, "vst/escrow"), Symbol::new(&env, "esc_rel")),
             (
                 e.payee,
                 provider_amount,
@@ -433,8 +430,7 @@ impl EscrowContract {
         );
 
         // #283: Refunded event with session_id, amount, mentee_id (payer), reason
-        env.events().publish(
-            (symbol_short!("Refunded"), order_id),
+        env.events().publish((String::from_str(&env, "vst/escrow"), Symbol::new(&env, "refunded")),
             (e.payer, e.amount, e.token, reason),
         );
         clear_reentrancy(&env);
@@ -477,7 +473,7 @@ impl EscrowContract {
         credits.set(to.clone(), 0);
         env.storage().persistent().set(&CREDITS, &credits);
         env.events()
-            .publish((symbol_short!("Withdrawn"),), (to.clone(), amount, token));
+            .publish((String::from_str(&env, "vst/escrow"), Symbol::new(&env, "withdrawn")), (to.clone(), amount, token));
         clear_reentrancy(&env);
         Ok(amount)
     }

@@ -142,8 +142,7 @@ impl Governor {
         env.storage().persistent().set(&PROPS, &props);
         env.storage().instance().set(&P_COUNT, &id);
 
-        env.events()
-            .publish((symbol_short!("Propose"), id), proposer);
+        env.events().publish((String::from_str(&env, "vst/governor"), Symbol::new(&env, "proposed")), (id, proposer));
         Ok(id)
     }
 
@@ -198,10 +197,7 @@ impl Governor {
         props.set(proposal_id, p);
         env.storage().persistent().set(&PROPS, &props);
 
-        env.events().publish(
-            (symbol_short!("Vote"), proposal_id),
-            (voter, support, weight),
-        );
+        env.events().publish((String::from_str(&env, "vst/governor"), Symbol::new(&env, "voted")), (proposal_id, voter, support, weight),);
         Ok(())
     }
 
@@ -264,8 +260,7 @@ impl Governor {
         props.set(proposal_id, p);
         env.storage().persistent().set(&PROPS, &props);
 
-        env.events()
-            .publish((symbol_short!("Queue"), proposal_id), ());
+        env.events().publish((String::from_str(&env, "vst/governor"), Symbol::new(&env, "queued")), (proposal_id,));
         Ok(())
     }
 
@@ -298,8 +293,7 @@ impl Governor {
         props.set(proposal_id, p.clone());
         env.storage().persistent().set(&PROPS, &props);
 
-        env.events()
-            .publish((symbol_short!("Execute"), proposal_id), ());
+        env.events().publish((String::from_str(&env, "vst/governor"), Symbol::new(&env, "executed")), (proposal_id,));
         Ok(())
     }
 

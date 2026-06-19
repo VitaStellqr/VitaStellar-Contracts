@@ -1,7 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Vec,
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String, Symbol,
+    Vec,
 };
 
 #[contracterror]
@@ -121,7 +122,7 @@ impl ReputationIntegration {
             .set(&DataKey::SyncSettings, &default_settings);
 
         env.events()
-            .publish((symbol_short!("REPUTINT"), symbol_short!("INIT")), admin);
+            .publish((String::from_str(&env, "vst/reputation_int"), Symbol::new(&env, "init")), admin);
         Ok(())
     }
 
@@ -154,7 +155,7 @@ impl ReputationIntegration {
         Self::update_base_reputation_score(&env, provider.clone(), combined_score)?;
 
         env.events().publish(
-            (symbol_short!("REPUTINT"), symbol_short!("SYNC")),
+            (String::from_str(&env, "vst/reputation_int"), Symbol::new(&env, "sync")),
             (provider, combined_score),
         );
         Ok(combined_score)
@@ -203,7 +204,7 @@ impl ReputationIntegration {
         let synced_count = 0;
 
         env.events().publish(
-            (symbol_short!("REPUTINT"), symbol_short!("AUTO_SYNC")),
+            (String::from_str(&env, "vst/reputation_int"), Symbol::new(&env, "auto_sync")),
             synced_count,
         );
         Ok(synced_count)
@@ -236,7 +237,7 @@ impl ReputationIntegration {
             .set(&DataKey::ScoreMapping, &mapping);
 
         env.events().publish(
-            (symbol_short!("REPUTINT"), symbol_short!("MAP_UPD")),
+            (String::from_str(&env, "vst/reputation_int"), Symbol::new(&env, "map_upd")),
             mapping,
         );
         Ok(())
@@ -256,7 +257,7 @@ impl ReputationIntegration {
             .set(&DataKey::SyncSettings, &settings);
 
         env.events().publish(
-            (symbol_short!("REPUTINT"), symbol_short!("SET_UPD")),
+            (String::from_str(&env, "vst/reputation_int"), Symbol::new(&env, "set_upd")),
             settings,
         );
         Ok(())
@@ -430,7 +431,7 @@ impl ReputationIntegration {
         // In a real implementation, you'd make a cross-contract call to update the score
         // For now, we'll just emit an event
         env.events().publish(
-            (symbol_short!("REPUTINT"), symbol_short!("BASE_UPD")),
+            (String::from_str(&env, "vst/reputation_int"), Symbol::new(&env, "base_upd")),
             (provider, new_score),
         );
 

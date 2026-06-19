@@ -235,7 +235,10 @@ pub fn set_deprecated_functions(
     storage::set_deprecated_functions(env, &deprecations);
 
     env.events().publish(
-        (Symbol::new(env, "DeprecationsUpdated"),),
+        (
+            String::from_str(env, "vst/upgradeability"),
+            Symbol::new(env, "deprec_upd"),
+        ),
         deprecations.len(),
     );
 
@@ -264,8 +267,7 @@ pub fn emit_deprecation_warning(env: &Env, function: Symbol) -> Result<(), Upgra
     let deprecation = get_deprecated_function(env, function.clone())
         .ok_or(UpgradeError::DeprecatedFunctionNotTracked)?;
 
-    env.events()
-        .publish((Symbol::new(env, "Deprecated"), function), deprecation.note);
+    env.events().publish((String::from_str(env, "vst/upgradeability"), Symbol::new(env, "deprecated")), (function, deprecation.note));
 
     Ok(())
 }

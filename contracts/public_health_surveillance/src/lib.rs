@@ -381,7 +381,7 @@ impl PublicHealthSurveillance {
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().persistent().set(&ADMIN, &admin);
         env.events()
-            .publish((symbol_short!("phs"), symbol_short!("init")), admin);
+            .publish((String::from_str(&env, "vst/public_health"), Symbol::new(&env, "init")), admin);
         Ok(())
     }
 
@@ -439,7 +439,7 @@ impl PublicHealthSurveillance {
 
         // Emit events
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("out_rpt")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "out_rpt")),
             (provider, disease_code, outbreak_detected),
         );
 
@@ -509,7 +509,7 @@ impl PublicHealthSurveillance {
 
         // Emit events
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("model_crt")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "model_crt")),
             (modeler, disease_code, model_type),
         );
 
@@ -567,7 +567,7 @@ impl PublicHealthSurveillance {
 
         // Emit events
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("alert_crt")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "alert_crt")),
             (authority, alert_id, severity),
         );
 
@@ -637,7 +637,7 @@ impl PublicHealthSurveillance {
 
         // Emit events
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("cov_rpt")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "cov_rpt")),
             (provider, vaccine_type, coverage_bps),
         );
 
@@ -701,7 +701,7 @@ impl PublicHealthSurveillance {
 
         // Emit events
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("env_rpt")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "env_rpt")),
             (monitoring_station, metric_type, risk_bps),
         );
 
@@ -758,7 +758,7 @@ impl PublicHealthSurveillance {
 
         // Emit events
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("amr_rpt")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "amr_rpt")),
             (testing_lab, pathogen_code, resistance_bps),
         );
 
@@ -807,7 +807,7 @@ impl PublicHealthSurveillance {
 
         // Emit events
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("sdoh_rpt")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "sdoh_rpt")),
             (data_source, determinant_type, impact_bps),
         );
 
@@ -870,7 +870,7 @@ impl PublicHealthSurveillance {
 
         // Emit events
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("intv_crt")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "intv_crt")),
             (coordinator, intervention_type, implementation_cost),
         );
 
@@ -930,7 +930,7 @@ impl PublicHealthSurveillance {
 
         // Emit events
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("colab_crt")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "colab_crt")),
             (lead_organization, collaboration_type, participants.len()),
         );
 
@@ -1103,7 +1103,7 @@ impl PublicHealthSurveillance {
             .set(&DataKey::AlertCounter, &(alert_id.saturating_add(1)));
 
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("auto_alrt")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "auto_alrt")),
             (alert_id, DiseaseSeverity::High),
         );
 
@@ -1148,7 +1148,7 @@ impl PublicHealthSurveillance {
             .set(&DataKey::AlertCounter, &(alert_id.saturating_add(1)));
 
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("env_alert")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "env_alert")),
             (alert_id, env_health.risk_bps),
         );
 
@@ -1189,7 +1189,7 @@ impl PublicHealthSurveillance {
             .set(&DataKey::AlertCounter, &(alert_id.saturating_add(1)));
 
         env.events().publish(
-            (symbol_short!("phs"), symbol_short!("amr_alert")),
+            (String::from_str(&env, "vst/public_health"), Symbol::new(&env, "amr_alert")),
             (alert_id, amr_data.resistance_bps),
         );
 

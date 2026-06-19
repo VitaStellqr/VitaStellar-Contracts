@@ -2,7 +2,7 @@
 use crate::errors::Error;
 use crate::storage::*;
 use crate::types::*;
-use soroban_sdk::{contract, contractimpl, contractmeta, token, Address, Env, Vec};
+use soroban_sdk::{contract, contractimpl, contractmeta, token, Address, Env, String, Symbol, Vec};
 
 contractmeta!(
     key = "Description",
@@ -32,7 +32,7 @@ impl VestingContract {
         set_owner(&env, &owner);
 
         env.events()
-            .publish(("vesting_initialized",), (token_address,));
+            .publish((String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "vest_init")), (token_address,));
     }
 
     /// Create a vesting schedule for a beneficiary
@@ -65,7 +65,7 @@ impl VestingContract {
         set_vesting_schedule(&env, &beneficiary, &schedule);
 
         env.events().publish(
-            ("vesting_schedule_created",),
+            (String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "vest_created")),
             (beneficiary, cliff_duration, vesting_duration, total_amount),
         );
     }
@@ -98,7 +98,7 @@ impl VestingContract {
         );
 
         env.events()
-            .publish(("tokens_released",), (beneficiary, releasable));
+            .publish((String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "tokens_released")), (beneficiary, releasable));
 
         Ok(releasable)
     }
@@ -225,7 +225,7 @@ impl VestingContract {
         set_vesting_schedule(&env, &beneficiary, &schedule);
 
         env.events().publish(
-            ("vesting_schedule_updated",),
+            (String::from_str(&env, "vst/token_sale"), Symbol::new(&env, "vest_updated")),
             (
                 beneficiary,
                 new_cliff_duration,

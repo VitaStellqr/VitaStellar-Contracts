@@ -1,4 +1,4 @@
-//! # Contract Verification Metadata
+﻿//! # Contract Verification Metadata
 //!
 //! Resolves issue #438: publishes on-chain verification metadata so that block
 //! explorers (e.g. Stellar Expert) can display source-code provenance, build
@@ -141,7 +141,7 @@ impl ContractVerification {
 
         // Emit event for block-explorer indexing.
         env.events().publish(
-            (symbol_short!("VERIFY"), symbol_short!("META")),
+            (String::from_str(&env, "vst/contract_verification"), Symbol::new(&env, "meta")),
             (name, version),
         );
 
@@ -173,7 +173,7 @@ impl ContractVerification {
             .set(&DataKey::BuildInfo, &build_info);
 
         env.events()
-            .publish((symbol_short!("VERIFY"), symbol_short!("BUILD")), wasm_hash);
+            .publish((String::from_str(&env, "vst/contract_verification"), Symbol::new(&env, "build")), wasm_hash);
 
         Ok(())
     }
@@ -186,7 +186,7 @@ impl ContractVerification {
         env.storage().instance().set(&DataKey::AbiEntries, &entries);
 
         env.events().publish(
-            (symbol_short!("VERIFY"), symbol_short!("ABI")),
+            (String::from_str(&env, "vst/contract_verification"), Symbol::new(&env, "abi")),
             entries.len(),
         );
 
@@ -208,7 +208,7 @@ impl ContractVerification {
         env.storage().instance().set(&DataKey::IsVerified, &true);
 
         env.events().publish(
-            (symbol_short!("VERIFY"), symbol_short!("OK")),
+            (String::from_str(&env, "vst/contract_verification"), Symbol::new(&env, "ok")),
             env.ledger().timestamp(),
         );
 

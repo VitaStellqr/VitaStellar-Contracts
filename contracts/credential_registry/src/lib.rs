@@ -60,7 +60,7 @@ impl CredentialRegistryContract {
         env.storage().instance().set(&DataKey::Admin, &admin);
 
         env.events()
-            .publish((symbol_short!("CREDREG"), symbol_short!("INIT")), admin);
+            .publish((String::from_str(&env, "vst/credential_registry"), Symbol::new(&env, "init")), admin);
         Ok(())
     }
 
@@ -78,7 +78,7 @@ impl CredentialRegistryContract {
             .persistent()
             .set(&DataKey::IssuerAdmin(issuer.clone()), &issuer_admin.clone());
         env.events().publish(
-            (symbol_short!("CREDREG"), symbol_short!("IADMIN")),
+            (String::from_str(&env, "vst/credential_registry"), Symbol::new(&env, "iadmin")),
             (issuer, issuer_admin),
         );
         Ok(true)
@@ -138,7 +138,7 @@ impl CredentialRegistryContract {
             .set(&DataKey::RootToVersion(issuer.clone(), root.clone()), &next);
 
         env.events().publish(
-            (symbol_short!("CREDREG"), symbol_short!("ROOT")),
+            (String::from_str(&env, "vst/credential_registry"), Symbol::new(&env, "root")),
             (issuer, next),
         );
         Ok(next)
@@ -178,7 +178,7 @@ impl CredentialRegistryContract {
         }
 
         env.events()
-            .publish((symbol_short!("CREDREG"), symbol_short!("REVOKE")), version);
+            .publish((String::from_str(&env, "vst/credential_registry"), Symbol::new(&env, "revoke")), version);
         Ok(true)
     }
 
@@ -196,7 +196,7 @@ impl CredentialRegistryContract {
             .persistent()
             .set(&DataKey::RevocationRoot(issuer.clone()), &revocation_root);
         env.events()
-            .publish((symbol_short!("CREDREG"), symbol_short!("REVROOT")), issuer);
+            .publish((String::from_str(&env, "vst/credential_registry"), Symbol::new(&env, "revroot")), issuer);
         Ok(true)
     }
 
@@ -308,7 +308,7 @@ impl CredentialRegistryContract {
         }
 
         env.events().publish(
-            (symbol_short!("CREDREG"), symbol_short!("BROOT")),
+            (String::from_str(&env, "vst/credential_registry"), Symbol::new(&env, "broot")),
             (issuer, current),
         );
         Ok(versions)

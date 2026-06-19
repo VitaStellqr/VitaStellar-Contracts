@@ -254,12 +254,7 @@ impl SutToken {
             amount,
         };
         env.events()
-            .publish((Symbol::new(&env, "transfer"),), event);
-
-        Ok(())
-    }
-
-    /// Transfer tokens from one address to another (requires allowance)
+            .publish((String::from_str(&env, "vst/sut_token"), Symbol::new(&env, "transfer")), event); to another (requires allowance)
     pub fn transfer_from(
         env: Env,
         spender: Address,
@@ -306,7 +301,7 @@ impl SutToken {
             amount,
         };
         env.events()
-            .publish((Symbol::new(&env, "transfer"),), event);
+            .publish((String::from_str(&env, "vst/sut_token"), Symbol::new(&env, "transfer")), event);
 
         Ok(())
     }
@@ -338,7 +333,7 @@ impl SutToken {
             amount,
         };
         env.events()
-            .publish((Symbol::new(&env, "approval"),), event);
+            .publish((String::from_str(&env, "vst/sut_token"), Symbol::new(&env, "approval")), event);
 
         Ok(())
     }
@@ -401,7 +396,7 @@ impl SutToken {
             to: to.clone(),
             amount,
         };
-        env.events().publish((Symbol::new(&env, "mint"),), event);
+        env.events().publish((String::from_str(&env, "vst/sut_token"), Symbol::new(&env, "mint")), event);
 
         Ok(())
     }
@@ -466,7 +461,7 @@ impl SutToken {
             from: from.clone(),
             amount,
         };
-        env.events().publish((Symbol::new(&env, "burn"),), event);
+        env.events().publish((String::from_str(&env, "vst/sut_token"), Symbol::new(&env, "burn")), event);
 
         Ok(())
     }
@@ -551,7 +546,7 @@ impl SutToken {
             block_number,
         };
         env.events()
-            .publish((Symbol::new(&env, "snapshot"),), event);
+            .publish((String::from_str(&env, "vst/sut_token"), Symbol::new(&env, "snapshot")), event);
 
         Ok(snapshot_id)
     }

@@ -7,7 +7,7 @@ mod test;
 use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env,
-    Symbol, Vec,
+    String, Symbol, Vec,
 };
 
 const ROLE_INDEXER: u32 = 1;
@@ -294,7 +294,7 @@ impl MedicalRecordSearchContract {
         }
 
         env.events()
-            .publish((symbol_short!("SRCH_IDX"),), (input.record_id, caller));
+            .publish((String::from_str(&env, "vst/medical_rec_srch"), Symbol::new(&env, "srch_idx")), (input.record_id, caller));
         Ok(true)
     }
 
@@ -738,7 +738,7 @@ impl MedicalRecordSearchContract {
             .persistent()
             .set(&DataKey::Audit(query_id), &entry);
         env.events().publish(
-            (symbol_short!("SRCH_AUD"),),
+            (String::from_str(&env, "vst/medical_rec_srch"), Symbol::new(&env, "srch_aud")),
             (query_id, result_count, from_cache),
         );
     }

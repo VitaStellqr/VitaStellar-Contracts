@@ -1,4 +1,4 @@
-use soroban_sdk::{symbol_short, Address, BytesN, Env, String, Vec};
+use soroban_sdk::{Address, BytesN, Env, String, Symbol, Vec};
 
 use crate::{
     types::{DataKey, Error, HealthPrediction, PatientPredictionsSummary},
@@ -82,7 +82,7 @@ pub fn make_prediction(
         .set(&DataKey::PatientSummary(patient.clone()), &summary);
 
     env.events().publish(
-        (symbol_short!("PredMade"),),
+        (String::from_str(&env, "vst/pred_analytics"), Symbol::new(&env, "pred_made")),
         (prediction_id, patient, predicted_value, confidence_bps),
     );
 

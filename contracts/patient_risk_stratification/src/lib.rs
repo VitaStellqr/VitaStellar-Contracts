@@ -1,4 +1,4 @@
-#![no_std]
+﻿#![no_std]
 #![allow(clippy::too_many_arguments)]
 
 use soroban_sdk::{
@@ -192,7 +192,7 @@ impl PatientRiskStratificationContract {
             .instance()
             .set(&DataKey::RiskModel(model_id.clone()), &model);
 
-        env.events().publish((symbol_short!("ModelReg"),), model_id);
+        env.events().publish((String::from_str(&env, "vst/patient_risk_stratification"), Symbol::new(&env, "model_reg")), model_id);
 
         Ok(true)
     }
@@ -261,7 +261,7 @@ impl PatientRiskStratificationContract {
         );
 
         env.events().publish(
-            (symbol_short!("RiskAsses"),),
+            (String::from_str(&env, "vst/patient_risk_stratification"), Symbol::new(&env, "risk_assess")),
             (assessment_id, patient, risk_score_bps, confidence_bps),
         );
 
@@ -428,7 +428,7 @@ impl PatientRiskStratificationContract {
             .set(&DataKey::RiskModel(model_id.clone()), &model);
 
         env.events()
-            .publish((symbol_short!("ModelUpd"),), (model_id, enabled));
+            .publish((String::from_str(&env, "vst/patient_risk_stratification"), Symbol::new(&env, "model_upd")), (model_id, enabled));
 
         Ok(true)
     }

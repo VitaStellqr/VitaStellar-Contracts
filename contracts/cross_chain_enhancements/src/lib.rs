@@ -1,4 +1,4 @@
-// Cross-Chain Bridge Enhancements - ZK Proofs and Advanced Security Features
+﻿// Cross-Chain Bridge Enhancements - ZK Proofs and Advanced Security Features
 #![no_std]
 
 use soroban_sdk::{
@@ -128,7 +128,7 @@ impl CrossChainEnhancements {
             .set(&DataKey::IntegrityCounter, &0u64);
 
         env.events()
-            .publish((symbol_short!("zk"), symbol_short!("init")), admin);
+            .publish((String::from_str(&env, "vst/cross_chain_enhancements"), Symbol::new(&env, "init")), admin);
         Ok(())
     }
 
@@ -165,7 +165,7 @@ impl CrossChainEnhancements {
             .set(&DataKey::ZKProof(proof_id.clone()), &zk_proof);
 
         env.events().publish(
-            (symbol_short!("zk"), symbol_short!("own_proof")),
+            (String::from_str(&env, "vst/cross_chain_enhancements"), Symbol::new(&env, "own_proof")),
             (proof_id.clone(), prover, record_id),
         );
         Ok(proof_id)
@@ -204,7 +204,7 @@ impl CrossChainEnhancements {
                 .set(&DataKey::ZKProof(proof_id.clone()), &zk_proof);
 
             env.events().publish(
-                (symbol_short!("zk"), symbol_short!("verified")),
+                (String::from_str(&env, "vst/cross_chain_enhancements"), Symbol::new(&env, "verified")),
                 (proof_id, verifier),
             );
         }
@@ -249,7 +249,7 @@ impl CrossChainEnhancements {
             .set(&DataKey::IntegrityProof(proof_id.clone()), &integrity_proof);
 
         env.events().publish(
-            (symbol_short!("zk"), symbol_short!("integrity")),
+            (String::from_str(&env, "vst/cross_chain_enhancements"), Symbol::new(&env, "integrity")),
             (proof_id.clone(), caller, data_hash),
         );
         Ok(proof_id)
@@ -314,7 +314,7 @@ impl CrossChainEnhancements {
             .set(&DataKey::RateLimit(address.clone()), &rate_limit);
 
         env.events().publish(
-            (symbol_short!("rl"), symbol_short!("set")),
+            (String::from_str(&env, "vst/cross_chain_enhancements"), Symbol::new(&env, "rl_set")),
             (address, daily_limit),
         );
         Ok(())

@@ -1,4 +1,4 @@
-use soroban_sdk::{symbol_short, Address, Env};
+use soroban_sdk::{Address, Env, String, Symbol};
 
 pub fn publish_appointment_booked(
     env: &Env,
@@ -9,7 +9,10 @@ pub fn publish_appointment_booked(
     timestamp: u64,
 ) {
     env.events().publish(
-        (symbol_short!("APPT"), symbol_short!("BOOK")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "booked"),
+        ),
         (appointment_id, patient, provider, amount, timestamp),
     );
 }
@@ -21,7 +24,10 @@ pub fn publish_appointment_confirmed(
     timestamp: u64,
 ) {
     env.events().publish(
-        (symbol_short!("APPT"), symbol_short!("CONF")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "confirmed"),
+        ),
         (appointment_id, provider, timestamp),
     );
 }
@@ -34,7 +40,10 @@ pub fn publish_appointment_refunded(
     timestamp: u64,
 ) {
     env.events().publish(
-        (symbol_short!("APPT"), symbol_short!("REFUND")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "refunded"),
+        ),
         (appointment_id, patient, amount, timestamp),
     );
 }
@@ -47,7 +56,10 @@ pub fn publish_funds_released(
     timestamp: u64,
 ) {
     env.events().publish(
-        (symbol_short!("APPT"), symbol_short!("RELEASE")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "released"),
+        ),
         (appointment_id, provider, amount, timestamp),
     );
 }
@@ -60,7 +72,10 @@ pub fn publish_marked_no_show(
     timestamp: u64,
 ) {
     env.events().publish(
-        (symbol_short!("APPT"), symbol_short!("NOSHOW")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "no_show"),
+        ),
         (appointment_id, provider, patient, timestamp),
     );
 }
@@ -73,14 +88,22 @@ pub fn publish_reminder_sent(
     timestamp: u64,
 ) {
     env.events().publish(
-        (symbol_short!("APPT"), symbol_short!("REMINDR")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "reminder"),
+        ),
         (appointment_id, provider, patient, timestamp),
     );
 }
 
 pub fn publish_initialization(env: &Env, admin: &Address) {
-    env.events()
-        .publish((symbol_short!("APPT"), symbol_short!("INIT")), admin);
+    env.events().publish(
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "init"),
+        ),
+        admin,
+    );
 }
 
 // ==================== Diagnostic Events ====================
@@ -88,7 +111,10 @@ pub fn publish_initialization(env: &Env, admin: &Address) {
 /// Emitted when a function is entered (DEBUG level)
 pub fn diag_fn_enter(env: &Env, fn_name: &'static str) {
     env.events().publish(
-        (symbol_short!("DIAG"), symbol_short!("ENTER")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "diag_enter"),
+        ),
         soroban_sdk::String::from_str(env, fn_name),
     );
 }
@@ -96,7 +122,10 @@ pub fn diag_fn_enter(env: &Env, fn_name: &'static str) {
 /// Emitted when a function exits successfully (DEBUG level)
 pub fn diag_fn_exit(env: &Env, fn_name: &'static str) {
     env.events().publish(
-        (symbol_short!("DIAG"), symbol_short!("EXIT")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "diag_exit"),
+        ),
         soroban_sdk::String::from_str(env, fn_name),
     );
 }
@@ -104,7 +133,10 @@ pub fn diag_fn_exit(env: &Env, fn_name: &'static str) {
 /// Emitted on state change (INFO level)
 pub fn diag_state_change(env: &Env, appointment_id: u64, old_status: u32, new_status: u32) {
     env.events().publish(
-        (symbol_short!("DIAG"), symbol_short!("STATE")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "diag_state"),
+        ),
         (appointment_id, old_status, new_status),
     );
 }
@@ -112,7 +144,10 @@ pub fn diag_state_change(env: &Env, appointment_id: u64, old_status: u32, new_st
 /// Emitted on validation failure (WARN level)
 pub fn diag_validation_fail(env: &Env, fn_name: &'static str, reason: &'static str) {
     env.events().publish(
-        (symbol_short!("DIAG"), symbol_short!("VALFAIL")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "diag_valfail"),
+        ),
         (
             soroban_sdk::String::from_str(env, fn_name),
             soroban_sdk::String::from_str(env, reason),
@@ -123,7 +158,10 @@ pub fn diag_validation_fail(env: &Env, fn_name: &'static str, reason: &'static s
 /// Emitted on authorization check failure (WARN level)
 pub fn diag_auth_fail(env: &Env, fn_name: &'static str) {
     env.events().publish(
-        (symbol_short!("DIAG"), symbol_short!("AUTHFAIL")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "diag_authfl"),
+        ),
         soroban_sdk::String::from_str(env, fn_name),
     );
 }
@@ -131,7 +169,10 @@ pub fn diag_auth_fail(env: &Env, fn_name: &'static str) {
 /// Emitted on error condition (ERROR level)
 pub fn diag_error(env: &Env, fn_name: &'static str, error_code: u32) {
     env.events().publish(
-        (symbol_short!("DIAG"), symbol_short!("ERR")),
+        (
+            String::from_str(env, "vst/appt_booking_escrow"),
+            Symbol::new(env, "diag_err"),
+        ),
         (soroban_sdk::String::from_str(env, fn_name), error_code),
     );
 }

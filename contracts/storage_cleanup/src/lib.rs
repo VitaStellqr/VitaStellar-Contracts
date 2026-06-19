@@ -1,7 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Vec,
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String, Symbol,
+    Vec,
 };
 
 // ── Retention periods (seconds) ──────────────────────────────────────────────
@@ -199,7 +200,10 @@ impl StorageCleanup {
         Self::record_cleanup(&env, &caller, 255, total);
 
         env.events().publish(
-            (symbol_short!("CLEANUP"), symbol_short!("ALL")),
+            (
+                String::from_str(&env, "vst/storage_cleanup"),
+                Symbol::new(&env, "cleanup_all"),
+            ),
             (caller, total),
         );
 

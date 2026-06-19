@@ -127,8 +127,13 @@ impl ReputationAccessControl {
         // Set default reputation thresholds
         Self::set_default_policies(&env)?;
 
-        env.events()
-            .publish((symbol_short!("REPUTAC"), symbol_short!("INIT")), admin);
+        env.events().publish(
+            (
+                String::from_str(&env, "vst/reputation_ac"),
+                Symbol::new(&env, "init"),
+            ),
+            admin,
+        );
         Ok(())
     }
 
@@ -147,7 +152,10 @@ impl ReputationAccessControl {
             .set(&DataKey::AccessPolicy(resource_type), &policy);
 
         env.events().publish(
-            (symbol_short!("REPUTAC"), symbol_short!("POLICY")),
+            (
+                String::from_str(&env, "vst/reputation_ac"),
+                Symbol::new(&env, "policy"),
+            ),
             resource_type,
         );
         Ok(())
@@ -244,7 +252,10 @@ impl ReputationAccessControl {
             .set(&DataKey::ProviderRequests(provider), &requests);
 
         env.events().publish(
-            (symbol_short!("REPUTAC"), symbol_short!("REQUEST")),
+            (
+                String::from_str(&env, "vst/reputation_ac"),
+                Symbol::new(&env, "request"),
+            ),
             request_id.clone(),
         );
         Ok(request_id)
@@ -273,7 +284,10 @@ impl ReputationAccessControl {
         );
 
         env.events().publish(
-            (symbol_short!("REPUTAC"), symbol_short!("APPROVED")),
+            (
+                String::from_str(&env, "vst/reputation_ac"),
+                Symbol::new(&env, "approved"),
+            ),
             request_id,
         );
         Ok(())
@@ -296,7 +310,10 @@ impl ReputationAccessControl {
             .set(&DataKey::AccessRequest(request_id.clone()), &request);
 
         env.events().publish(
-            (symbol_short!("REPUTAC"), symbol_short!("DENIED")),
+            (
+                String::from_str(&env, "vst/reputation_ac"),
+                Symbol::new(&env, "denied"),
+            ),
             request_id,
         );
         Ok(())
@@ -317,7 +334,10 @@ impl ReputationAccessControl {
             .set(&DataKey::EmergencyAccess(provider.clone()), &true);
 
         env.events().publish(
-            (symbol_short!("REPUTAC"), symbol_short!("EMERGENCY")),
+            (
+                String::from_str(&env, "vst/reputation_ac"),
+                Symbol::new(&env, "emergency"),
+            ),
             provider,
         );
         Ok(())
@@ -338,7 +358,10 @@ impl ReputationAccessControl {
 
         env.events().publish(
             // shortened: "REVOKE_EM" = 9 chars (was "REVOKE_EMERGENCY" = 16)
-            (symbol_short!("REPUTAC"), symbol_short!("REVOKE_EM")),
+            (
+                String::from_str(&env, "vst/reputation_ac"),
+                Symbol::new(&env, "revoke_em"),
+            ),
             provider,
         );
         Ok(())
@@ -402,7 +425,10 @@ impl ReputationAccessControl {
             .set(&DataKey::ReputationThreshold(resource_type), &threshold);
 
         env.events().publish(
-            (symbol_short!("REPUTAC"), symbol_short!("THRESHOLD")),
+            (
+                String::from_str(&env, "vst/reputation_ac"),
+                Symbol::new(&env, "threshold"),
+            ),
             (resource_type, threshold),
         );
         Ok(())

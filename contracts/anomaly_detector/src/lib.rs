@@ -205,7 +205,7 @@ impl AnomalyDetectorContract {
         env.storage().instance().set(&DataKey::Paused, &false);
         env.storage().instance().set(&DataKey::AlertCount, &0u64);
         env.storage().instance().set(&DataKey::FeedbackCount, &0u64);
-        env.events().publish((symbol_short!("Init"),), admin);
+        env.events().publish((String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "init")), admin);
         Ok(true)
     }
 
@@ -216,7 +216,7 @@ impl AnomalyDetectorContract {
             .instance()
             .set(&DataKey::Validator(validator.clone()), &true);
         env.events()
-            .publish((symbol_short!("ValAdded"),), validator);
+            .publish((String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "val_added")), validator);
         Ok(true)
     }
 
@@ -226,7 +226,7 @@ impl AnomalyDetectorContract {
         env.storage()
             .instance()
             .remove(&DataKey::Validator(validator.clone()));
-        env.events().publish((symbol_short!("ValRmvd"),), validator);
+        env.events().publish((String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "val_rmvd")), validator);
         Ok(true)
     }
 
@@ -234,7 +234,7 @@ impl AnomalyDetectorContract {
         caller.require_auth();
         Self::require_admin(&env, &caller)?;
         env.storage().instance().set(&DataKey::Paused, &true);
-        env.events().publish((symbol_short!("Paused"),), caller);
+        env.events().publish((String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "paused")), caller);
         Ok(true)
     }
 
@@ -242,7 +242,7 @@ impl AnomalyDetectorContract {
         caller.require_auth();
         Self::require_admin(&env, &caller)?;
         env.storage().instance().set(&DataKey::Paused, &false);
-        env.events().publish((symbol_short!("Unpaused"),), caller);
+        env.events().publish((String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "unpaused")), caller);
         Ok(true)
     }
 
@@ -270,7 +270,7 @@ impl AnomalyDetectorContract {
             .persistent()
             .set(&DataKey::Model(model_id.clone()), &model);
         env.events()
-            .publish((symbol_short!("ThrUpd"),), (model_id, threshold_bps));
+            .publish((String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "thr_upd")), (model_id, threshold_bps));
         Ok(true)
     }
 
@@ -304,7 +304,7 @@ impl AnomalyDetectorContract {
             }
         }
         env.events()
-            .publish((symbol_short!("ClrAlrt"),), (caller, cleared));
+            .publish((String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "clr_alrt")), (caller, cleared));
         Ok(cleared)
     }
 
@@ -361,7 +361,7 @@ impl AnomalyDetectorContract {
             .persistent()
             .set(&DataKey::ModelWeights(model_id.clone()), &weights);
 
-        env.events().publish((symbol_short!("MdlReg"),), model_id);
+        env.events().publish((String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "mdl_reg")), model_id);
         Ok(true)
     }
 
@@ -414,7 +414,7 @@ impl AnomalyDetectorContract {
             .set(&DataKey::Model(model_id.clone()), &m);
 
         env.events()
-            .publish((symbol_short!("WgtUpd"),), (model_id, feature_index));
+            .publish((String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "wgt_upd")), (model_id, feature_index));
         Ok(true)
     }
 
@@ -486,7 +486,7 @@ impl AnomalyDetectorContract {
         }
 
         env.events().publish(
-            (symbol_short!("Infer"),),
+            (String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "infer")),
             (model_id, patient, score, is_anomalous),
         );
 
@@ -586,7 +586,7 @@ impl AnomalyDetectorContract {
         }
 
         env.events().publish(
-            (symbol_short!("PrescAnm"),),
+            (String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "presc_anm")),
             (patient, score, drug_count, high_risk_count),
         );
 
@@ -686,7 +686,7 @@ impl AnomalyDetectorContract {
         }
 
         env.events().publish(
-            (symbol_short!("AccAnm"),),
+            (String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "acc_anm")),
             (patient, score, access_count, is_after_hours),
         );
 
@@ -734,7 +734,7 @@ impl AnomalyDetectorContract {
         Self::increment_patient_active_alerts(&env, &patient);
 
         env.events().publish(
-            (symbol_short!("AlertCrt"),),
+            (String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "alert_crt")),
             (alert_id, patient, alert.anomaly_score),
         );
 
@@ -763,7 +763,7 @@ impl AnomalyDetectorContract {
             .set(&DataKey::Alert(alert_id), &alert);
 
         env.events()
-            .publish((symbol_short!("AlertAck"),), (alert_id, caller));
+            .publish((String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "alert_ack")), (alert_id, caller));
         Ok(true)
     }
 
@@ -796,7 +796,7 @@ impl AnomalyDetectorContract {
         Self::decrement_patient_active_alerts(&env, &alert.patient);
 
         env.events().publish(
-            (symbol_short!("AlertRes"),),
+            (String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "alert_res")),
             (alert_id, caller, resolution_notes),
         );
         Ok(true)
@@ -827,7 +827,7 @@ impl AnomalyDetectorContract {
         Self::increment_patient_false_positives(&env, &alert.patient);
 
         env.events()
-            .publish((symbol_short!("FalsePos"),), (alert_id, caller));
+            .publish((String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "false_pos")), (alert_id, caller));
         Ok(true)
     }
 
@@ -890,7 +890,7 @@ impl AnomalyDetectorContract {
             .set(&DataKey::Feedback(feedback_id), &feedback);
 
         env.events().publish(
-            (symbol_short!("Feedback"),),
+            (String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "feedback")),
             (feedback_id, alert_id, model_id, confirmed),
         );
 
@@ -927,7 +927,7 @@ impl AnomalyDetectorContract {
         env.storage().persistent().set(&key, &update);
 
         env.events().publish(
-            (symbol_short!("FedUpd"),),
+            (String::from_str(&env, "vst/anomaly_detector"), Symbol::new(&env, "fed_upd")),
             (round_id, participant, num_samples),
         );
         Ok(true)

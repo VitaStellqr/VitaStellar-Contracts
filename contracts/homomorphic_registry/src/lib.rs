@@ -1,4 +1,4 @@
-#![no_std]
+﻿#![no_std]
 #![allow(clippy::too_many_arguments)]
 
 #[cfg(test)]
@@ -166,7 +166,7 @@ impl HomomorphicRegistry {
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().persistent().set(&ADMIN, &admin);
         env.events()
-            .publish((symbol_short!("he"), symbol_short!("init")), admin);
+            .publish((String::from_str(&env, "vst/homomorphic_registry"), Symbol::new(&env, "init")), admin);
         Ok(())
     }
 
@@ -228,7 +228,7 @@ impl HomomorphicRegistry {
             .persistent()
             .set(&DataKey::ActiveKey(context_id.clone()), &key_id);
         env.events().publish(
-            (symbol_short!("he"), symbol_short!("key")),
+            (String::from_str(&env, "vst/homomorphic_registry"), Symbol::new(&env, "key")),
             (context_id, key_id),
         );
         Ok(())
@@ -299,7 +299,7 @@ impl HomomorphicRegistry {
             .persistent()
             .set(&DataKey::Profile(context_id.clone()), &profile);
         env.events()
-            .publish((symbol_short!("he"), symbol_short!("perf")), context_id);
+            .publish((String::from_str(&env, "vst/homomorphic_registry"), Symbol::new(&env, "perf")), context_id);
         Ok(())
     }
 
@@ -466,7 +466,7 @@ impl HomomorphicRegistry {
             .persistent()
             .set(&DataKey::Ciphertext(ciphertext_id.clone()), &ct);
         env.events()
-            .publish((symbol_short!("he"), symbol_short!("boot")), ciphertext_id);
+            .publish((String::from_str(&env, "vst/homomorphic_registry"), Symbol::new(&env, "boot")), ciphertext_id);
         Ok(())
     }
 
@@ -647,7 +647,7 @@ impl HomomorphicRegistry {
             .persistent()
             .set(&DataKey::Context(context_id.clone()), &ctx);
         env.events().publish(
-            (symbol_short!("he"), symbol_short!("ctx")),
+            (String::from_str(&env, "vst/homomorphic_registry"), Symbol::new(&env, "ctx")),
             (context_id, ctx.created_at),
         );
         Ok(())
@@ -672,7 +672,7 @@ impl HomomorphicRegistry {
             .persistent()
             .set(&DataKey::Context(context_id.clone()), &ctx);
         env.events()
-            .publish((symbol_short!("he"), symbol_short!("ctx_off")), context_id);
+            .publish((String::from_str(&env, "vst/homomorphic_registry"), Symbol::new(&env, "ctx_off")), context_id);
         Ok(())
     }
 
@@ -734,7 +734,7 @@ impl HomomorphicRegistry {
             .persistent()
             .set(&DataKey::Computation(computation_id.clone()), &item);
         env.events().publish(
-            (symbol_short!("he"), symbol_short!("submit")),
+            (String::from_str(&env, "vst/homomorphic_registry"), Symbol::new(&env, "submit")),
             (submitter, computation_id),
         );
         Ok(())
@@ -836,7 +836,7 @@ impl HomomorphicRegistry {
             .persistent()
             .set(&DataKey::Ciphertext(ciphertext_id.clone()), &ct);
         env.events()
-            .publish((symbol_short!("he"), symbol_short!("ct")), ciphertext_id);
+            .publish((String::from_str(&env, "vst/homomorphic_registry"), Symbol::new(&env, "ct")), ciphertext_id);
         Ok(())
     }
 

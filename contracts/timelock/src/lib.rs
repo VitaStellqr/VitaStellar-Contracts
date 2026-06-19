@@ -3,7 +3,7 @@
 pub mod errors;
 pub use errors::Error;
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map, Symbol,
+    contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map, String, Symbol,
 };
 
 #[derive(Clone)]
@@ -72,7 +72,10 @@ impl Timelock {
             PERSISTENT_TTL_THRESHOLD,
             PERSISTENT_TTL_EXTEND_TO,
         );
-        env.events().publish((symbol_short!("Queued"), id), (eta,));
+        env.events().publish(
+            (String::from_str(&env, "vst/timelock"), Symbol::new(&env, "queued")),
+            (id, eta),
+        );
         Ok(())
     }
 

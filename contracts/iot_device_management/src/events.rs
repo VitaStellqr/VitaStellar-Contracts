@@ -1,10 +1,15 @@
-use soroban_sdk::{symbol_short, Address, BytesN, Env};
+use soroban_sdk::{Address, BytesN, Env, String, Symbol};
 
 use crate::{DeviceStatus, DeviceType, FirmwareStatus, HealthStatus};
 
 pub fn emit_initialized(env: &Env, admin: &Address) {
-    env.events()
-        .publish(("IoT", symbol_short!("init")), admin.clone());
+    env.events().publish(
+        (
+            String::from_str(env, "vst/iot_device_mgmt"),
+            Symbol::new(env, "init"),
+        ),
+        admin.clone(),
+    );
 }
 
 pub fn emit_device_registered(
@@ -14,7 +19,10 @@ pub fn emit_device_registered(
     operator: &Address,
 ) {
     env.events().publish(
-        ("IoT", symbol_short!("dev_reg")),
+        (
+            String::from_str(env, "vst/iot_device_mgmt"),
+            Symbol::new(env, "dev_reg"),
+        ),
         (device_id.clone(), device_type as u32, operator.clone()),
     );
 }
@@ -26,7 +34,10 @@ pub fn emit_device_status_changed(
     new_status: DeviceStatus,
 ) {
     env.events().publish(
-        ("IoT", symbol_short!("dev_sts")),
+        (
+            String::from_str(env, "vst/iot_device_mgmt"),
+            Symbol::new(env, "dev_sts"),
+        ),
         (device_id.clone(), old_status as u32, new_status as u32),
     );
 }
@@ -38,7 +49,10 @@ pub fn emit_firmware_published(
     device_type: DeviceType,
 ) {
     env.events().publish(
-        ("IoT", symbol_short!("fw_pub")),
+        (
+            String::from_str(env, "vst/iot_device_mgmt"),
+            Symbol::new(env, "fw_pub"),
+        ),
         (manufacturer_id.clone(), version, device_type as u32),
     );
 }
@@ -50,7 +64,10 @@ pub fn emit_firmware_status_changed(
     status: FirmwareStatus,
 ) {
     env.events().publish(
-        ("IoT", symbol_short!("fw_sts")),
+        (
+            String::from_str(env, "vst/iot_device_mgmt"),
+            Symbol::new(env, "fw_sts"),
+        ),
         (manufacturer_id.clone(), version, status as u32),
     );
 }
@@ -63,37 +80,61 @@ pub fn emit_firmware_updated(
     success: bool,
 ) {
     env.events().publish(
-        ("IoT", symbol_short!("fw_upd")),
+        (
+            String::from_str(env, "vst/iot_device_mgmt"),
+            Symbol::new(env, "fw_upd"),
+        ),
         (device_id.clone(), from_version, to_version, success),
     );
 }
 
 pub fn emit_heartbeat(env: &Env, device_id: &BytesN<32>, health_status: HealthStatus) {
     env.events().publish(
-        ("IoT", symbol_short!("hbeat")),
+        (
+            String::from_str(env, "vst/iot_device_mgmt"),
+            Symbol::new(env, "heartbeat"),
+        ),
         (device_id.clone(), health_status as u32),
     );
 }
 
 pub fn emit_key_rotated(env: &Env, device_id: &BytesN<32>, rotation_count: u32) {
     env.events().publish(
-        ("IoT", symbol_short!("keyrot")),
+        (
+            String::from_str(env, "vst/iot_device_mgmt"),
+            Symbol::new(env, "key_rot"),
+        ),
         (device_id.clone(), rotation_count),
     );
 }
 
 #[allow(dead_code)]
 pub fn emit_manufacturer_registered(env: &Env, manufacturer_id: &BytesN<32>, _name: &str) {
-    env.events()
-        .publish(("IoT", symbol_short!("mfr_reg")), manufacturer_id.clone());
+    env.events().publish(
+        (
+            String::from_str(env, "vst/iot_device_mgmt"),
+            Symbol::new(env, "mfr_reg"),
+        ),
+        manufacturer_id.clone(),
+    );
 }
 
 pub fn emit_paused(env: &Env, admin: &Address) {
-    env.events()
-        .publish(("IoT", symbol_short!("paused")), admin.clone());
+    env.events().publish(
+        (
+            String::from_str(env, "vst/iot_device_mgmt"),
+            Symbol::new(env, "paused"),
+        ),
+        admin.clone(),
+    );
 }
 
 pub fn emit_unpaused(env: &Env, admin: &Address) {
-    env.events()
-        .publish(("IoT", symbol_short!("unpause")), admin.clone());
+    env.events().publish(
+        (
+            String::from_str(env, "vst/iot_device_mgmt"),
+            Symbol::new(env, "unpaused"),
+        ),
+        admin.clone(),
+    );
 }

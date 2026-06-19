@@ -1,7 +1,7 @@
-#![no_std]
+﻿#![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String, Vec,
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String, Symbol, Vec,
 };
 
 #[derive(Clone)]
@@ -179,7 +179,7 @@ impl ContractUsageAnalytics {
 
         // 4. Publish Event
         env.events().publish(
-            (symbol_short!("usage"), function_name),
+            (String::from_str(&env, "vst/contract_usage_analytics"), Symbol::new(&env, "usage")),
             (user, success, cpu_usage, ram_usage),
         );
 

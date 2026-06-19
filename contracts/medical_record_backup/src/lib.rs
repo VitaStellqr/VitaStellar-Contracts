@@ -1,4 +1,4 @@
-#![no_std]
+﻿#![no_std]
 #![allow(clippy::too_many_arguments)]
 
 #[cfg(test)]
@@ -342,7 +342,7 @@ impl MedicalRecordBackupContract {
         );
 
         env.events()
-            .publish((symbol_short!("BKP_INIT"),), admin.clone());
+            .publish((String::from_str(&env, "vst/medical_record_backup"), Symbol::new(&env, "init")), admin.clone());
         Ok(())
     }
 
@@ -366,7 +366,7 @@ impl MedicalRecordBackupContract {
             .persistent()
             .set(&DataKey::Roles(user.clone()), &allowed);
         env.events()
-            .publish((symbol_short!("BKP_ROLE"),), (user, allowed));
+            .publish((String::from_str(&env, "vst/medical_record_backup"), Symbol::new(&env, "role")), (user, allowed));
         Ok(true)
     }
 
@@ -385,7 +385,7 @@ impl MedicalRecordBackupContract {
         }
 
         env.storage().persistent().set(&DataKey::Policy, &policy);
-        env.events().publish((symbol_short!("BKP_POL"),), caller);
+        env.events().publish((String::from_str(&env, "vst/medical_record_backup"), Symbol::new(&env, "pol")), caller);
         Ok(true)
     }
 
@@ -438,7 +438,7 @@ impl MedicalRecordBackupContract {
         ids.push_back(target_id);
         env.storage().persistent().set(&DataKey::TargetIds, &ids);
         env.events()
-            .publish((symbol_short!("BKP_TGT"),), (target_id,));
+            .publish((String::from_str(&env, "vst/medical_record_backup"), Symbol::new(&env, "tgt")), (target_id,));
         Ok(target_id)
     }
 
@@ -608,7 +608,7 @@ impl MedicalRecordBackupContract {
             .persistent()
             .set(&DataKey::RestoreRequest(request_id), &request);
         env.events()
-            .publish((symbol_short!("BKP_RREQ"),), (request_id, artifact_id));
+            .publish((String::from_str(&env, "vst/medical_record_backup"), Symbol::new(&env, "restore_req")), (request_id, artifact_id));
         Ok(request_id)
     }
 
@@ -635,7 +635,7 @@ impl MedicalRecordBackupContract {
             .persistent()
             .set(&DataKey::RestoreRequest(request_id), &request);
         env.events()
-            .publish((symbol_short!("BKP_RAPP"),), (request_id, caller));
+            .publish((String::from_str(&env, "vst/medical_record_backup"), Symbol::new(&env, "restore_app")), (request_id, caller));
         Ok(true)
     }
 
@@ -670,7 +670,7 @@ impl MedicalRecordBackupContract {
             .set(&DataKey::Artifact(request.artifact_id), &artifact);
 
         env.events().publish(
-            (symbol_short!("BKP_REST"),),
+            (String::from_str(&env, "vst/medical_record_backup"), Symbol::new(&env, "restored")),
             (request_id, request.artifact_id),
         );
         Ok(artifact.snapshot_ref)
@@ -723,7 +723,7 @@ impl MedicalRecordBackupContract {
             .persistent()
             .set(&DataKey::RecoveryTest(test_id), &test);
         env.events()
-            .publish((symbol_short!("BKP_TEST"),), (test_id, passed));
+            .publish((String::from_str(&env, "vst/medical_record_backup"), Symbol::new(&env, "drilltest")), (test_id, passed));
         Ok(test_id)
     }
 
@@ -733,7 +733,7 @@ impl MedicalRecordBackupContract {
         let policy = Self::get_policy_internal(&env)?;
         let report = Self::optimize_and_cleanup_internal(&env, &policy);
         env.events()
-            .publish((symbol_short!("BKP_CLEAN"),), report.clone());
+            .publish((String::from_str(&env, "vst/medical_record_backup"), Symbol::new(&env, "cleanup")), report.clone());
         Ok(report)
     }
 
@@ -982,7 +982,7 @@ impl MedicalRecordBackupContract {
             .instance()
             .set(&NEXT_RUN, &now.saturating_add(policy.interval_seconds));
         env.events().publish(
-            (symbol_short!("BKP_RUN"),),
+            (String::from_str(&env, "vst/medical_record_backup"), Symbol::new(&env, "run")),
             (artifact_id, target_ids.len(), region_count),
         );
 
