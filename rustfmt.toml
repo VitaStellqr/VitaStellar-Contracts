@@ -7,8 +7,7 @@ tab_spaces = 4
 newline_style = "Auto"
 use_small_heuristics = "Default"
 
-# Imports
-group_imports = "StdExternalCrate"
+# Imports (stable)
 reorder_imports = true
 
 # Code organization
@@ -22,12 +21,6 @@ match_block_trailing_comma = true
 
 # Maximum widths
 max_width = 100
-error_on_line_overflow = false
-
-# Special cases
-format_strings = true
-format_macro_matchers = true
-format_macro_bodies = true
 
 # Edition-specific
 edition = "2021"

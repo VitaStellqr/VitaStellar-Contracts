@@ -58,6 +58,7 @@ pub enum DataKey {
     SupportedToken(Address),
     VestingSchedule(Address),
     VestingContract,
+    Nonce(Address),
 }
 
 pub fn get_ledger_timestamp(env: &Env) -> u64 {

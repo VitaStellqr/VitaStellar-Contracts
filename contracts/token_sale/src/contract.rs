@@ -193,12 +193,15 @@ impl TokenSaleContract {
         amount: u128,
     ) -> Result<(), Error> {
         contributor.require_auth();
+        Self::validate_contribution(&env, &contributor, phase_id, &token, amount)?;
+        Self::apply_contribution(&env, &contributor, phase_id, &token, amount)
+    }
 
         if is_paused(&env) {
             emit_metric(&env, "contribute", &contributor, false, 0);
             return Err(Error::Paused);
         }
-        let config = get_config(&env);
+        let config = get_config(env);
         if config.is_finalized {
             emit_metric(&env, "contribute", &contributor, false, 0);
             return Err(Error::PhaseClosed);
@@ -219,9 +222,45 @@ impl TokenSaleContract {
             return Err(Error::PhaseClosed);
         }
 
+        fp_math::tokens_for_payment(amount, phase.price_per_token, config.token_decimals)
+            .ok_or(Error::Overflow)?;
+
+        let new_sold = phase
+            .sold_tokens
+            .checked_add(
+                fp_math::tokens_for_payment(amount, phase.price_per_token, config.token_decimals)
+                    .ok_or(Error::Overflow)?,
+            )
+            .ok_or(Error::Overflow)?;
+        if new_sold > phase.max_tokens {
+            return Err(Error::CapExceeded);
+        }
+
+        let user_phase_contribution = get_phase_contribution(env, contributor, phase_id);
+        let new_contribution = user_phase_contribution
+            .checked_add(amount)
+            .ok_or(Error::Overflow)?;
+        if new_contribution > phase.per_address_cap {
+            return Err(Error::CapExceeded);
+        }
+
+        Ok(())
+    }
+
+    fn apply_contribution(
+        env: &Env,
+        contributor: &Address,
+        phase_id: u32,
+        token: &Address,
+        amount: u128,
+    ) -> Result<(), Error> {
+        let config = get_config(env);
+        let current_time = get_ledger_timestamp(env);
+        let mut phase = get_sale_phase(env, phase_id).ok_or(Error::PhaseNotFound)?;
+
         let tokens_to_allocate =
             fp_math::tokens_for_payment(amount, phase.price_per_token, config.token_decimals)
-                .expect("token allocation overflow");
+                .ok_or(Error::Overflow)?;
 
         let new_sold = phase
             .sold_tokens
@@ -232,7 +271,7 @@ impl TokenSaleContract {
             return Err(Error::CapExceeded);
         }
 
-        let user_phase_contribution = get_phase_contribution(&env, &contributor, phase_id);
+        let user_phase_contribution = get_phase_contribution(env, contributor, phase_id);
         let new_contribution = user_phase_contribution
             .checked_add(amount)
             .ok_or(Error::Overflow)?;
@@ -241,24 +280,24 @@ impl TokenSaleContract {
             return Err(Error::CapExceeded);
         }
 
-        let token_client = token::Client::new(&env, &token);
+        let token_client = token::Client::new(env, token);
         token_client.transfer(
-            &contributor,
+            contributor,
             &env.current_contract_address(),
             &(amount as i128),
         );
 
         phase.sold_tokens = new_sold;
-        set_sale_phase(&env, phase_id, &phase);
+        set_sale_phase(env, phase_id, &phase);
 
-        set_phase_contribution(&env, &contributor, phase_id, new_contribution);
+        set_phase_contribution(env, contributor, phase_id, new_contribution);
 
-        let new_total = get_total_raised(&env)
+        let new_total = get_total_raised(env)
             .checked_add(amount)
             .ok_or(Error::Overflow)?;
-        set_total_raised(&env, new_total);
+        set_total_raised(env, new_total);
 
-        let mut contribution = get_contribution(&env, &contributor).unwrap_or(Contribution {
+        let mut contribution = get_contribution(env, contributor).unwrap_or(Contribution {
             amount: 0,
             tokens_allocated: 0,
             phase_id,
@@ -275,16 +314,33 @@ impl TokenSaleContract {
             .checked_add(tokens_to_allocate)
             .ok_or(Error::Overflow)?;
         contribution.timestamp = current_time;
-        set_contribution(&env, &contributor, &contribution);
+        set_contribution(env, contributor, &contribution);
 
         emit_metric(&env, "contribute", &contributor, true, 0);
 
         env.events().publish(
             ("contribution",),
-            (contributor, phase_id, amount, tokens_to_allocate),
+            (contributor.clone(), phase_id, amount, tokens_to_allocate),
         );
 
         Ok(())
+    }
+
+    fn consume_nonce(env: &Env, buyer: &Address, next_nonce: u64) -> Result<(), Error> {
+        let stored_nonce = get_nonce(env, buyer);
+        if !Self::nonce_is_newer(next_nonce, stored_nonce) {
+            return Err(Error::ReplayDetected);
+        }
+
+        set_nonce(env, buyer, next_nonce);
+        env.events()
+            .publish(("NonceConsumed",), (buyer.clone(), next_nonce));
+        Ok(())
+    }
+
+    fn nonce_is_newer(next_nonce: u64, stored_nonce: u64) -> bool {
+        let delta = next_nonce.wrapping_sub(stored_nonce);
+        delta != 0 && delta <= NONCE_WRAP_HALF
     }
 
     /// Finalize the sale

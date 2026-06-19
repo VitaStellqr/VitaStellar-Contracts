@@ -139,8 +139,7 @@ impl ReputationAccessControl {
         resource_type: ResourceType,
         policy: AccessPolicy,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         env.storage()
             .persistent()
@@ -252,8 +251,7 @@ impl ReputationAccessControl {
 
     // Approve access request
     pub fn approve_request(env: Env, admin: Address, request_id: BytesN<32>) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         let mut request: AccessRequest = env
             .storage()
@@ -281,8 +279,7 @@ impl ReputationAccessControl {
 
     // Deny access request
     pub fn deny_request(env: Env, admin: Address, request_id: BytesN<32>) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         let mut request: AccessRequest = env
             .storage()
@@ -309,8 +306,7 @@ impl ReputationAccessControl {
         provider: Address,
         _duration_hours: u32,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         env.storage()
             .persistent()
@@ -329,8 +325,7 @@ impl ReputationAccessControl {
         admin: Address,
         provider: Address,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         env.storage()
             .persistent()
@@ -394,8 +389,7 @@ impl ReputationAccessControl {
         resource_type: ResourceType,
         threshold: u32,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         env.storage()
             .persistent()

@@ -1,12 +1,19 @@
 #![allow(clippy::unwrap_used)]
 
 use soroban_sdk::testutils::{Address as _, Events};
-use soroban_sdk::{Address, Env, String, Symbol, TryFromVal, Vec};
+use soroban_sdk::{contract, contractimpl, Address, Env, String, Symbol, TryFromVal, Vec};
 
 use crate::{
     emit_deprecation_warning, get_deprecated_function, get_deprecated_functions,
     set_deprecated_functions, storage, DeprecatedFunction,
 };
+
+/// Stub contract required for `as_contract`
+#[contract]
+pub struct TestContract;
+
+#[contractimpl]
+impl TestContract {}
 
 fn sample_deprecation(env: &Env) -> DeprecatedFunction {
     DeprecatedFunction {
@@ -24,19 +31,24 @@ fn test_deprecated_functions_are_tracked() {
     let env = Env::default();
     env.mock_all_auths();
 
+    let contract_id = env.register_contract(None, TestContract);
     let admin = Address::generate(&env);
-    storage::set_admin(&env, &admin);
 
     let deprecation = sample_deprecation(&env);
-    let deprecations = Vec::from_array(&env, [deprecation.clone()]);
 
-    set_deprecated_functions(&env, deprecations).unwrap();
+    env.as_contract(&contract_id, || {
+        storage::set_admin(&env, &admin);
 
-    let stored = get_deprecated_functions(&env);
-    assert_eq!(stored.len(), 1);
+        let deprecations = Vec::from_array(&env, [deprecation.clone()]);
+        set_deprecated_functions(&env, deprecations).unwrap();
 
-    let tracked = get_deprecated_function(&env, Symbol::new(&env, "old_function")).unwrap();
-    assert_eq!(tracked, deprecation);
+        let stored = get_deprecated_functions(&env);
+        assert_eq!(stored.len(), 1);
+
+        let tracked = get_deprecated_function(&env, Symbol::new(&env, "old_function")).unwrap();
+
+        assert_eq!(tracked, deprecation);
+    });
 }
 
 #[test]
@@ -44,29 +56,40 @@ fn test_deprecation_warning_emits_event() {
     let env = Env::default();
     env.mock_all_auths();
 
+    let contract_id = env.register_contract(None, TestContract);
     let admin = Address::generate(&env);
-    storage::set_admin(&env, &admin);
 
-    let deprecations = Vec::from_array(&env, [sample_deprecation(&env)]);
-    set_deprecated_functions(&env, deprecations).unwrap();
+    let deprecation = sample_deprecation(&env);
 
-    let initial_event_count = env.events().all().len();
-    emit_deprecation_warning(&env, Symbol::new(&env, "old_function")).unwrap();
+    env.as_contract(&contract_id, || {
+        storage::set_admin(&env, &admin);
 
-    let events = env.events().all();
-    assert!(events.len() > initial_event_count);
+        let deprecations = Vec::from_array(&env, [deprecation.clone()]);
+        set_deprecated_functions(&env, deprecations).unwrap();
 
-    let deprecated_events = events
-        .iter()
-        .filter(|(_, topics, _)| {
-            if topics.len() < 2 {
-                return false;
-            }
-            let Some(first) = topics.get(0) else {
-                return false;
-            };
-            Symbol::try_from_val(&env, &first) == Ok(Symbol::new(&env, "Deprecated"))
-        })
-        .count();
-    assert_eq!(deprecated_events, 1);
+        let initial_event_count = env.events().all().len();
+
+        emit_deprecation_warning(&env, Symbol::new(&env, "old_function")).unwrap();
+
+        let events = env.events().all();
+
+        assert!(events.len() > initial_event_count);
+
+        let deprecated_events = events
+            .iter()
+            .filter(|(_, topics, _)| {
+                if topics.len() < 2 {
+                    return false;
+                }
+
+                let Some(first) = topics.get(0) else {
+                    return false;
+                };
+
+                Symbol::try_from_val(&env, &first) == Ok(Symbol::new(&env, "Deprecated"))
+            })
+            .count();
+
+        assert_eq!(deprecated_events, 1);
+    });
 }

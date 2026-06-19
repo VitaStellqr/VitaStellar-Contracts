@@ -313,8 +313,7 @@ impl EMRIntegrationContract {
         supported_standards: Vec<String>,
         api_endpoints: Vec<String>,
     ) -> Result<bool, Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         Self::require_not_paused(&env)?;
 
         let mut systems: Map<String, EMRSystem> = env
@@ -419,8 +418,7 @@ impl EMRIntegrationContract {
         malpractice_insurance: String,
         background_check_id: String,
     ) -> Result<bool, Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         Self::require_not_paused(&env)?;
 
         if license_expiration.is_empty() {
@@ -506,8 +504,7 @@ impl EMRIntegrationContract {
         admin: Address,
         node: NetworkNode,
     ) -> Result<bool, Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         Self::require_not_paused(&env)?;
 
         let mut nodes: Map<String, NetworkNode> = env
@@ -535,8 +532,7 @@ impl EMRIntegrationContract {
         admin: Address,
         agreement: InteroperabilityAgreement,
     ) -> Result<bool, Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         Self::require_not_paused(&env)?;
 
         let mut agreements: Map<String, InteroperabilityAgreement> = env
@@ -916,15 +912,13 @@ impl EMRIntegrationContract {
     }
 
     pub fn pause(env: Env, admin: Address) -> Result<bool, Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         env.storage().persistent().set(&PAUSED, &true);
         Ok(true)
     }
 
     pub fn resume(env: Env, admin: Address) -> Result<bool, Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         env.storage().persistent().set(&PAUSED, &false);
         Ok(true)
     }

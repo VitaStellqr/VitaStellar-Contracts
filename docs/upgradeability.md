@@ -54,3 +54,10 @@ Comprehensive integration tests are located in `tests/upgrade_integration_test.r
 - Failed upgrades (invalid version, not enough approvals).
 - Timelock enforcement.
 - Data persistence across versions.
+
+### Migration Shim Tests
+
+`tests/integration/upgrade_manager_migration.rs` (added in issue #105) specifically asserts:
+
+- **Balance preservation**: User balances written to persistent storage in v1 are readable and unchanged after `migrate` runs, ensuring the upgrade shim cannot silently corrupt or drop user funds.
+- **Version mismatch error**: Calling `execute_upgrade` with `new_version ≤ current_version` returns `UpgradeError::IncompatibleVersion`, preventing accidental downgrades or no-op re-runs.
