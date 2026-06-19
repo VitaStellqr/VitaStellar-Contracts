@@ -139,6 +139,118 @@ fn test_contribution_and_claim() {
 }
 
 #[test]
+fn test_buy_rejects_replay_and_accepts_next_nonce() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let owner = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let buyer = Address::generate(&env);
+
+    let (sut_token_address, _sut_token_client, sut_token_admin) =
+        create_token_contract(&env, &owner);
+    let (payment_token_address, _payment_token_client, payment_token_admin) =
+        create_token_contract(&env, &owner);
+
+    let contract_id = env.register_contract(None, TokenSaleContract);
+    let client = TokenSaleContractClient::new(&env, &contract_id);
+
+    client.initialize(&owner, &sut_token_address, &treasury, &500, &10000, &6u32);
+    client.add_supported_token(&payment_token_address);
+    env.ledger().with_mut(|li| {
+        li.timestamp = 1500;
+    });
+    client.add_sale_phase(&1000, &2000, &100, &50000000, &1000);
+
+    payment_token_admin.mint(&buyer, &2000);
+    sut_token_admin.mint(&contract_id, &50000000);
+
+    client.buy(&buyer, &0, &payment_token_address, &500, &1u64);
+
+    let replay = client.try_buy(&buyer, &0, &payment_token_address, &500, &1u64);
+    assert_eq!(replay, Err(Ok(Error::ReplayDetected)));
+
+    client.buy(&buyer, &0, &payment_token_address, &500, &2u64);
+}
+
+#[test]
+fn test_buy_accepts_sequential_nonces_and_rejects_out_of_order() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let owner = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let buyer = Address::generate(&env);
+
+    let (sut_token_address, _sut_token_client, sut_token_admin) =
+        create_token_contract(&env, &owner);
+    let (payment_token_address, _payment_token_client, payment_token_admin) =
+        create_token_contract(&env, &owner);
+
+    let contract_id = env.register_contract(None, TokenSaleContract);
+    let client = TokenSaleContractClient::new(&env, &contract_id);
+
+    client.initialize(&owner, &sut_token_address, &treasury, &500, &10000, &6u32);
+    client.add_supported_token(&payment_token_address);
+    env.ledger().with_mut(|li| {
+        li.timestamp = 1500;
+    });
+    client.add_sale_phase(&1000, &2000, &100, &u128::MAX, &u128::MAX);
+
+    payment_token_admin.mint(&buyer, &5050);
+    sut_token_admin.mint(&contract_id, &50000000);
+
+    for nonce in 1..=100u64 {
+        client.buy(&buyer, &0, &payment_token_address, &(nonce as u128), &nonce);
+    }
+
+    let replay = client.try_buy(&buyer, &0, &payment_token_address, &50u128, &50u64);
+    assert_eq!(replay, Err(Ok(Error::ReplayDetected)));
+}
+
+#[test]
+fn test_buy_wraps_nonce_at_u64_max() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let owner = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let buyer = Address::generate(&env);
+
+    let (sut_token_address, _sut_token_client, sut_token_admin) =
+        create_token_contract(&env, &owner);
+    let (payment_token_address, _payment_token_client, payment_token_admin) =
+        create_token_contract(&env, &owner);
+
+    let contract_id = env.register_contract(None, TokenSaleContract);
+    let client = TokenSaleContractClient::new(&env, &contract_id);
+
+    client.initialize(&owner, &sut_token_address, &treasury, &500, &10000, &6u32);
+    client.add_supported_token(&payment_token_address);
+    env.ledger().with_mut(|li| {
+        li.timestamp = 1500;
+    });
+    client.add_sale_phase(&1000, &2000, &100, &50000000, &1000);
+
+    payment_token_admin.mint(&buyer, &4);
+    sut_token_admin.mint(&contract_id, &50000000);
+
+    client.buy(&buyer, &0, &payment_token_address, &1u128, &1u64);
+    client.buy(
+        &buyer,
+        &0,
+        &payment_token_address,
+        &1u128,
+        &((u64::MAX / 2) + 1),
+    );
+    client.buy(&buyer, &0, &payment_token_address, &1u128, &u64::MAX);
+    client.buy(&buyer, &0, &payment_token_address, &1u128, &0u64);
+
+    let replay = client.try_buy(&buyer, &0, &payment_token_address, &1u128, &u64::MAX);
+    assert_eq!(replay, Err(Ok(Error::ReplayDetected)));
+}
+
+#[test]
 fn test_vesting_contract() {
     let env = Env::default();
     env.mock_all_auths();

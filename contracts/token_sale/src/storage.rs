@@ -123,3 +123,16 @@ pub fn set_vesting_contract(_env: &Env, _contract: &Address) {
         .instance()
         .set(&DataKey::VestingContract, _contract);
 }
+
+pub fn get_nonce(env: &Env, user: &Address) -> u64 {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Nonce(user.clone()))
+        .unwrap_or(0)
+}
+
+pub fn set_nonce(env: &Env, user: &Address, nonce: u64) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::Nonce(user.clone()), &nonce);
+}

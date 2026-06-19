@@ -14,4 +14,5 @@ pub enum Error {
     AlreadyClaimed = 8,
     RefundsNotEnabled = 9,
     Paused = 10,
+    ReplayDetected = 11,
 }
