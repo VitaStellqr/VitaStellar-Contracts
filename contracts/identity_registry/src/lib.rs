@@ -1256,12 +1256,28 @@ impl IdentityRegistryContract {
             .ok_or(Error::InvalidRecoveryGuardian)?;
 
         // Check if recovery already pending
-        if env
+        if let Some(request_id) = env
             .storage()
             .persistent()
-            .has(&DataKey::ActiveRecovery(subject.clone()))
+            .get::<u64>(&DataKey::ActiveRecovery(subject.clone()))
         {
-            return Err(Error::RecoveryAlreadyPending);
+            let request: Option<RecoveryRequest> = env
+                .storage()
+                .persistent()
+                .get(&DataKey::RecoveryRequest(request_id));
+            if let Some(request) = request {
+                if request.executed {
+                    env.storage()
+                        .persistent()
+                        .remove(&DataKey::ActiveRecovery(subject.clone()));
+                } else {
+                    return Err(Error::RecoveryAlreadyPending);
+                }
+            } else {
+                env.storage()
+                    .persistent()
+                    .remove(&DataKey::ActiveRecovery(subject.clone()));
+            }
         }
 
         let request_id: u64 = env
@@ -1373,7 +1389,7 @@ impl IdentityRegistryContract {
             .ok_or(Error::RecoveryNotInitiated)?;
 
         if request.executed {
-            return Err(Error::RecoveryNotInitiated);
+            return Err(Error::RecoveryAlreadyExecuted);
         }
 
         // Check timelock
@@ -1453,11 +1469,6 @@ impl IdentityRegistryContract {
             .persistent()
             .set(&DataKey::RecoveryRequest(request_id), &request);
 
-        // Clear active recovery
-        env.storage()
-            .persistent()
-            .remove(&DataKey::ActiveRecovery(request.subject.clone()));
-
         env.events().publish(
             (Symbol::new(&env, "RecoveryExecuted"),),
             (request.subject, request_id),
@@ -1482,6 +1493,10 @@ impl IdentityRegistryContract {
             .persistent()
             .get(&DataKey::RecoveryRequest(request_id))
             .ok_or(Error::RecoveryNotInitiated)?;
+
+        if request.executed {
+            return Err(Error::RecoveryAlreadyExecuted);
+        }
 
         request.executed = true;
         env.storage()

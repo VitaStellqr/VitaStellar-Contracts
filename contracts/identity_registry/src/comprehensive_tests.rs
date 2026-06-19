@@ -585,6 +585,36 @@ fn test_cancel_recovery_not_initiated() {
     client.cancel_recovery(&subject);
 }
 
+#[test]
+#[should_panic(expected = "Error(Contract, #363)")]
+fn test_cancel_recovery_already_executed() {
+    let (env, client, _owner) = create_test_contract();
+    let subject = Address::generate(&env);
+
+    create_test_did(&env, &client, &subject);
+
+    let guardian1 = Address::generate(&env);
+    let guardian2 = Address::generate(&env);
+
+    client.add_recovery_guardian(&subject, &guardian1, &1u32);
+    client.add_recovery_guardian(&subject, &guardian2, &1u32);
+
+    let new_controller = Address::generate(&env);
+    let new_key = BytesN::from_array(&env, &[5u8; 32]);
+
+    let request_id = client.initiate_recovery(&guardian1, &subject, &new_controller, &new_key);
+    client.approve_recovery(&guardian2, &request_id);
+
+    env.ledger().set_timestamp(100_000);
+    client.execute_recovery(&request_id);
+
+    env.storage()
+        .persistent()
+        .set(&DataKey::ActiveRecovery(subject.clone()), &request_id);
+
+    client.cancel_recovery(&subject);
+}
+
 // ============================================================================
 // SERVICE ENDPOINT EDGE CASES
 // ============================================================================

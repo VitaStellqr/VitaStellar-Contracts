@@ -397,6 +397,7 @@
 | 360 | RecoveryNotInitiated | Generated from contract source |
 | 361 | RecoveryAlreadyPending | Generated from contract source |
 | 362 | RecoveryTimelockNotElapsed | Generated from contract source |
+| 363 | RecoveryAlreadyExecuted | Generated from contract source |
 | 450 | VerificationMethodNotFound | Generated from contract source |
 | 460 | CredentialNotFound | Generated from contract source |
 | 461 | AttestationNotFound | Generated from contract source |

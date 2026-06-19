@@ -25,6 +25,7 @@ pub enum Error {
     RecoveryNotInitiated = 360,
     RecoveryAlreadyPending = 361,
     RecoveryTimelockNotElapsed = 362,
+    RecoveryAlreadyExecuted = 363,
 
     // --- Entity Existence (400–499) ---
     VerificationMethodNotFound = 450,
