@@ -44,8 +44,7 @@ impl CodeOwnership {
         secondary_owners: Vec<Address>,
         expertise_areas: Vec<String>,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         if env
             .storage()
@@ -91,8 +90,7 @@ impl CodeOwnership {
         new_primary_owner: Address,
         new_secondary_owners: Vec<Address>,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         let mut ownership: ModuleOwnership = env
             .storage()
@@ -121,8 +119,7 @@ impl CodeOwnership {
         escalation_threshold: u32,
         escalation_owner: Address,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         // Verify module exists
         let _ownership: ModuleOwnership = env

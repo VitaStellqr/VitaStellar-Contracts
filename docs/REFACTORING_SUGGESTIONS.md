@@ -20,7 +20,7 @@ Patterns repeated across multiple contracts that should be extracted into shared
 
 - **Admin check pattern**: `caller.require_auth(); Self::require_admin(&env, &caller)?;`
   - Appears in: `anomaly_detector`, `cross_chain_bridge`, `aml`, `audit`, `rbac`
-  - Suggestion: Macro `require_admin!(env, caller)` or shared trait
+  - Status: addressed with the shared `access_utils::require_admin!` macro
 
 - **Initialization guard**: Check-then-set `DataKey::Admin` / `DataKey::Initialized`
   - Appears in: all contracts
