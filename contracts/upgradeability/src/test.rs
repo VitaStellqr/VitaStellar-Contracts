@@ -45,8 +45,7 @@ fn test_deprecated_functions_are_tracked() {
         let stored = get_deprecated_functions(&env);
         assert_eq!(stored.len(), 1);
 
-        let tracked =
-            get_deprecated_function(&env, Symbol::new(&env, "old_function")).unwrap();
+        let tracked = get_deprecated_function(&env, Symbol::new(&env, "old_function")).unwrap();
 
         assert_eq!(tracked, deprecation);
     });
@@ -87,8 +86,7 @@ fn test_deprecation_warning_emits_event() {
                     return false;
                 };
 
-                Symbol::try_from_val(&env, &first)
-                    == Ok(Symbol::new(&env, "Deprecated"))
+                Symbol::try_from_val(&env, &first) == Ok(Symbol::new(&env, "Deprecated"))
             })
             .count();
 
