@@ -801,7 +801,20 @@
 
 | Code | Symbol | Description |
 |------|--------|-------------|
-| 1 | NotInitialized | Generated from contract source |
-| 2 | AlreadyInitialized | Generated from contract source |
-| 3 | NotFound | Generated from contract source |
+| 1 | AlreadyInitialized | Generated from contract source |
+| 2 | NotInitialized | Generated from contract source |
+| 3 | NotAuthorized | Generated from contract source |
+| 4 | InvalidProof | Generated from contract source |
+| 5 | ProofNotFound | Generated from contract source |
+| 6 | CircuitNotFound | Generated from contract source |
+| 7 | VerificationFailed | Generated from contract source |
+| 8 | GasLimitExceeded | Generated from contract source |
+| 9 | InvalidInput | Generated from contract source |
+| 10 | InvalidRange | Generated from contract source |
+| 11 | CredentialExpired | Generated from contract source |
+| 12 | InvalidCircuit | Generated from contract source |
+| 13 | ProofTooLarge | Generated from contract source |
+| 14 | RecursiveDepthExceeded | Generated from contract source |
+| 15 | InvalidHashFunction | Generated from contract source |
+| 16 | CommitmentMismatch | Generated from contract source |
 
