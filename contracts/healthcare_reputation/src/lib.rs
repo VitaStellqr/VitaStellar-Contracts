@@ -597,8 +597,7 @@ impl HealthcareReputationSystem {
         approved: bool,
         resolution: String,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         let mut dispute: ReputationDispute = env
             .storage()

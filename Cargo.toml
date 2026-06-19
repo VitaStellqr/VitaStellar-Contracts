@@ -2,12 +2,14 @@
 resolver = "2"
 members = [
     "contracts/*",
+    "libs/access_utils",
     "contract_optimizer",
     "tests",
     "tests/interoperability_suite",
 ]
 
 [workspace.dependencies]
+access_utils = { package = "access-utils", path = "libs/access_utils" }
 soroban-sdk = { version = "=21.7.7" }
 soroban-cli = "=21.7.7"
 

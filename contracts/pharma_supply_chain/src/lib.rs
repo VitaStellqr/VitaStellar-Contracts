@@ -177,8 +177,7 @@ impl PharmaSupplyChainContract {
         name: String,
         license_number: String,
     ) -> Result<u64, Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
         if name.is_empty() || license_number.is_empty() {
             return Err(Error::InvalidInput);
         }

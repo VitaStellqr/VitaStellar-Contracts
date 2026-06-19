@@ -17,7 +17,6 @@ fn create_test_contract() -> (Env, IdentityRegistryContractClient<'static>, Addr
     client.initialize(&owner, &network_id, &rbac_id);
     (env, client, owner)
 }
-
 // Helper to create DID for testing
 fn create_test_did(
     env: &Env,

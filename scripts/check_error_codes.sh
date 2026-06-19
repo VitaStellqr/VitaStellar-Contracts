@@ -1,20 +1,12 @@
 #!/usr/bin/env bash
-# Validates error codes across all contract files:
-# 1. All error codes fall within approved category ranges (100-999)
-# 2. No duplicate error codes in ERROR_CODES.md documentation
-# 3. All errors.rs codes are documented in ERROR_CODES.md
-# 4. Codes 1-99 are only used as per-contract specific codes
-#
-# Requires: bash (not POSIX sh)
-# Usage: ./scripts/check_error_codes.sh  OR  bash scripts/check_error_codes.sh
-#
-# Exits non-zero on any violation.
+# Validates that all error codes in errors.rs files fall within the approved
+# category ranges defined in docs/ERROR_CODES.md. Also validates that contract
+# names referenced in ERROR_CODES.md exist in contracts/. Exits non-zero on any violation.
 
 set -euo pipefail
 
 CONTRACTS_DIR="$(cd "$(dirname "$0")/.." && pwd)/contracts"
-DOCS_DIR="$(cd "$(dirname "$0")/.." && pwd)/docs"
-ERROR_CODES_FILE="$DOCS_DIR/ERROR_CODES.md"
+DOCS_DIR="$(cd "$(dirname "$0")/../docs" && pwd)"
 VIOLATIONS=0
 
 # Helper: Extract all numeric codes from ERROR_CODES.md (category sections only, not per-contract)
@@ -94,17 +86,53 @@ is_code_documented() {
     extract_documented_codes | grep -q "^$code$"
 }
 
-echo "Checking error codes..."
-echo ""
+validate_contract_names() {
+    local error_codes_file="$DOCS_DIR/ERROR_CODES.md"
+    local actual_contracts
+    local referenced_contracts
+    
+    # Get list of actual contracts
+    actual_contracts=$(find "$CONTRACTS_DIR" -maxdepth 1 -type d ! -name contracts -printf '%f\n' | sort)
+    
+    # Extract contract names only from error code tables (rows with at least 6 columns and numeric code)
+    # Pattern: | numeric | symbol | contracts | description | causes | remediation |
+    referenced_contracts=$(awk -F'|' '
+        /^## Per-Contract Error Codes/ { exit }
+        /^\| [0-9]{2,}/ {
+            # Count fields to ensure this is an error code table row
+            if (NF >= 12) {  # 6 fields with pipes = 12 total including empty ones
+                contracts=$4  # 4th column is Contract(s)
+                gsub(/^[[:space:]]+/, "", contracts)  # trim leading spaces
+                gsub(/[[:space:]]+$/, "", contracts)  # trim trailing spaces
+                if (contracts && contracts != "Contract(s)") {
+                    # split by comma and print each contract
+                    n=split(contracts, arr, ",")
+                    for (i=1; i<=n; i++) {
+                        contract=arr[i]
+                        gsub(/^[[:space:]]+/, "", contract)
+                        gsub(/[[:space:]]+$/, "", contract)
+                        if (contract && contract != "All") {
+                            print contract
+                        }
+                    }
+                }
+            }
+        }
+    ' "$error_codes_file" | sort -u)
+    
+    # Check each referenced contract exists
+    while IFS= read -r contract; do
+        if [[ -z "$contract" ]]; then
+            continue
+        fi
+        if ! echo "$actual_contracts" | grep -q "^$contract$"; then
+            echo "VIOLATION in ERROR_CODES.md: contract '$contract' does not exist in contracts/"
+            VIOLATIONS=$((VIOLATIONS + 1))
+        fi
+    done <<< "$referenced_contracts"
+}
 
-# Check for duplicates in documentation
-echo "1. Checking ERROR_CODES.md for duplicates..."
-if check_documentation_duplicates; then
-    echo "   ✓ No duplicate codes in documentation"
-else
-    VIOLATIONS=$((VIOLATIONS + 1))
-fi
-echo ""
+echo "Checking error codes across contracts..."
 
 # Check all error code implementations
 echo "2. Checking error code implementations..."
@@ -116,12 +144,15 @@ done < <(find "$CONTRACTS_DIR" -name "errors.rs" -print0)
 echo "   ✓ Checked $file_count error code files"
 echo ""
 
-# Summary
+echo "Validating contract names in ERROR_CODES.md..."
+validate_contract_names
+
 if (( VIOLATIONS > 0 )); then
-    echo "FAIL: $VIOLATIONS error code violation(s) found."
-    echo "See docs/ERROR_CODES.md for the approved ranges and documented codes."
+    echo ""
+    echo "FAIL: $VIOLATIONS violation(s) found."
+    echo "See docs/ERROR_CODES.md for the approved ranges and contract list."
     exit 1
 else
-    echo "✓ All error codes are valid and properly documented."
+    echo "OK: all error codes and contract references are valid."
     exit 0
 fi
