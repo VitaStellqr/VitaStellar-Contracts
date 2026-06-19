@@ -347,8 +347,7 @@ impl MedicalRecordBackupContract {
     }
 
     pub fn set_paused(env: Env, caller: Address, paused: bool) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         env.storage().instance().set(&PAUSED, &paused);
         Ok(true)
     }
@@ -359,8 +358,7 @@ impl MedicalRecordBackupContract {
         user: Address,
         role_mask: u32,
     ) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         let allowed = role_mask & ALL_ROLES;
         env.storage()
             .persistent()
@@ -371,8 +369,7 @@ impl MedicalRecordBackupContract {
     }
 
     pub fn set_policy(env: Env, caller: Address, policy: BackupPolicy) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         if policy.interval_seconds == 0
             || policy.retention_seconds == 0
