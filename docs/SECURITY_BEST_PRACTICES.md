@@ -201,7 +201,57 @@ Before submitting a PR, verify:
 
 ---
 
-## 7. Incident Response
+## 7. Fuzz / Property-based Testing for Public Mutating Endpoints
+
+Public mutating endpoints — anything that accepts arbitrary input from a
+caller outside the trust boundary — must have at least one property-based
+or fuzz harness. **Panics abort the transaction with an opaque error**,
+and a panic at the project perimeter (an `analytics` ingest, a public
+metadata setter, etc.) typically signals allocator abuse or DoS.
+
+### Quick reference for adding a new harness
+
+1. **Place the harness file** at
+   `contracts/<your_contract>/fuzz/<harness_name>.rs`, then register it
+   in the contract `Cargo.toml`:
+   ```toml
+   [dev-dependencies]
+   proptest = "1.5"
+
+   [[test]]
+   name = "<harness_name>"
+   path = "fuzz/<harness_name>.rs"
+   ```
+2. **Wire it into** `scripts/run_contract_fuzz.sh` so it runs in CI:
+   ```bash
+   cargo test -p <your_contract> --test <harness_name>
+   ```
+3. **Assert non-panicking invariants.** For an ingest like
+   `record_call`, assert at minimum:
+   - `try_record_call(...).is_ok()` for any valid-shaped input.
+   - `get_function_metrics(name)` is populated after the call.
+   - `call_count` is monotonically non-decreasing on repeat calls.
+
+### Why `proptest` and not `cargo-fuzz`
+
+`cargo-fuzz` requires **nightly** Rust and the `arbitrary` crate. This
+workspace pins **stable** Rust (`rust-toolchain.toml` `channel = "1.92.0"`)
+and explicitly notes that `arbitrary` was removed to fix workspace
+inheritance (`Cargo.toml`). `proptest` runs on stable and matches the
+convention already used in `scripts/run_contract_fuzz.sh` and
+`docs/testing/CONTRACT_BEHAVIOR_FUZZING.md`.
+
+### Reference harness
+
+- `contracts/contract_usage_analytics/fuzz/fuzz_record_event.rs` —
+  added by GWorld57 in response to issue #82. Targets the public
+  `record_call` ingest endpoint, asserts non-panic on arbitrary
+  inputs, and includes a regression case (`record_call_does_not_duplicate_function_names`)
+  that catches a real unbounded-growth bug class.
+
+---
+
+## 8. Incident Response
 
 If a vulnerability is discovered:
 

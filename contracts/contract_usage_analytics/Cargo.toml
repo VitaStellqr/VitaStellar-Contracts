@@ -14,6 +14,19 @@ soroban-sdk.workspace = true
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+# `proptest` is used for property-based / fuzz testing of public mutating
+# entrypoints (see contracts/contract_usage_analytics/fuzz/). We deliberately
+# do NOT use `cargo-fuzz` here because it requires nightly Rust and the
+# `arbitrary` crate, both of which conflict with the workspace's stable
+# toolchain pin (`rust-toolchain.toml`).
+proptest = "1.5"
+
+# Issue #82 requested a fuzz harness at `fuzz/fuzz_record_event.rs`. Cargo
+# only auto-discovers integration tests under `tests/`, so we register this
+# `[[test]]` target explicitly.
+[[test]]
+name = "fuzz_record_event"
+path = "fuzz/fuzz_record_event.rs"
 
 [features]
 testutils = ["soroban-sdk/testutils"]
