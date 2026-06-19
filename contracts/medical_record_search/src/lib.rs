@@ -4,6 +4,7 @@
 #[cfg(test)]
 mod test;
 
+use common_error::{read_or_default, try_read};
 use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env,
@@ -748,7 +749,7 @@ impl MedicalRecordSearchContract {
     }
 
     fn next_query_id(env: &Env) -> u64 {
-        let current: u64 = env.storage().instance().get(&QUERY_ID).unwrap_or(1);
+        let current: u64 = try_read(env, &QUERY_ID).unwrap_or(1);
         env.storage()
             .instance()
             .set(&QUERY_ID, &current.saturating_add(1));
@@ -797,7 +798,7 @@ impl MedicalRecordSearchContract {
     }
 
     fn require_not_paused(env: &Env) -> Result<(), Error> {
-        if env.storage().instance().get(&PAUSED).unwrap_or(false) {
+        if read_or_default::<_, bool>(env, &PAUSED) {
             return Err(Error::ContractPaused);
         }
         Ok(())

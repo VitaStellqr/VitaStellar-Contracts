@@ -13,6 +13,7 @@
 
 #![no_std]
 
+use common_error::read_or_default;
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String,
 };
@@ -39,6 +40,17 @@ pub struct FunctionStats {
     pub error_count: u64,
     pub total_gas: u64,
     pub last_called_at: u64,
+}
+
+impl Default for FunctionStats {
+    fn default() -> Self {
+        Self {
+            call_count: 0,
+            error_count: 0,
+            total_gas: 0,
+            last_called_at: 0,
+        }
+    }
 }
 
 /// Top-level dashboard snapshot returned by `get_dashboard`.
@@ -165,13 +177,7 @@ impl ContractMonitoring {
 
         // Update per-function stats.
         let key = DataKey::FnStats(function_name.clone());
-        let mut stats: FunctionStats =
-            env.storage().instance().get(&key).unwrap_or(FunctionStats {
-                call_count: 0,
-                error_count: 0,
-                total_gas: 0,
-                last_called_at: 0,
-            });
+        let mut stats: FunctionStats = read_or_default(&env, &key);
         stats.call_count += 1;
         stats.total_gas += gas_used;
         stats.last_called_at = env.ledger().timestamp();
@@ -197,13 +203,7 @@ impl ContractMonitoring {
             .set(&DataKey::TotalErrors, &(errors + 1));
 
         let key = DataKey::FnStats(function_name);
-        let mut stats: FunctionStats =
-            env.storage().instance().get(&key).unwrap_or(FunctionStats {
-                call_count: 0,
-                error_count: 0,
-                total_gas: 0,
-                last_called_at: 0,
-            });
+        let mut stats: FunctionStats = read_or_default(&env, &key);
         stats.error_count += 1;
         env.storage().instance().set(&key, &stats);
 
@@ -303,16 +303,7 @@ impl ContractMonitoring {
         function_name: String,
     ) -> Result<FunctionStats, MonitoringError> {
         Self::ensure_initialized(&env)?;
-        Ok(env
-            .storage()
-            .instance()
-            .get(&DataKey::FnStats(function_name))
-            .unwrap_or(FunctionStats {
-                call_count: 0,
-                error_count: 0,
-                total_gas: 0,
-                last_called_at: 0,
-            }))
+        Ok(read_or_default(&env, &DataKey::FnStats(function_name)))
     }
 
     // ── Internal ──────────────────────────────────────────────────────────────

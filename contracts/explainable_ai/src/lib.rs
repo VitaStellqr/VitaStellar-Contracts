@@ -6,6 +6,7 @@
 #![allow(clippy::unwrap_used)]
 #![allow(dead_code)]
 
+use common_error::read_or_default;
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map,
     String, Symbol, Vec,
@@ -177,25 +178,21 @@ impl ExplainableAiContract {
     }
 
     fn next_request_id(env: &Env) -> u64 {
-        let current: u64 = env.storage().instance().get(&REQUEST_COUNTER).unwrap_or(0);
+        let current: u64 = read_or_default(env, &REQUEST_COUNTER);
         let next = current + 1;
         env.storage().instance().set(&REQUEST_COUNTER, &next);
         next
     }
 
     fn next_explanation_id(env: &Env) -> u64 {
-        let current: u64 = env
-            .storage()
-            .instance()
-            .get(&EXPLANATION_COUNTER)
-            .unwrap_or(0);
+        let current: u64 = read_or_default(env, &EXPLANATION_COUNTER);
         let next = current + 1;
         env.storage().instance().set(&EXPLANATION_COUNTER, &next);
         next
     }
 
     fn next_audit_id(env: &Env) -> u64 {
-        let current: u64 = env.storage().instance().get(&AUDIT_COUNTER).unwrap_or(0);
+        let current: u64 = read_or_default(env, &AUDIT_COUNTER);
         let next = current + 1;
         env.storage().instance().set(&AUDIT_COUNTER, &next);
         next
@@ -560,14 +557,14 @@ impl ExplainableAiContract {
     // Helper functions
     fn next_shap_id(env: &Env) -> u64 {
         let key = DataKey::ShapCounter;
-        let id: u64 = env.storage().instance().get(&key).unwrap_or(0);
+        let id: u64 = read_or_default(&env, &key);
         env.storage().instance().set(&key, &(id + 1));
         id + 1
     }
 
     fn next_cf_id(env: &Env) -> u64 {
         let key = DataKey::CfCounter;
-        let id: u64 = env.storage().instance().get(&key).unwrap_or(0);
+        let id: u64 = read_or_default(env, &key);
         env.storage().instance().set(&key, &(id + 1));
         id + 1
     }
