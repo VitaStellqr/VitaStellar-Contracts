@@ -1,5 +1,5 @@
-use soroban_sdk::{Env, String};
 use crate::RecordError;
+use soroban_sdk::{Env, String};
 
 pub fn validate_record_fields(
     _env: &Env,

@@ -1,9 +1,11 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, contracttype, contracterror, symbol_short, Address, Env, String};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String,
+};
 
-mod validation;
 mod crypto;
+mod validation;
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -62,7 +64,9 @@ impl MedicalRecords {
             owner: owner.clone(),
         };
 
-        env.storage().persistent().set(&DataKey::Record(record_id), &record);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Record(record_id), &record);
 
         env.events().publish(
             (symbol_short!("record"), symbol_short!("write")),
