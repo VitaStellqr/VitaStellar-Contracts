@@ -106,6 +106,7 @@ The project uses GitHub Actions for CI/CD. The pipeline includes:
 ## Getting Help
 - Review existing documentation in the `docs/` directory
 - Check open issues for known problems
+- Looking for where to start? Run `make first-issue` to see a list of beginner-friendly tasks!
 - Ask questions in pull request discussions
 
 ## License
