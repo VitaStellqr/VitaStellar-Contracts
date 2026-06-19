@@ -1,5 +1,13 @@
 # Identity Verification Flow Diagrams
 
+> **Design decisions behind this flow are documented as ADRs:**
+> - [ADR-003 — Relayer trust model](../adr/ADR-003-relayer-trust-model.md)
+> - [ADR-004 — Signature scheme (Ed25519)](../adr/ADR-004-signature-scheme.md)
+> - [ADR-005 — Replay window (24 h)](../adr/ADR-005-replay-window.md)
+> - [ADR-006 — Ownership representation](../adr/ADR-006-ownership-representation.md)
+>
+> See `contracts/cross_chain_identity/src/lib.rs` for the implementation.
+
 ## W3C DID-Based Identity Verification Architecture
 
 ```mermaid
