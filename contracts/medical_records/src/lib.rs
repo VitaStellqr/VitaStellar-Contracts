@@ -49,9 +49,7 @@ impl MedicalRecords {
         #[cfg(not(test))]
         owner.require_auth();
 
-        if patient_id.is_empty() || record_type.is_empty() || content.is_empty() || timestamp == 0 {
-            return Err(RecordError::InvalidInput);
-        }
+        validation::validate_record_fields(&env, &patient_id, &record_type, &content, timestamp)?;
 
         let record_id = env.ledger().sequence() as u64;
 
