@@ -2,7 +2,7 @@
 use crate::errors::Error;
 use crate::storage::*;
 use crate::types::*;
-use soroban_sdk::{contract, contractimpl, contractmeta, token, Address, Env};
+use soroban_sdk::{contract, contractimpl, contractmeta, symbol_short, token, Address, Env, String};
 extern crate fp_math;
 
 // Metadata that is added on to every WASM custom section
@@ -11,11 +11,46 @@ contractmeta!(
     val = "Capped Token Sale Contract with Vesting"
 );
 
+// Helper function to emit metrics
+fn emit_metric(env: &Env, function_name: &str, caller: &Address, success: bool, cpu_usage: u64) {
+    let metrics_enabled = env
+        .storage()
+        .instance()
+        .get::<String, bool>(&String::from_small_str("metrics_enabled"))
+        .unwrap_or(false);
+
+    if metrics_enabled {
+        env.events().publish(
+            (symbol_short!("metric"),),
+            (
+                String::from_small_str(function_name),
+                caller,
+                success,
+                cpu_usage,
+            ),
+        );
+    }
+}
+
 #[contract]
 pub struct TokenSaleContract;
 
 #[contractimpl]
 impl TokenSaleContract {
+    /// Enable metrics collection
+    pub fn enable_metrics(env: Env) {
+        env.storage()
+            .instance()
+            .set(&String::from_small_str("metrics_enabled"), &true);
+    }
+
+    /// Disable metrics collection
+    pub fn disable_metrics(env: Env) {
+        env.storage()
+            .instance()
+            .set(&String::from_small_str("metrics_enabled"), &false);
+    }
+
     /// Initialize the token sale contract
     #[allow(clippy::too_many_arguments)]
     pub fn initialize(
@@ -51,6 +86,8 @@ impl TokenSaleContract {
         set_paused(&env, false);
         set_total_raised(&env, 0);
         set_phase_count(&env, 0);
+
+        emit_metric(&env, "initialize", &owner, true, 0);
 
         env.events().publish(
             ("sale_initialized",),
@@ -88,6 +125,8 @@ impl TokenSaleContract {
         set_sale_phase(&env, phase_id, &new_phase);
         set_phase_count(&env, phase_id + 1);
 
+        emit_metric(&env, "add_sale_phase", &owner, true, 0);
+
         env.events().publish(
             ("phase_added",),
             (phase_id, start_time, end_time, price_per_token, max_tokens),
@@ -101,6 +140,8 @@ impl TokenSaleContract {
 
         set_supported_token(&env, &token, true);
 
+        emit_metric(&env, "add_supported_token", &owner, true, 0);
+
         env.events().publish(("token_added",), (token,));
     }
 
@@ -110,6 +151,7 @@ impl TokenSaleContract {
         owner.require_auth();
 
         set_paused(&env, true);
+        emit_metric(&env, "pause_sale", &owner, true, 0);
         env.events().publish(("sale_paused",), ());
     }
 
@@ -119,6 +161,7 @@ impl TokenSaleContract {
         owner.require_auth();
 
         set_paused(&env, false);
+        emit_metric(&env, "unpause_sale", &owner, true, 0);
         env.events().publish(("sale_unpaused",), ());
     }
 
@@ -135,6 +178,8 @@ impl TokenSaleContract {
             &(amount as i128),
         );
 
+        emit_metric(&env, "emergency_withdraw", &owner, true, 0);
+
         env.events()
             .publish(("emergency_withdraw",), (token, amount));
     }
@@ -150,22 +195,27 @@ impl TokenSaleContract {
         contributor.require_auth();
 
         if is_paused(&env) {
+            emit_metric(&env, "contribute", &contributor, false, 0);
             return Err(Error::Paused);
         }
         let config = get_config(&env);
         if config.is_finalized {
+            emit_metric(&env, "contribute", &contributor, false, 0);
             return Err(Error::PhaseClosed);
         }
         if !is_supported_token(&env, &token) {
+            emit_metric(&env, "contribute", &contributor, false, 0);
             return Err(Error::InvalidArgument);
         }
 
         let current_time = get_ledger_timestamp(&env);
         let Some(mut phase) = get_sale_phase(&env, phase_id) else {
+            emit_metric(&env, "contribute", &contributor, false, 0);
             return Err(Error::PhaseNotFound);
         };
 
         if !phase.is_active || current_time < phase.start_time || current_time > phase.end_time {
+            emit_metric(&env, "contribute", &contributor, false, 0);
             return Err(Error::PhaseClosed);
         }
 
@@ -178,6 +228,7 @@ impl TokenSaleContract {
             .checked_add(tokens_to_allocate)
             .ok_or(Error::Overflow)?;
         if new_sold > phase.max_tokens {
+            emit_metric(&env, "contribute", &contributor, false, 0);
             return Err(Error::CapExceeded);
         }
 
@@ -186,6 +237,7 @@ impl TokenSaleContract {
             .checked_add(amount)
             .ok_or(Error::Overflow)?;
         if new_contribution > phase.per_address_cap {
+            emit_metric(&env, "contribute", &contributor, false, 0);
             return Err(Error::CapExceeded);
         }
 
@@ -225,6 +277,8 @@ impl TokenSaleContract {
         contribution.timestamp = current_time;
         set_contribution(&env, &contributor, &contribution);
 
+        emit_metric(&env, "contribute", &contributor, true, 0);
+
         env.events().publish(
             ("contribution",),
             (contributor, phase_id, amount, tokens_to_allocate),
@@ -250,6 +304,8 @@ impl TokenSaleContract {
         }
 
         set_config(&env, &config);
+
+        emit_metric(&env, "finalize_sale", &owner, true, 0);
 
         env.events()
             .publish(("sale_finalized",), (total_raised, success));
@@ -282,6 +338,8 @@ impl TokenSaleContract {
             &(contribution.tokens_allocated as i128),
         );
 
+        emit_metric(&env, "claim_tokens", &claimer, true, 0);
+
         env.events().publish(
             ("tokens_claimed",),
             (claimer, contribution.tokens_allocated),
@@ -310,6 +368,8 @@ impl TokenSaleContract {
             &claimer,
             &(contribution.amount as i128),
         );
+
+        emit_metric(&env, "claim_refund", &claimer, true, 0);
 
         env.events()
             .publish(("refund_claimed",), (claimer, contribution.amount));

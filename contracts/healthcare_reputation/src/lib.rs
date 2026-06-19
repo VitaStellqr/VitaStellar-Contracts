@@ -29,6 +29,27 @@ pub enum Error {
     ConductEntryNotFound = 16,
 }
 
+// Helper function to emit metrics
+fn emit_metric(env: &Env, function_name: &str, caller: &Address, success: bool, cpu_usage: u64) {
+    let metrics_enabled = env
+        .storage()
+        .instance()
+        .get::<String, bool>(&String::from_small_str("metrics_enabled"))
+        .unwrap_or(false);
+
+    if metrics_enabled {
+        env.events().publish(
+            (symbol_short!("metric"),),
+            (
+                String::from_small_str(function_name),
+                caller,
+                success,
+                cpu_usage,
+            ),
+        );
+    }
+}
+
 // Credential types for healthcare providers
 #[contracttype]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -192,6 +213,20 @@ pub struct HealthcareReputationSystem;
 
 #[contractimpl]
 impl HealthcareReputationSystem {
+    // Enable metrics collection
+    pub fn enable_metrics(env: Env) {
+        env.storage()
+            .instance()
+            .set(&String::from_small_str("metrics_enabled"), &true);
+    }
+
+    // Disable metrics collection
+    pub fn disable_metrics(env: Env) {
+        env.storage()
+            .instance()
+            .set(&String::from_small_str("metrics_enabled"), &false);
+    }
+
     // Initialize the healthcare reputation system
     pub fn initialize(env: Env, admin: Address) -> Result<(), Error> {
         if env.storage().instance().has(&DataKey::Initialized) {
@@ -200,6 +235,8 @@ impl HealthcareReputationSystem {
 
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Initialized, &true);
+
+        emit_metric(&env, "initialize", &admin, true, 0);
 
         env.events()
             .publish((symbol_short!("HLTHREP"), symbol_short!("INIT")), admin);
@@ -226,6 +263,7 @@ impl HealthcareReputationSystem {
             provider.clone(),
             credential_id.clone(),
         )) {
+            emit_metric(&env, "add_credential", &provider, false, 0);
             return Err(Error::DuplicateCredential);
         }
 
@@ -264,6 +302,8 @@ impl HealthcareReputationSystem {
             &DataKey::ExpirationNotification(provider.clone(), expiration_date),
             &credential_id,
         );
+
+        emit_metric(&env, "add_credential", &provider, true, 0);
 
         env.events().publish(
             (symbol_short!("HLTHREP"), symbol_short!("CRED_ADD")),
@@ -308,6 +348,8 @@ impl HealthcareReputationSystem {
         // Update reputation score
         Self::update_reputation_score(&env, provider.clone())?;
 
+        emit_metric(&env, "verify_credential", &admin_clone, true, 0);
+
         env.events().publish(
             (symbol_short!("HLTHREP"), symbol_short!("CRED_VER")),
             (provider, credential_id, verified),
@@ -329,6 +371,7 @@ impl HealthcareReputationSystem {
         Self::require_initialized(&env)?;
 
         if !(1..=5).contains(&rating) {
+            emit_metric(&env, "add_feedback", &patient, false, 0);
             return Err(Error::InvalidRating);
         }
 
@@ -373,7 +416,7 @@ impl HealthcareReputationSystem {
         let feedback = PatientFeedback {
             feedback_id: feedback_id.clone(),
             provider: provider.clone(),
-            patient,
+            patient: patient.clone(),
             rating,
             comment,
             timestamp: env.ledger().timestamp(),
@@ -400,6 +443,8 @@ impl HealthcareReputationSystem {
         // Update reputation score
         Self::update_reputation_score(&env, provider.clone())?;
 
+        emit_metric(&env, "add_feedback", &patient, true, 0);
+
         env.events().publish(
             (symbol_short!("HLTHREP"), symbol_short!("FEEDBACK")),
             (provider, feedback_id, rating),
@@ -423,6 +468,7 @@ impl HealthcareReputationSystem {
         Self::require_initialized(&env)?;
 
         if !(1..=10).contains(&severity) {
+            emit_metric(&env, "add_conduct_entry", &reporter, false, 0);
             return Err(Error::InvalidConductEntry);
         }
 
@@ -470,7 +516,7 @@ impl HealthcareReputationSystem {
             conduct_type,
             description,
             severity,
-            reporter,
+            reporter: reporter.clone(),
             timestamp: env.ledger().timestamp(),
             is_verified: false,
             action_taken,
@@ -494,6 +540,8 @@ impl HealthcareReputationSystem {
 
         // Update reputation score
         Self::update_reputation_score(&env, provider.clone())?;
+
+        emit_metric(&env, "add_conduct_entry", &reporter, true, 0);
 
         env.events().publish(
             (symbol_short!("HLTHREP"), symbol_short!("CONDUCT")),
@@ -556,7 +604,7 @@ impl HealthcareReputationSystem {
         let dispute = ReputationDispute {
             dispute_id: dispute_id.clone(),
             provider: provider.clone(),
-            challenger,
+            challenger: challenger.clone(),
             dispute_type,
             description,
             evidence,
@@ -580,6 +628,8 @@ impl HealthcareReputationSystem {
         env.storage()
             .persistent()
             .set(&DataKey::ProviderDisputes(provider.clone()), &dispute_list);
+
+        emit_metric(&env, "create_dispute", &challenger, true, 0);
 
         env.events().publish(
             (symbol_short!("HLTHREP"), symbol_short!("DISPUTE")),
@@ -621,6 +671,8 @@ impl HealthcareReputationSystem {
         if approved {
             Self::update_reputation_score(&env, dispute.provider.clone())?;
         }
+
+        emit_metric(&env, "resolve_dispute", &admin, true, 0);
 
         env.events().publish(
             (symbol_short!("HLTHREP"), symbol_short!("DISP_RES")),
