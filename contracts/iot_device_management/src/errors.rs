@@ -47,7 +47,7 @@ pub enum Error {
     DeviceOffline = 826,
 }
 
-#[allow(dead_code)]
+#[allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 pub fn get_suggestion(error: Error) -> Symbol {
     match error {
         Error::Unauthorized

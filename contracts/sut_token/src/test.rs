@@ -580,7 +580,7 @@ fn test_edge_case_approve_zero() {
 use soroban_sdk::contractclient;
 
 #[contractclient(name = "SutTokenClient")]
-#[allow(dead_code)]
+#[allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 pub trait SutTokenTrait {
     fn initialize(
         env: Env,

@@ -5,9 +5,9 @@
 //! All state-mutating functions follow CEI strictly. The `withdraw` module
 //! provides a `REENTRANCY_LOCK` guard as an additional defense-in-depth layer.
 #![no_std]
-#![allow(clippy::needless_borrow)]
-#![allow(clippy::unnecessary_cast)]
-#![allow(dead_code)]
+#![allow(clippy::needless_borrow)] // Borrowing form is intentional for clarity or ABI compatibility
+#![allow(clippy::unnecessary_cast)] // Intentional lint suppression with a deliberate reason
+#![allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 
 pub mod approvals;
 pub mod errors;
@@ -278,7 +278,7 @@ impl EscrowContract {
 }
 
 #[cfg(all(test, feature = "testutils"))]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used)] // Unwrap is intentionally used in this contract context
 mod test {
     use super::*;
     use soroban_sdk::testutils::Address as _;

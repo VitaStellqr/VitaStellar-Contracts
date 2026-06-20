@@ -1,5 +1,5 @@
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::expect_used)]
+#![allow(clippy::unwrap_used)] // Allowed in test/benchmark harness where unwrap is acceptable
+#![allow(clippy::expect_used)] // Allowed in test/benchmark harness where expect is acceptable
 use crate::{UpgradeManager, UpgradeManagerClient};
 use soroban_sdk::{
     symbol_short,

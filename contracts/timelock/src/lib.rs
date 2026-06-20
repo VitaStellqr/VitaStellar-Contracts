@@ -116,7 +116,7 @@ impl Timelock {
 mod time_dependent_tests;
 
 #[cfg(all(test, feature = "testutils"))]
-#[allow(clippy::unwrap_used, clippy::panic)]
+#[allow(clippy::unwrap_used, clippy::panic)] // Unwrap is intentionally used in this contract context
 mod test {
     use super::*;
     use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};

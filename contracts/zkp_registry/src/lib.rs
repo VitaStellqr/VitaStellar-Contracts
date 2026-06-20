@@ -1,5 +1,5 @@
 #![no_std]
-#![allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
 
 #[cfg(test)]
 mod test;
@@ -175,7 +175,7 @@ impl ZKPRegistry {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn register_circuit(
         env: Env,
         admin: Address,
@@ -219,7 +219,7 @@ impl ZKPRegistry {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn submit_zkp(
         env: Env,
         submitter: Address,
@@ -293,7 +293,7 @@ impl ZKPRegistry {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn create_medical_record_proof(
         env: Env,
         patient: Address,
@@ -334,7 +334,7 @@ impl ZKPRegistry {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn create_range_proof(
         env: Env,
         prover: Address,
@@ -384,7 +384,7 @@ impl ZKPRegistry {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn create_credential_proof(
         env: Env,
         holder: Address,
@@ -432,7 +432,7 @@ impl ZKPRegistry {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn create_recursive_proof(
         env: Env,
         composer: Address,

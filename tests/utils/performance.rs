@@ -123,7 +123,7 @@ impl PerformanceResult {
 }
 
 /// Performance benchmark runner
-#[allow(dead_code)]
+#[allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 pub struct BenchmarkRunner {
     name: String,
     iterations: u32,
@@ -165,7 +165,7 @@ impl BenchmarkRunner {
 }
 
 /// Performance test suite
-#[allow(dead_code)]
+#[allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 pub struct PerformanceSuite {
     tests: HashMap<String, PerformanceResult>,
 }

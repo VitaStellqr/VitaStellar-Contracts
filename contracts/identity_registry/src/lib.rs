@@ -514,7 +514,7 @@ impl IdentityRegistryContract {
     // spec / XDR helpers that reference this method, which would otherwise
     // trip `unused_deprecated` (errored by `-D warnings`). External callers
     // in other crates still see the deprecation warning.
-    #[allow(deprecated, clippy::let_underscore_must_use)]
+    #[allow(deprecated, clippy::let_underscore_must_use)] // Deprecated usage is intentional for compatibility reasons
     pub fn initialize_legacy(env: Env, owner: Address, rbac_contract: Address) {
         owner.require_auth();
         // Route through `initialize` to unify init semantics. Use `"testnet"`
@@ -954,7 +954,7 @@ impl IdentityRegistryContract {
     // ========================================================================
 
     /// Issue a verifiable credential (only verifiers/issuers can do this)
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn issue_credential(
         env: Env,
         issuer: Address,

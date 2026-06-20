@@ -1,8 +1,8 @@
 // Predictive Analytics Contract - Health predictions with proper validation
 #![no_std]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::arithmetic_side_effects)]
-#![allow(clippy::panic)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+#![allow(clippy::arithmetic_side_effects)] // Arithmetic side effects are intentional and explicitly checked
+#![allow(clippy::panic)] // Panic is intentional for internal invariant or invalid-state handling
 
 mod config;
 mod predictions;

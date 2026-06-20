@@ -19,7 +19,7 @@ pub struct TokenSaleContract;
 #[contractimpl]
 impl TokenSaleContract {
     /// Initialize the token sale contract
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn initialize(
         env: Env,
         owner: Address,

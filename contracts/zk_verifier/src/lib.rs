@@ -187,7 +187,7 @@ impl ZkVerifierContract {
             .unwrap_or(0)
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn submit_attestation(
         env: Env,
         attestor: Address,
@@ -368,7 +368,7 @@ impl ZkVerifierContract {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used)] // Unwrap is intentionally used in this contract context
 
     use super::*;
     use soroban_sdk::testutils::{Address as _, Ledger};

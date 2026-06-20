@@ -1,10 +1,10 @@
 // Explainable AI Contract - Enhanced with SHAP Integration and Counterfactual Explanations
 #![no_std]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::arithmetic_side_effects)]
-#![allow(clippy::panic)]
-#![allow(clippy::unwrap_used)]
-#![allow(dead_code)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+#![allow(clippy::arithmetic_side_effects)] // Arithmetic side effects are intentional and explicitly checked
+#![allow(clippy::panic)] // Panic is intentional for internal invariant or invalid-state handling
+#![allow(clippy::unwrap_used)] // Unwrap is intentionally used in this contract context
+#![allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map,

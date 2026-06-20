@@ -1,5 +1,5 @@
 #![no_std]
-#![allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map,
@@ -435,7 +435,7 @@ impl PatientRiskStratificationContract {
 }
 
 #[cfg(all(test, feature = "testutils"))]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used)] // Unwrap is intentionally used in this contract context
 mod test {
     use super::*;
     use soroban_sdk::testutils::Address as _;

@@ -22,8 +22,8 @@
 //! via `add_fido2_device` on the identity registry.
 
 #![no_std]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::arithmetic_side_effects)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+#![allow(clippy::arithmetic_side_effects)] // Arithmetic side effects are intentional and explicitly checked
 
 use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::{
@@ -1010,8 +1010,8 @@ impl Fido2AuthenticatorContract {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
-    #![allow(clippy::expect_used)]
+    #![allow(clippy::unwrap_used)] // Unwrap is intentionally used in this contract context
+    #![allow(clippy::expect_used)] // Expect is intentionally used for internal invariant checks
 
     use super::*;
     use soroban_sdk::{

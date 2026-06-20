@@ -1,8 +1,8 @@
 #![no_std]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::needless_pass_by_value)]
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::used_underscore_binding)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+#![allow(clippy::needless_pass_by_value)] // Pass-by-value is intentional for ownership or ABI reasons
+#![allow(clippy::cast_possible_truncation)] // Numeric cast is intentional and considered safe here
+#![allow(clippy::used_underscore_binding)] // Underscore binding is intentional for documentation or type inference
 
 mod errors;
 mod events;

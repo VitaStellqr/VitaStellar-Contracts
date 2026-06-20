@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used)] // Allowed in test/benchmark harness where unwrap is acceptable
 
 use soroban_sdk::testutils::{Address as _, Events};
 use soroban_sdk::{contract, contractimpl, Address, Env, String, Symbol, TryFromVal, Vec};

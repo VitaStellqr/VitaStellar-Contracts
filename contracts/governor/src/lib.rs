@@ -1,8 +1,8 @@
 #![no_std]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::needless_borrow)]
-#![allow(clippy::needless_return)]
-#![allow(dead_code)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+#![allow(clippy::needless_borrow)] // Borrowing form is intentional for clarity or ABI compatibility
+#![allow(clippy::needless_return)] // Explicit return form is intentional for readability
+#![allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 
 pub mod errors;
 pub use errors::Error;
@@ -320,7 +320,7 @@ impl Governor {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::panic)]
+#[allow(clippy::unwrap_used, clippy::panic)] // Unwrap is intentionally used in this contract context
 mod test {
     use super::*;
     use soroban_sdk::testutils::{Address as _, Ledger};
