@@ -1,5 +1,6 @@
 #![no_std]
 
+use common_error::read_or_default;
 use soroban_sdk::{
     contracterror, contracttype, symbol_short, Address, BytesN, Env, String, Symbol, Vec,
 };
@@ -56,7 +57,7 @@ pub mod storage {
     pub const DEPRECATED_FUNCTIONS: Symbol = symbol_short!("DEPRLIST");
 
     pub fn get_version(env: &Env) -> u32 {
-        env.storage().instance().get(&VERSION).unwrap_or(0)
+        read_or_default(env, &VERSION)
     }
 
     pub fn set_version(env: &Env, version: u32) {
@@ -72,7 +73,7 @@ pub mod storage {
     }
 
     pub fn is_frozen(env: &Env) -> bool {
-        env.storage().instance().get(&IS_FROZEN).unwrap_or(false)
+        read_or_default(env, &IS_FROZEN)
     }
 
     pub fn freeze(env: &Env) {

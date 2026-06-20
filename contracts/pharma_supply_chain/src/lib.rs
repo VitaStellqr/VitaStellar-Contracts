@@ -135,7 +135,7 @@ pub enum DataKey {
 #[contract]
 pub struct PharmaSupplyChainContract;
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
 #[contractimpl]
 impl PharmaSupplyChainContract {
     fn require_admin(env: &Env, caller: &Address) -> Result<(), Error> {
@@ -200,7 +200,7 @@ impl PharmaSupplyChainContract {
         Ok(id)
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn register_medication(
         env: Env,
         caller: Address,

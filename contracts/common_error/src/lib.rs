@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{contracterror, symbol_short, Symbol};
+use soroban_sdk::{contracterror, symbol_short, IntoVal, Symbol, TryFromVal, Val};
 
 pub const COMMON_ERROR_MAX: u32 = 99;
 pub const MEDICAL_RECORDS_ERROR_BASE: u32 = 1000;
@@ -45,4 +45,28 @@ pub fn get_suggestion(error: CommonError) -> Symbol {
         CommonError::Timeout => symbol_short!("RE_TRY_L"),
         _ => symbol_short!("CONTACT"),
     }
+}
+
+// ---------------------------------------------------------------------------
+// Storage helpers
+// ---------------------------------------------------------------------------
+
+use soroban_sdk::Env;
+
+/// Read a value from instance storage, returning `V::default()` if absent.
+pub fn read_or_default<K, V>(env: &Env, key: &K) -> V
+where
+    K: IntoVal<Env, Val>,
+    V: TryFromVal<Env, Val> + Default,
+{
+    env.storage().instance().get(key).unwrap_or_default()
+}
+
+/// Read a value from instance storage, returning `None` if absent.
+pub fn try_read<K, V>(env: &Env, key: &K) -> Option<V>
+where
+    K: IntoVal<Env, Val>,
+    V: TryFromVal<Env, Val>,
+{
+    env.storage().instance().get(key)
 }

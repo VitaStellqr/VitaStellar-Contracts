@@ -455,3 +455,7 @@ rollback-release: check-deps
 	@echo "🔄 Rolling back release v$(VERSION)..."
 	./scripts/rollback_deployment.sh $(VERSION)
 
+# Print current good-first-issue list
+first-issue: check-deps
+	@echo "Looking for good first issues..."
+	@gh issue list --label "good-first-issue" --limit 5

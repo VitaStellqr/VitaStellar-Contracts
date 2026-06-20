@@ -1,7 +1,7 @@
 // Public Health Surveillance Platform - Privacy-Preserving Disease Monitoring and Response
 #![no_std]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::arithmetic_side_effects)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+#![allow(clippy::arithmetic_side_effects)] // Arithmetic side effects are intentional and explicitly checked
 
 #[cfg(test)]
 mod test;
@@ -386,7 +386,7 @@ impl PublicHealthSurveillance {
     }
 
     /// Report outbreak data with privacy preservation
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn report_outbreak_data(
         env: Env,
         provider: Address,
@@ -451,7 +451,7 @@ impl PublicHealthSurveillance {
     }
 
     /// Create epidemic model for disease prediction
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn create_epidemic_model(
         env: Env,
         modeler: Address,
@@ -517,7 +517,7 @@ impl PublicHealthSurveillance {
     }
 
     /// Create public health alert
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn create_public_health_alert(
         env: Env,
         authority: Address,
@@ -575,7 +575,7 @@ impl PublicHealthSurveillance {
     }
 
     /// Report vaccination coverage with privacy preservation
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn report_vaccination_coverage(
         env: Env,
         provider: Address,
@@ -645,7 +645,7 @@ impl PublicHealthSurveillance {
     }
 
     /// Report environmental health data
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn report_environmental_health(
         env: Env,
         monitoring_station: Address,
@@ -709,7 +709,7 @@ impl PublicHealthSurveillance {
     }
 
     /// Report antimicrobial resistance data
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn report_antimicrobial_resistance(
         env: Env,
         testing_lab: Address,
@@ -766,7 +766,7 @@ impl PublicHealthSurveillance {
     }
 
     /// Report social determinants of health data
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn report_social_determinants(
         env: Env,
         data_source: Address,
@@ -815,7 +815,7 @@ impl PublicHealthSurveillance {
     }
 
     /// Create public health intervention
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn create_intervention(
         env: Env,
         coordinator: Address,
@@ -878,7 +878,7 @@ impl PublicHealthSurveillance {
     }
 
     /// Create global health collaboration
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn create_global_collaboration(
         env: Env,
         lead_organization: Address,

@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 
 use soroban_sdk::{Bytes, Env};
 

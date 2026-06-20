@@ -1,5 +1,7 @@
 ﻿#![no_std]
 #![allow(clippy::arithmetic_side_effects)]
+#![no_std]
+#![allow(clippy::arithmetic_side_effects)] // Arithmetic side effects are intentional and explicitly checked
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env,
@@ -207,7 +209,7 @@ impl HealthcareReputationSystem {
     }
 
     // Add provider credential
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn add_credential(
         env: Env,
         provider: Address,
@@ -409,7 +411,7 @@ impl HealthcareReputationSystem {
     }
 
     // Add professional conduct entry
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn add_conduct_entry(
         env: Env,
         reporter: Address,

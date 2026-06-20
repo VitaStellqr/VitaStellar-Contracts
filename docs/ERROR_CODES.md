@@ -773,6 +773,7 @@
 | 9 | RefundsNotEnabled | Generated from contract source |
 | 10 | Paused | Generated from contract source |
 | 11 | ReplayDetected | Generated from contract source |
+| 500 | InsufficientFunds | Generated from contract source |
 
 ### upgrade_manager
 

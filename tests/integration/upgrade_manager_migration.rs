@@ -7,7 +7,7 @@
 //! 2. Calling `execute_upgrade` with a new_version ≤ current_version is
 //!    rejected with `UpgradeError::IncompatibleVersion` (version mismatch error).
 
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used)] // Allowed in test/benchmark harness where unwrap is acceptable
 
 use soroban_sdk::{
     contract, contractimpl, symbol_short, testutils::Address as _, Address, BytesN, Env, Map,

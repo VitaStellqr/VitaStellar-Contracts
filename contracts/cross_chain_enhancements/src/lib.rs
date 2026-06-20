@@ -423,7 +423,7 @@ impl CrossChainEnhancements {
     }
 
     /// Verify Merkle path proof
-    #[allow(clippy::expect_used)]
+    #[allow(clippy::expect_used)] // Expect is intentionally used for internal invariant checks
     fn verify_merkle_path(
         leaf: &BytesN<32>,
         path: &Vec<BytesN<32>>,

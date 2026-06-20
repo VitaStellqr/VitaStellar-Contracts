@@ -1,6 +1,6 @@
 #![no_std]
-#![allow(dead_code)]
-#![allow(clippy::too_many_arguments)]
+#![allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
 
 #[cfg(test)]
 mod test;

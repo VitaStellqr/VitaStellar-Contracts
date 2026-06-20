@@ -71,7 +71,7 @@ impl UpgradeManager {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn propose_upgrade(
         env: Env,
         proposer: Address,

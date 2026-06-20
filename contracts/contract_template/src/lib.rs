@@ -12,6 +12,7 @@
 
 mod errors;
 mod events;
+pub mod storage;
 #[cfg(test)]
 mod test;
 mod types;

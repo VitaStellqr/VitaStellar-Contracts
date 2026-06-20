@@ -2,7 +2,7 @@ use soroban_sdk::{Address, Env, Map};
 
 use crate::types::{DailyStats, PlatformStats, DAILY_STATS, STATS};
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
 pub fn update_stats(
     env: &Env,
     volume: i128,

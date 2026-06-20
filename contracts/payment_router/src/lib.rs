@@ -132,7 +132,7 @@ impl PaymentRouter {
 }
 
 #[cfg(all(test, feature = "testutils"))]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used)] // Unwrap is intentionally used in this contract context
 mod test {
     use super::*;
     use soroban_sdk::testutils::Address as _;

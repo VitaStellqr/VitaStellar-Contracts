@@ -1,5 +1,5 @@
 //! Custom assertions for contract testing
-#![allow(clippy::unwrap_used, clippy::panic)]
+#![allow(clippy::unwrap_used, clippy::panic)] // Allowed in test/benchmark harness where unwrap is acceptable
 
 use soroban_sdk::Address;
 
