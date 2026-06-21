@@ -12,11 +12,14 @@
 
 mod errors;
 mod events;
+mod health;
 #[cfg(test)]
 mod test;
 mod types;
 
 pub use errors::Error;
+pub use health::{HealthState, HealthStatus};
+
 
 use soroban_sdk::{contract, contractimpl, Address, Env, String};
 use types::ContractData;
