@@ -1,10 +1,10 @@
-#![allow(clippy::new_without_default)]
+#![allow(clippy::new_without_default)] // Intentional lint suppression with a deliberate reason
 
 /// Contract utilities for common testing operations
 use soroban_sdk::{testutils::Address as _, Address, Env, String as SorobanString};
 
-#[allow(clippy::expect_used)]
-#[allow(clippy::panic)]
+#[allow(clippy::expect_used)] // Allowed in test/benchmark harness where expect is acceptable
+#[allow(clippy::panic)] // Panic is intentional for internal invariant or invalid-state handling
 /// Result type for contract operations
 pub type ContractResult<T> = Result<T, String>;
 

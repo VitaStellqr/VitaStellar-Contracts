@@ -1,11 +1,12 @@
 // Explainable AI Contract - Enhanced with SHAP Integration and Counterfactual Explanations
 #![no_std]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::arithmetic_side_effects)]
-#![allow(clippy::panic)]
-#![allow(clippy::unwrap_used)]
-#![allow(dead_code)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+#![allow(clippy::arithmetic_side_effects)] // Arithmetic side effects are intentional and explicitly checked
+#![allow(clippy::panic)] // Panic is intentional for internal invariant or invalid-state handling
+#![allow(clippy::unwrap_used)] // Unwrap is intentionally used in this contract context
+#![allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 
+use common_error::read_or_default;
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map,
     String, Symbol, Vec,
@@ -177,25 +178,21 @@ impl ExplainableAiContract {
     }
 
     fn next_request_id(env: &Env) -> u64 {
-        let current: u64 = env.storage().instance().get(&REQUEST_COUNTER).unwrap_or(0);
+        let current: u64 = read_or_default(env, &REQUEST_COUNTER);
         let next = current + 1;
         env.storage().instance().set(&REQUEST_COUNTER, &next);
         next
     }
 
     fn next_explanation_id(env: &Env) -> u64 {
-        let current: u64 = env
-            .storage()
-            .instance()
-            .get(&EXPLANATION_COUNTER)
-            .unwrap_or(0);
+        let current: u64 = read_or_default(env, &EXPLANATION_COUNTER);
         let next = current + 1;
         env.storage().instance().set(&EXPLANATION_COUNTER, &next);
         next
     }
 
     fn next_audit_id(env: &Env) -> u64 {
-        let current: u64 = env.storage().instance().get(&AUDIT_COUNTER).unwrap_or(0);
+        let current: u64 = read_or_default(env, &AUDIT_COUNTER);
         let next = current + 1;
         env.storage().instance().set(&AUDIT_COUNTER, &next);
         next
@@ -560,14 +557,14 @@ impl ExplainableAiContract {
     // Helper functions
     fn next_shap_id(env: &Env) -> u64 {
         let key = DataKey::ShapCounter;
-        let id: u64 = env.storage().instance().get(&key).unwrap_or(0);
+        let id: u64 = read_or_default(env, &key);
         env.storage().instance().set(&key, &(id + 1));
         id + 1
     }
 
     fn next_cf_id(env: &Env) -> u64 {
         let key = DataKey::CfCounter;
-        let id: u64 = env.storage().instance().get(&key).unwrap_or(0);
+        let id: u64 = read_or_default(env, &key);
         env.storage().instance().set(&key, &(id + 1));
         id + 1
     }

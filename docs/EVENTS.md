@@ -512,6 +512,13 @@ This document is auto-generated from on-chain event emissions found in `contract
 | `SNDR_RMV` · `NOTIF` | single (1) | `contracts/notification_system/src/events.rs:228` |
 | `TMPL_SET` · `NOTIF` | single (1) | `contracts/notification_system/src/events.rs:240` |
 
+## payment_router
+
+| Topics | Payload | Source |
+|---|---:|---|
+| `NonceConsumed` | tuple (2) | `contracts/payment_router/src/lib.rs:124` |
+| `payment_routed` | tuple (6) | `contracts/payment_router/src/lib.rs:93` |
+
 ## patient_consent_management
 
 | Topics | Payload | Source |
@@ -648,7 +655,8 @@ This document is auto-generated from on-chain event emissions found in `contract
 
 | Topics | Payload | Source |
 |---|---:|---|
-| `contribution` | tuple (4) | `contracts/token_sale/src/contract.rs:209` |
+| `NonceConsumed` | tuple (2) | `contracts/token_sale/src/contract.rs:313` |
+| `contribution` | tuple (4) | `contracts/token_sale/src/contract.rs:270` |
 | `phase_added` | tuple (5) | `contracts/token_sale/src/contract.rs:90` |
 | `sale_initialized` | tuple (4) | `contracts/token_sale/src/contract.rs:54` |
 | `sale_paused` | tuple (0) | `contracts/token_sale/src/contract.rs:112` |

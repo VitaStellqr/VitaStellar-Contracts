@@ -41,8 +41,7 @@ impl DeprecationFramework {
         reason: String,
         replacement_contract: Option<String>,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         if env
             .storage()
@@ -89,8 +88,7 @@ impl DeprecationFramework {
         support_end_date: u64,
         removal_date: u64,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         // Validate dates are in chronological order
         if announcement_date >= support_end_date || support_end_date >= removal_date {
@@ -128,8 +126,7 @@ impl DeprecationFramework {
         guide_content: String,
         code_examples: Vec<String>,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         let _status: DeprecationStatus = env
             .storage()
@@ -161,8 +158,7 @@ impl DeprecationFramework {
         contract_id: String,
         new_phase: DeprecationPhase,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         let mut status: DeprecationStatus = env
             .storage()
@@ -197,8 +193,7 @@ impl DeprecationFramework {
         message: String,
         communication_type: String, // "email", "notification", "announcement"
     ) -> Result<u64, Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         let _status: DeprecationStatus = env
             .storage()
@@ -237,8 +232,7 @@ impl DeprecationFramework {
         contract_id: String,
         checklist_items: Vec<String>,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         let _status: DeprecationStatus = env
             .storage()
@@ -262,8 +256,7 @@ impl DeprecationFramework {
         contract_id: String,
         item_index: u32,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         let _checklist: Vec<String> = env
             .storage()

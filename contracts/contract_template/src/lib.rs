@@ -5,14 +5,16 @@
 //! - Standard initialization guard
 //! - Typed errors and events
 //! - Storage key namespacing
+//! - Reentrancy protection on state-mutating calls
 //!
 //! Copy this directory and rename `contract-template` / `ContractTemplate` throughout.
-
 #![no_std]
 
 mod errors;
 mod events;
 mod health;
+pub mod reentrancy;
+pub mod storage;
 #[cfg(test)]
 mod test;
 mod types;
@@ -27,7 +29,6 @@ use types::ContractData;
 // ---------------------------------------------------------------------------
 // Storage keys
 // ---------------------------------------------------------------------------
-
 const KEY_ADMIN: &str = "Admin";
 const KEY_DATA: &str = "Data";
 
@@ -52,8 +53,10 @@ impl ContractTemplate {
         if env.storage().instance().has(&KEY_ADMIN) {
             return Err(Error::AlreadyInitialized);
         }
+
         env.storage().instance().set(&KEY_ADMIN, &admin);
         events::emit_initialized(&env, &admin);
+
         Ok(())
     }
 
@@ -67,11 +70,20 @@ impl ContractTemplate {
     /// Requires auth from the **current** admin.
     pub fn transfer_admin(env: Env, new_admin: Address) -> Result<(), Error> {
         let admin = Self::get_admin(&env)?;
+
         // Always call require_auth() before any state changes.
         admin.require_auth();
 
+        // Guard against reentrant calls during this state transition.
+        if !reentrancy::enter(&env) {
+            return Err(Error::ReentrantCall);
+        }
+
         env.storage().instance().set(&KEY_ADMIN, &new_admin);
         events::emit_admin_transferred(&env, &admin, &new_admin);
+
+        reentrancy::exit(&env);
+
         Ok(())
     }
 
@@ -94,7 +106,11 @@ impl ContractTemplate {
             return Err(Error::InputTooLong);
         }
 
-        // 4. Execute the state change.
+        // 4. Guard against reentrant calls, then execute the state change.
+        if !reentrancy::enter(&env) {
+            return Err(Error::ReentrantCall);
+        }
+
         let record = ContractData {
             owner: caller.clone(),
             value: data.clone(),
@@ -103,6 +119,9 @@ impl ContractTemplate {
 
         // 5. Emit an event for auditability.
         events::emit_data_updated(&env, &caller, &data);
+
+        reentrancy::exit(&env);
+
         Ok(())
     }
 

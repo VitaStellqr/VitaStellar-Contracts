@@ -1,10 +1,11 @@
 // Anomaly Detection Contract - Healthcare anomaly detection with proper validation
 #![no_std]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::arithmetic_side_effects)]
-#![allow(clippy::panic)]
-#![allow(dead_code)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+#![allow(clippy::arithmetic_side_effects)] // Arithmetic side effects are intentional and explicitly checked
+#![allow(clippy::panic)] // Panic is intentional for internal invariant or invalid-state handling
+#![allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 
+use common_error::read_or_default;
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env,
     IntoVal, Map, String, Symbol,
@@ -162,7 +163,7 @@ impl AnomalyDetectionContract {
     }
 
     fn next_anomaly_id(env: &Env) -> u64 {
-        let current: u64 = env.storage().instance().get(&ANOMALY_COUNTER).unwrap_or(0);
+        let current: u64 = read_or_default(env, &ANOMALY_COUNTER);
         let next = current + 1;
         env.storage().instance().set(&ANOMALY_COUNTER, &next);
         next
@@ -583,7 +584,7 @@ impl AnomalyDetectionContract {
 }
 
 #[cfg(all(test, feature = "testutils"))]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used)] // Unwrap is intentionally used in this contract context
 mod test {
     use super::*;
     use soroban_sdk::testutils::Address as _;

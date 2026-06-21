@@ -17,6 +17,7 @@
 #![no_std]
 
 #[allow(unused_imports)]
+// Import is intentionally retained for conditional compilation or documentation
 // `vec!` macro is re-exported to the nested test module via `use super::*`
 use soroban_sdk::vec;
 use soroban_sdk::{

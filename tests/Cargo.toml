@@ -8,6 +8,7 @@ publish = false
 soroban-sdk = { workspace = true, features = ["testutils"] }
 sut_token = { path = "../contracts/sut_token" }
 reputation = { path = "../contracts/reputation" }
+upgradeability = { path = "../contracts/upgradeability", features = ["testutils"] }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }

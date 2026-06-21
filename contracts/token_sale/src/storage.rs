@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used)] // Unwrap is intentionally used in this contract context
 
 use crate::types::*;
 use soroban_sdk::{Address, Env};
@@ -112,14 +112,27 @@ pub fn set_vesting_schedule(env: &Env, beneficiary: &Address, schedule: &Vesting
         .set(&DataKey::VestingSchedule(beneficiary.clone()), schedule);
 }
 
-#[allow(dead_code)]
+#[allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 pub fn get_vesting_contract(env: &Env) -> Option<Address> {
     env.storage().instance().get(&DataKey::VestingContract)
 }
 
-#[allow(dead_code)]
+#[allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 pub fn set_vesting_contract(_env: &Env, _contract: &Address) {
     _env.storage()
         .instance()
         .set(&DataKey::VestingContract, _contract);
+}
+
+pub fn get_nonce(env: &Env, user: &Address) -> u64 {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Nonce(user.clone()))
+        .unwrap_or(0)
+}
+
+pub fn set_nonce(env: &Env, user: &Address, nonce: u64) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::Nonce(user.clone()), &nonce);
 }

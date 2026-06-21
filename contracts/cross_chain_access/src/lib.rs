@@ -1,8 +1,8 @@
 #![no_std]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::needless_borrow)]
-#![allow(clippy::match_like_matches_macro)]
-#![allow(dead_code)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+#![allow(clippy::needless_borrow)] // Borrowing form is intentional for clarity or ABI compatibility
+#![allow(clippy::match_like_matches_macro)] // Manual match is intentional for readability
+#![allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 
 #[cfg(test)]
 mod test;
@@ -991,8 +991,7 @@ impl CrossChainAccessContract {
     // ==================== Admin Functions ====================
 
     pub fn pause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         env.storage().persistent().set(&DataKey::Paused, &true);
 
@@ -1005,8 +1004,7 @@ impl CrossChainAccessContract {
     }
 
     pub fn unpause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         env.storage().persistent().set(&DataKey::Paused, &false);
 

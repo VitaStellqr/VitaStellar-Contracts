@@ -1,10 +1,11 @@
 #![no_std]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::needless_borrow)]
-#![allow(clippy::needless_return)]
-#![allow(dead_code)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+#![allow(clippy::needless_borrow)] // Borrowing form is intentional for clarity or ABI compatibility
+#![allow(clippy::needless_return)] // Explicit return form is intentional for readability
+#![allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 
 pub mod errors;
+use common_error::read_or_default;
 pub use errors::Error;
 use soroban_sdk::{
     contract, contractimpl, contracttype, symbol_short, vec, Address, Bytes, Env, IntoVal, Map,
@@ -108,7 +109,7 @@ impl Governor {
             return Err(Error::ProposalThresholdNotMet);
         }
 
-        let count = env.storage().instance().get(&P_COUNT).unwrap_or(0u64);
+        let count = read_or_default::<_, u64>(&env, &P_COUNT);
         let id = count.checked_add(1).ok_or(Error::Overflow)?;
 
         let start = now(&env)
@@ -320,7 +321,7 @@ impl Governor {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::panic)]
+#[allow(clippy::unwrap_used, clippy::panic)] // Unwrap is intentionally used in this contract context
 mod test {
     use super::*;
     use soroban_sdk::testutils::{Address as _, Ledger};
@@ -331,7 +332,7 @@ mod test {
     impl MockToken {
         pub fn balance_of(env: Env, user: Address) -> i128 {
             let key = (symbol_short!("bal"), user);
-            env.storage().instance().get(&key).unwrap_or(0i128)
+            read_or_default::<_, i128>(&env, &key)
         }
 
         pub fn set_bal(env: Env, user: Address, amount: i128) {

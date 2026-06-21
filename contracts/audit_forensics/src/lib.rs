@@ -120,7 +120,7 @@ pub struct AuditForensicsContract;
 #[allow(clippy::too_many_arguments)] // Contract API functions require all parameters individually per Soroban ABI
 #[contractimpl]
 impl AuditForensicsContract {
-    #[allow(clippy::panic)]
+    #[allow(clippy::panic)] // Panic is intentional for internal invariant or invalid-state handling
     pub fn initialize(env: Env, admin: Address) {
         if env.storage().instance().has(&DataKey::Admin) {
             panic!("Already initialized");
@@ -456,7 +456,7 @@ impl AuditForensicsContract {
         report
     }
 
-    #[allow(clippy::panic)]
+    #[allow(clippy::panic)] // Panic is intentional for internal invariant or invalid-state handling
     pub fn set_alert_threshold(env: Env, admin: Address, action: AuditAction, threshold: u32) {
         admin.require_auth();
         Self::require_admin(&env, &admin);
@@ -556,7 +556,7 @@ impl AuditForensicsContract {
         Self::log_internal(&env, admin, AuditAction::AlertTriggered, None);
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
     fn check_alerts(env: &Env, action: AuditAction) {
         let key = match action {
             AuditAction::RecordAccess => Some(symbol_short!("THR_ACC")),
@@ -600,7 +600,7 @@ impl AuditForensicsContract {
         }
     }
 
-    #[allow(clippy::panic, clippy::unwrap_used)]
+    #[allow(clippy::panic, clippy::unwrap_used)] // Unwrap is intentionally used in this contract context
     fn require_admin(env: &Env, actor: &Address) {
         let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
         if admin != *actor {

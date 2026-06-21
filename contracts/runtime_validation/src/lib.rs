@@ -46,8 +46,7 @@ impl RuntimeValidation {
         description: String,
         severity: u32, // 1=low, 2=medium, 3=high, 4=critical
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         if !(1..=4).contains(&severity) {
             return Err(Error::InvalidSeverity);
@@ -95,8 +94,7 @@ impl RuntimeValidation {
         description: String,
         expected_state: String,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         if env
             .storage()
@@ -132,8 +130,7 @@ impl RuntimeValidation {
         description: String,
         required_role: String,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         if env
             .storage()
@@ -168,8 +165,7 @@ impl RuntimeValidation {
         resource_type: String,
         max_allocation: i128,
     ) -> Result<(), Error> {
-        admin.require_auth();
-        Self::require_admin(&env, &admin)?;
+        access_utils::require_admin!(env, admin);
 
         if max_allocation <= 0 {
             return Err(Error::InvalidResourceLimit);
