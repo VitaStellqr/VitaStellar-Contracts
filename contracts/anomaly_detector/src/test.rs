@@ -1,6 +1,6 @@
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::expect_used)]
-#![allow(clippy::panic)]
+#![allow(clippy::unwrap_used)] // Allowed in test/benchmark harness where unwrap is acceptable
+#![allow(clippy::expect_used)] // Allowed in test/benchmark harness where expect is acceptable
+#![allow(clippy::panic)] // Panic is intentional for internal invariant or invalid-state handling
 
 use crate::{
     AlertLevel, AlertStatus, AnomalyDetectorContract, AnomalyDetectorContractClient, Error,

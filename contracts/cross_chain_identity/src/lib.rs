@@ -1,11 +1,11 @@
 // Cross-Chain Identity Contract - Identity verification across blockchains
 #![no_std]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::needless_borrow)]
-#![allow(clippy::unnecessary_cast)]
-#![allow(clippy::unnecessary_map_or)]
-#![allow(clippy::arithmetic_side_effects)]
-#![allow(dead_code)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+#![allow(clippy::needless_borrow)] // Borrowing form is intentional for clarity or ABI compatibility
+#![allow(clippy::unnecessary_cast)] // Intentional lint suppression with a deliberate reason
+#![allow(clippy::unnecessary_map_or)] // Intentional lint suppression with a deliberate reason
+#![allow(clippy::arithmetic_side_effects)] // Arithmetic side effects are intentional and explicitly checked
+#![allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 
 #[cfg(test)]
 mod test;
@@ -214,8 +214,7 @@ impl CrossChainIdentityContract {
         name: String,
         public_key: BytesN<32>,
     ) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
         Self::require_not_paused(&env)?;
 
         let validator = IdentityValidator {
@@ -242,8 +241,7 @@ impl CrossChainIdentityContract {
         caller: Address,
         validator_address: Address,
     ) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         let key = DataKey::Validator(validator_address.clone());
         if let Some(mut validator) = env
@@ -271,8 +269,7 @@ impl CrossChainIdentityContract {
         validator_address: Address,
         trust_score: u32,
     ) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         let key = DataKey::Validator(validator_address.clone());
         if let Some(mut validator) = env
@@ -293,8 +290,7 @@ impl CrossChainIdentityContract {
         caller: Address,
         min_attestations: u32,
     ) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         env.storage()
             .persistent()
@@ -303,8 +299,7 @@ impl CrossChainIdentityContract {
     }
 
     pub fn pause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         env.storage().persistent().set(&DataKey::Paused, &true);
 
@@ -317,8 +312,7 @@ impl CrossChainIdentityContract {
     }
 
     pub fn unpause(env: Env, caller: Address) -> Result<bool, Error> {
-        caller.require_auth();
-        Self::require_admin(&env, &caller)?;
+        access_utils::require_admin!(env, caller);
 
         env.storage().persistent().set(&DataKey::Paused, &false);
 

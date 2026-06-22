@@ -1,4 +1,3 @@
-# Minimal CI for VitaStellar-Contracts
 # Verifies wasm32 builds, tests pass, code is formatted and coverage is reported
 
 name: CI
@@ -59,7 +58,7 @@ jobs:
         run: cargo install cargo-tarpaulin --locked
 
       - name: Generate coverage report
-        run: cargo tarpaulin --workspace --out Xml --timeout 600
+        run: cargo tarpaulin --workspace --out Xml --out Html --timeout 1200
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -67,6 +66,24 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: cobertura.xml
           fail_ci_if_error: false
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html-report
+          path: tarpaulin-report.html
+          retention-days: 30
+
+  loc-check:
+    name: LOC Manifest Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate threat-model LOC manifest
+        run: |
+          chmod +x scripts/loc_report.sh
+          ./scripts/loc_report.sh --check
 
   format:
     name: Format Check
@@ -80,4 +97,29 @@ jobs:
           components: rustfmt
 
       - name: Check formatting
-        run: cargo fmt --all -- --check
+        run: cargo fmt -- --check
+
+  error_codes:
+    name: Error Codes Reference
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Regenerate error codes reference
+        run: python3 scripts/generate_error_codes.py --write
+
+      - name: Check if docs/ERROR_CODES.md is up to date
+        run: |
+          if git diff --quiet docs/ERROR_CODES.md; then
+            echo "✓ docs/ERROR_CODES.md is in sync with contract source"
+          else
+            echo "✗ docs/ERROR_CODES.md is out of sync"
+            echo "Run: python3 scripts/generate_error_codes.py --write"
+            git diff docs/ERROR_CODES.md
+            exit 1
+          fi

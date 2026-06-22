@@ -15,7 +15,7 @@ pub enum Error {
 
     // --- Lifecycle & State (300–399) ---
     FeeNotSet = 380,
-    ReentrancyGuard = 381,
+    ReentrancyRejected = 381,
     InvalidStateTransition = 382,
 
     // --- Entity Existence (400–499) ---
@@ -35,6 +35,7 @@ pub fn get_suggestion(error: Error) -> Symbol {
             symbol_short!("CHK_AUTH")
         },
         Error::InvalidAmount | Error::InvalidFeeBps => symbol_short!("CHK_LEN"),
+        Error::ReentrancyRejected => symbol_short!("CONTACT"),
         Error::EscrowNotFound => symbol_short!("CHK_ID"),
         Error::AlreadySettled | Error::EscrowExists => symbol_short!("ALREADY"),
         _ => symbol_short!("CONTACT"),

@@ -1,8 +1,8 @@
 // Medical Consent NFT - Advanced Patient consent management with dynamic features
 #![no_std]
-#![allow(clippy::arithmetic_side_effects)]
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::expect_used)]
+#![allow(clippy::arithmetic_side_effects)] // Arithmetic side effects are intentional and explicitly checked
+#![allow(clippy::unwrap_used)] // Unwrap is intentionally used in this contract context
+#![allow(clippy::expect_used)] // Expect is intentionally used for internal invariant checks
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Map, String,

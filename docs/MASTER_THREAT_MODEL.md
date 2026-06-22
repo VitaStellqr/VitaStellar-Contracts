@@ -6,9 +6,25 @@ This master threat model consolidates all security threat analyses for the VitaS
 
 **Version**: 1.0  
 **Last Updated**: 2026-04-25  
-**Scope**: All VitaStellar smart contracts (medical_records, crypto_registry, governor, rbac, and related contracts)  
+**Scope**: All VitaStellar smart contracts (emr_integration, identity_registry, crypto_registry, governor, and related contracts)
 **Blockchain**: Soroban (Stellar)  
 **Asset Classification**: Critical Healthcare Infrastructure
+
+## LOC Manifest
+
+The fenced `loc-manifest` block below is the authoritative size-of-contract record cited by this threat model. It is validated by `scripts/loc_report.sh --check` (invoked by the `loc-check` CI job in `.github/workflows/ci.yml`) against `wc -l` on `contracts/<name>/src/**/*.rs` — tests and `target/` are excluded. Drift fails CI; to update intentionally, regenerate with `./scripts/loc_report.sh --emit-manifest` and paste the result into the block.
+
+```loc-manifest
+audit_forensics: 790
+crypto_registry: 935
+emr_integration: 2141
+governor: 452
+homomorphic_registry: 1149
+identity_registry: 3706
+medical_record_backup: 1566
+mpc_manager: 1133
+zk_verifier: 490
+```
 
 ## Executive Summary
 
@@ -43,42 +59,51 @@ This document follows STRIDE methodology adapted for blockchain smart contracts:
 
 ### Core Contracts
 
-1. **MedicalRecordsContract** (`contracts/medical_records/`)
-   - Main contract for medical record management
+The VitaStellar deployment is a graph of focused contracts rather than one monolithic record store. The seven contracts below carry the bulk of the attack surface analyzed in this document; the rest of the workspace (identity, payment, governance auxiliary, telemetry, etc.) is referenced where relevant but not analyzed in depth here. LOC numbers in this section are produced by `scripts/loc_report.sh --check` and validated by CI.
+
+1. **EmrIntegration** (`contracts/emr_integration/`)
+   - Primary contract for electronic medical record management
    - Handles record creation, access, and encryption
    - Manages user roles and permissions
    - Integrates ZK proof verification
-   - ~5,600 lines of Rust code
+   - ~2,141 lines of Rust code
 
-2. **CryptoRegistry** (`contracts/crypto_registry/`)
+2. **IdentityRegistry** (`contracts/identity_registry/`)
+   - Decentralized identity and role-based access control
+   - Healthcare-specific roles (provider, patient, admin, auditor, …)
+   - Permission assignment, attestation, and lookup
+   - ~3,706 lines of Rust code
+
+3. **CryptoRegistry** (`contracts/crypto_registry/`)
    - Manages public key infrastructure
    - Supports classical and post-quantum algorithms
    - Key versioning and rotation
-   - ~417 lines of Rust code
+   - ~935 lines of Rust code
 
-3. **Governor** (`contracts/governor/`)
+4. **Governor** (`contracts/governor/`)
    - On-chain governance for upgrades
    - Proposal and voting mechanism
    - Timelock execution
-   - ~13,587 lines of Rust code
+   - ~451 lines of Rust code
 
-4. **RBAC** (`contracts/rbac/`)
-   - Role-based access control
-   - 8 healthcare-specific roles
-   - Permission assignment and queries
-   - ~479 lines of Rust code (documentation)
+5. **MedicalRecordBackup** (`contracts/medical_record_backup/`)
+   - Disaster-recovery and off-chain archival
+   - Encrypted backup write/read APIs
+   - Retention and rotation policies
+   - ~1,566 lines of Rust code
 
-5. **Supporting Contracts**
-   - HomomorphicRegistry (HE computation coordination)
-   - MPCManager (secure multi-party computation)
-   - ZKVerifier (zero-knowledge proof verification)
-   - EmergencyAccessOverride (emergency procedures)
-   - AuditForensics (security monitoring)
+6. **Supporting Contracts (analyzed in this document)**
+   - HomomorphicRegistry (`contracts/homomorphic_registry/`) — HE computation coordination
+   - MPCManager (`contracts/mpc_manager/`) — secure multi-party computation
+   - ZKVerifier (`contracts/zk_verifier/`) — zero-knowledge proof verification
+   - AuditForensics (`contracts/audit_forensics/`) — security monitoring and forensics
+
+The `check_permission()`, `manage_user()`, and `grant_permission()` function names cited in §1 below are illustrative attack-vector patterns — VitaStellar contracts use Soroban authorization primitives (`require_auth()`, role attributes, capability checks) rather than those specific function names. See `docs/AUTH_PATTERNS.md` for the real API surface.
 
 ### Data Flow
 
 ```
-User → Authentication → Access Control Check → Operation Validation → 
+User → Authentication → Access Control Check → Operation Validation →
 State Update → Event Emission → Cross-Chain Sync (if applicable)
 ```
 
@@ -94,19 +119,22 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 ### 1. Access Control Threats
 
 #### 1.1 Unauthorized Record Access
+
 **Risk Level**: CRITICAL  
 **Attack Surface**: All record access functions
 
 **Threat Description**: Attackers gain unauthorized access to medical records through authentication bypass, permission checking flaws, or credential theft.
 
 **Attack Vectors**:
+
 - Impersonation of authorized users
-- Bypassing `check_permission()` logic
+- Bypassing the centralized permission-check layer (see `docs/AUTH_PATTERNS.md`)
 - Exploiting DID verification weaknesses
 - ZK proof forgery
 - Emergency access abuse
 
 **Existing Mitigations**:
+
 - `require_auth()` on all entry points (AUTH-001)
 - Centralized permission checking (AUTH-002, AUTH-003)
 - DID verification integration (AUTH-005)
@@ -116,24 +144,28 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Residual Risk**: MEDIUM  
 **Recommendations**:
+
 - Implement continuous authentication monitoring
 - Add behavioral anomaly detection
 - Regular penetration testing of access controls
 - Multi-factor authentication for high-risk operations
 
 #### 1.2 Privilege Escalation
+
 **Risk Level**: CRITICAL  
 **Attack Surface**: User management and permission functions
 
 **Threat Description**: Attackers gain higher privileges than assigned, potentially achieving admin access.
 
 **Attack Vectors**:
-- Exploiting `manage_user()` or `grant_permission()` flaws
+
+- Exploiting user-management or permission-grant flaws
 - Admin key compromise
 - Delegation chain attacks
 - Storage manipulation
 
 **Existing Mitigations**:
+
 - Admin authorization requirements (AUTH-004)
 - Threshold governance (GOV-001)
 - Timelock delays (GOV-002)
@@ -142,24 +174,28 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Residual Risk**: LOW  
 **Recommendations**:
+
 - Implement hardware security modules for admin keys
 - Regular key rotation policies
 - Multi-party computation for critical operations
 - Enhanced monitoring of privilege changes
 
 #### 1.3 Emergency Access Abuse
+
 **Risk Level**: HIGH  
 **Attack Surface**: Emergency override mechanisms
 
 **Threat Description**: Legitimate emergency access mechanisms are exploited for unauthorized data access.
 
 **Attack Vectors**:
+
 - Fraudulent emergency requests
 - Scope expansion beyond necessity
 - Failure to expire grants
 - Emergency access as persistence mechanism
 
 **Existing Mitigations**:
+
 - Time-bounded grants (AUTH-007)
 - Record scope limitations
 - Admin authorization required
@@ -167,6 +203,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Residual Risk**: MEDIUM  
 **Recommendations**:
+
 - Multi-party approval for emergency access
 - Automated expiration enforcement
 - Regular audit of emergency access usage
@@ -175,12 +212,14 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 ### 2. State Manipulation Threats
 
 #### 2.1 Medical Record Tampering
+
 **Risk Level**: CRITICAL  
 **Attack Surface**: Record storage and modification functions
 
 **Threat Description**: Attackers alter existing medical records to change diagnoses, treatments, or other critical information.
 
 **Attack Vectors**:
+
 - Direct storage manipulation
 - Exploiting record creation functions
 - Metadata tampering
@@ -188,6 +227,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 - Ciphertext reference manipulation
 
 **Existing Mitigations**:
+
 - Immutable record design (STATE-001)
 - Cryptographic hashing (STATE-002)
 - Version tracking (STATE-003)
@@ -196,24 +236,28 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Residual Risk**: LOW  
 **Recommendations**:
+
 - Implement blockchain-based notarization
 - Regular integrity verification scans
 - Patient notification of record changes
 - Legal audit trail maintenance
 
 #### 2.2 Cryptographic Configuration Subversion
+
 **Risk Level**: HIGH  
 **Attack Surface**: Crypto configuration and governance
 
 **Threat Description**: Attackers weaken cryptographic protections by modifying configuration parameters.
 
 **Attack Vectors**:
+
 - Disabling encryption requirements
 - Weakening post-quantum settings
 - Modifying trusted contract addresses
 - Governance attacks
 
 **Existing Mitigations**:
+
 - Threshold + timelock governance (GOV-001, GOV-002)
 - Crypto-specific governance (CRYPTO-010)
 - Configuration change monitoring (MON-004)
@@ -221,6 +265,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Residual Risk**: LOW  
 **Recommendations**:
+
 - Hardware security modules for admin operations
 - Multi-jurisdictional governance participation
 - Regular governance security audits
@@ -229,18 +274,21 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 ### 3. Resource Exhaustion Threats
 
 #### 3.1 Storage Exhaustion
+
 **Risk Level**: MEDIUM  
 **Attack Surface**: Record creation and user management
 
 **Threat Description**: Attackers create excessive data to consume storage resources and increase costs.
 
 **Attack Vectors**:
+
 - Spamming record creation
 - Large data field abuse
 - Excessive user creation
 - Permission grant flooding
 
 **Existing Mitigations**:
+
 - Rate limiting (RES-001, RES-002)
 - Field validation (RES-004)
 - Storage-efficient data structures (RES-003)
@@ -249,24 +297,28 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Residual Risk**: LOW  
 **Recommendations**:
+
 - Dynamic rate limit adjustment
 - Storage quota systems
 - Automated cleanup procedures
 - Cost monitoring and alerting
 
 #### 3.2 Computation Exhaustion
+
 **Risk Level**: MEDIUM  
 **Attack Surface**: Validation and processing functions
 
 **Threat Description**: Attackers craft inputs requiring excessive computation to process.
 
 **Attack Vectors**:
+
 - Large array processing
 - Complex ZK proof verification
 - Deep iteration attacks
 - Gas limit manipulation
 
 **Existing Mitigations**:
+
 - Input validation (RES-004)
 - Gas cost awareness (RES-006)
 - Pagination limits (RES-005)
@@ -274,6 +326,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Residual Risk**: LOW  
 **Recommendations**:
+
 - Gas profiling and optimization
 - Computation complexity limits
 - Resource usage monitoring
@@ -282,12 +335,14 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 ### 4. Cryptographic Threats
 
 #### 4.1 Key Compromise
+
 **Risk Level**: CRITICAL  
 **Attack Surface**: Key generation, storage, and usage
 
 **Threat Description**: Private keys are stolen or compromised, enabling decryption of sensitive data.
 
 **Attack Vectors**:
+
 - Device compromise
 - Side-channel attacks
 - Memory scraping
@@ -296,6 +351,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 - Quantum computing attacks
 
 **Existing Mitigations**:
+
 - HSM/secure enclave usage (CRYPTO-001)
 - Key rotation (CRYPTO-006)
 - Hybrid encryption (CRYPTO-004)
@@ -305,6 +361,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Residual Risk**: MEDIUM  
 **Recommendations**:
+
 - Multi-party key management
 - Geographic key distribution
 - Regular key rotation automation
@@ -312,12 +369,14 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 - Hardware security validation
 
 #### 4.2 Algorithm Vulnerabilities
+
 **Risk Level**: HIGH  
 **Attack Surface**: Cryptographic implementations
 
 **Threat Description**: Cryptographic algorithms or implementations have exploitable weaknesses.
 
 **Attack Vectors**:
+
 - Mathematical breakthroughs
 - Implementation bugs
 - Side-channel vulnerabilities
@@ -325,6 +384,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 - Post-quantum algorithm weaknesses
 
 **Existing Mitigations**:
+
 - Standardized algorithms (CRYPTO-003)
 - Algorithm agility (CRYPTO-010)
 - Security audits (OP-001)
@@ -333,6 +393,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Residual Risk**: MEDIUM  
 **Recommendations**:
+
 - Cryptographic agility enhancement
 - Post-quantum migration prioritization
 - Continuous algorithm monitoring
@@ -342,12 +403,14 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 ### 5. Cross-Contract Interaction Threats
 
 #### 5.1 Cross-Chain Bridge Attacks
+
 **Risk Level**: HIGH  
 **Attack Surface**: Cross-chain synchronization and bridge contracts
 
 **Threat Description**: Attackers exploit cross-chain mechanisms to steal assets or manipulate state.
 
 **Attack Vectors**:
+
 - Double-spend attacks
 - Message manipulation
 - Bridge contract exploits
@@ -355,6 +418,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 - Replay attacks
 
 **Existing Mitigations**:
+
 - Address validation (XCON-001)
 - Hash verification (CRYPTO-007)
 - Timelock governance (GOV-001)
@@ -363,6 +427,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Residual Risk**: MEDIUM  
 **Recommendations**:
+
 - Multi-chain security monitoring
 - Bridge contract audits
 - Cross-chain insurance mechanisms
@@ -370,12 +435,14 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 - Decentralized oracle networks
 
 #### 5.2 Reentrancy and Race Conditions
+
 **Risk Level**: MEDIUM  
 **Attack Surface**: Cross-contract call patterns
 
 **Threat Description**: Attackers exploit reentrancy or race conditions in contract interactions.
 
 **Attack Vectors**:
+
 - Reentrant calls
 - Front-running
 - Transaction ordering manipulation
@@ -383,6 +450,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 - Gas limit attacks
 
 **Existing Mitigations**:
+
 - Checks-Effects-Interactions pattern (XCON-003)
 - Reentrancy guards (XCON-003)
 - State validation (XCON-004)
@@ -391,39 +459,68 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 **Residual Risk**: LOW  
 **Recommendations**:
+
 - Formal verification of critical paths
 - Advanced reentrancy detection
 - MEV protection strategies
 - Transaction ordering fairness
 - Gas optimization reviews
 
+#### 5.3 Payment Message Replay
+
+**Risk Level**: HIGH  
+**Attack Surface**: `payment_router::route_payment`, `token_sale::buy`, and downstream reputation accounting
+
+**Threat Description**: A bounced or duplicated transaction can be resubmitted with the same caller-bound arguments, causing duplicate payment routing, duplicate token sale allocation, and distorted treasury or reputation balances.
+
+**Attack Vectors**:
+
+- Replay of payment messages
+- Re-submission of bounced sale purchases
+- Out-of-order nonce submission by an integration client
+- Duplicate SDK retry without nonce advancement
+
+**Existing Mitigations**:
+
+- Caller-keyed `nonce_seq` counters in `payment_router` and `token_sale`
+- Strictly newer `next_nonce` validation with u64 wrap-around handling
+- `NonceConsumed` events for replay observability
+- `Error::ReplayDetected` rejection for stale or replayed nonces
+
+**Residual Risk**: LOW  
+**Recommendations**:
+
+- SDK wrappers should read the current nonce and submit `next_nonce = current + 1`
+- Healthcare reputation consumers should record the payment nonce in audit fields
+- Monitoring should alert on repeated `ReplayDetected` failures from the same caller
+
 ## Security Control Effectiveness
 
 ### Control Maturity Assessment
 
-| Control Category | Maturity Level | Coverage | Effectiveness |
-|-----------------|---------------|----------|---------------|
-| Authentication & Authorization | HIGH | 95% | HIGH |
-| Cryptographic Protections | MEDIUM-HIGH | 85% | MEDIUM-HIGH |
-| Governance & Administration | HIGH | 90% | HIGH |
-| State Integrity | HIGH | 95% | HIGH |
-| Resource Management | MEDIUM | 75% | MEDIUM |
-| Cross-Contract Security | MEDIUM | 80% | MEDIUM |
-| Monitoring & Detection | MEDIUM | 70% | MEDIUM |
-| Operational Procedures | MEDIUM | 65% | MEDIUM |
+| Control Category               | Maturity Level | Coverage | Effectiveness |
+| ------------------------------ | -------------- | -------- | ------------- |
+| Authentication & Authorization | HIGH           | 95%      | HIGH          |
+| Cryptographic Protections      | MEDIUM-HIGH    | 85%      | MEDIUM-HIGH   |
+| Governance & Administration    | HIGH           | 90%      | HIGH          |
+| State Integrity                | HIGH           | 95%      | HIGH          |
+| Resource Management            | MEDIUM         | 75%      | MEDIUM        |
+| Cross-Contract Security        | MEDIUM         | 80%      | MEDIUM        |
+| Monitoring & Detection         | MEDIUM         | 70%      | MEDIUM        |
+| Operational Procedures         | MEDIUM         | 65%      | MEDIUM        |
 
 ### Risk Heat Map
 
-| Threat Category | Likelihood | Impact | Risk Level | Trend |
-|----------------|-----------|---------|------------|-------|
-| Access Control Breaches | MEDIUM | CRITICAL | HIGH | ↗ |
-| State Manipulation | LOW | CRITICAL | MEDIUM | → |
-| Resource Exhaustion | HIGH | MEDIUM | MEDIUM | ↗ |
-| Cryptographic Failure | LOW | CRITICAL | MEDIUM | ↗ |
-| Cross-Contract Attacks | MEDIUM | HIGH | MEDIUM | → |
-| Governance Attacks | LOW | HIGH | LOW | → |
-| Quantum Threats | LOW (now) | CRITICAL | MEDIUM | ↗↑ |
-| Insider Threats | MEDIUM | HIGH | MEDIUM | → |
+| Threat Category         | Likelihood | Impact   | Risk Level | Trend |
+| ----------------------- | ---------- | -------- | ---------- | ----- |
+| Access Control Breaches | MEDIUM     | CRITICAL | HIGH       | ↗     |
+| State Manipulation      | LOW        | CRITICAL | MEDIUM     | →     |
+| Resource Exhaustion     | HIGH       | MEDIUM   | MEDIUM     | ↗     |
+| Cryptographic Failure   | LOW        | CRITICAL | MEDIUM     | ↗     |
+| Cross-Contract Attacks  | MEDIUM     | HIGH     | MEDIUM     | →     |
+| Governance Attacks      | LOW        | HIGH     | LOW        | →     |
+| Quantum Threats         | LOW (now)  | CRITICAL | MEDIUM     | ↗↑    |
+| Insider Threats         | MEDIUM     | HIGH     | MEDIUM     | →     |
 
 **Legend**: ↑ Increasing, → Stable, ↗ Increasing concern  
 **Time Horizon**: Next 12-24 months
@@ -431,24 +528,28 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 ## Compliance and Regulatory Considerations
 
 ### HIPAA (Healthcare Data)
+
 - **Requirements**: Access controls, audit logs, encryption, data integrity
 - **Compliance Status**: PARTIAL (requires operational procedures)
 - **Gaps**: Business Associate Agreements, breach notification procedures
 - **Action Items**: Implement BAAs, incident response procedures, staff training
 
 ### GDPR (EU Data)
+
 - **Requirements**: Data minimization, right to erasure, access controls
 - **Compliance Status**: PARTIAL (technical controls present)
 - **Gaps**: Data portability, consent management, DPO appointment
 - **Action Items**: Privacy policy updates, consent mechanisms, DPIAs
 
 ### Financial Regulations
+
 - **Requirements**: Transaction monitoring, audit trails, governance
 - **Compliance Status**: GOOD (strong governance controls)
 - **Gaps**: Regulatory reporting, licensing requirements
 - **Action Items**: Legal review, licensing assessment, reporting procedures
 
 ### Industry Standards
+
 - **NIST Cybersecurity Framework**: PARTIAL alignment
 - **ISO 27001**: Requires full ISMS implementation
 - **SOC 2**: Requires operational evidence and controls
@@ -457,6 +558,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 ## Operational Recommendations
 
 ### Immediate Actions (0-3 months)
+
 1. Deploy enhanced monitoring systems (MON-001 through MON-010)
 2. Implement rate limit tuning and alerting
 3. Conduct comprehensive security audit
@@ -464,6 +566,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 5. Deploy hardware security modules for admin keys
 
 ### Short-term Actions (3-12 months)
+
 1. Complete post-quantum migration assessment
 2. Implement advanced threat detection (MON-002, MON-003)
 3. Deploy cross-chain monitoring (MON-005)
@@ -471,6 +574,7 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 5. Conduct red team exercises (OP-010)
 
 ### Long-term Actions (12+ months)
+
 1. Full formal verification of critical contracts
 2. Advanced MEV protection mechanisms
 3. Decentralized oracle network integration
@@ -481,18 +585,18 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 ### Key Performance Indicators
 
-| Metric | Target | Current | Status |
-|--------|--------|---------|--------|
-| Unauthorized Access Attempts | 0 | TBD | 🔴 |
-| Mean Time to Detect (MTTD) | < 1 hour | TBD | 🔴 |
-| Mean Time to Respond (MTTR) | < 4 hours | TBD | 🔴 |
-| Security Audit Score | > 90% | TBD | 🔴 |
-| Encryption Coverage | 100% | ~95% | 🟡 |
-| Rate Limit Effectiveness | > 99% | TBD | 🔴 |
-| Governance Participation | > 80% | TBD | 🔴 |
-| Key Rotation Compliance | 100% | TBD | 🔴 |
-| Incident Response Drills | Quarterly | 0 | 🔴 |
-| Vulnerability Remediation | < 30 days | TBD | 🔴 |
+| Metric                       | Target    | Current | Status |
+| ---------------------------- | --------- | ------- | ------ |
+| Unauthorized Access Attempts | 0         | TBD     | 🔴     |
+| Mean Time to Detect (MTTD)   | < 1 hour  | TBD     | 🔴     |
+| Mean Time to Respond (MTTR)  | < 4 hours | TBD     | 🔴     |
+| Security Audit Score         | > 90%     | TBD     | 🔴     |
+| Encryption Coverage          | 100%      | ~95%    | 🟡     |
+| Rate Limit Effectiveness     | > 99%     | TBD     | 🔴     |
+| Governance Participation     | > 80%     | TBD     | 🔴     |
+| Key Rotation Compliance      | 100%      | TBD     | 🔴     |
+| Incident Response Drills     | Quarterly | 0       | 🔴     |
+| Vulnerability Remediation    | < 30 days | TBD     | 🔴     |
 
 **Status Legend**: 🟢 On Track, 🟡 At Risk, 🔴 Off Track
 
@@ -511,17 +615,17 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 ### Security Investment Categories
 
-| Category | Annual Cost | Priority | Justification |
-|----------|------------|----------|---------------|
-| Security Audits | $150K-300K | HIGH | External validation |
-| Monitoring Systems | $50K-100K | HIGH | Threat detection |
-| Personnel (Security) | $200K-400K | HIGH | Expertise and oversight |
-| Hardware Security | $50K-150K | MEDIUM | Key protection |
-| Training and Awareness | $25K-50K | MEDIUM | Staff capability |
-| Incident Response | $50K-100K | HIGH | Breach preparedness |
-| Red Team Exercises | $75K-150K | MEDIUM | Validation testing |
-| Compliance and Legal | $100K-200K | MEDIUM | Regulatory requirements |
-| **Total** | **$700K-1.4M** | | |
+| Category               | Annual Cost    | Priority | Justification           |
+| ---------------------- | -------------- | -------- | ----------------------- |
+| Security Audits        | $150K-300K     | HIGH     | External validation     |
+| Monitoring Systems     | $50K-100K      | HIGH     | Threat detection        |
+| Personnel (Security)   | $200K-400K     | HIGH     | Expertise and oversight |
+| Hardware Security      | $50K-150K      | MEDIUM   | Key protection          |
+| Training and Awareness | $25K-50K       | MEDIUM   | Staff capability        |
+| Incident Response      | $50K-100K      | HIGH     | Breach preparedness     |
+| Red Team Exercises     | $75K-150K      | MEDIUM   | Validation testing      |
+| Compliance and Legal   | $100K-200K     | MEDIUM   | Regulatory requirements |
+| **Total**              | **$700K-1.4M** |          |                         |
 
 ### ROI Considerations
 
@@ -546,13 +650,13 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 ### Milestone Timeline
 
-| Quarter | Milestone | Success Metric |
-|---------|-----------|----------------|
-| Q1 2026 | Security Baseline | Audit completion, monitoring deployment |
-| Q2 2026 | Enhanced Controls | Rate limiting, alerting operational |
-| Q3 2026 | Advanced Capabilities | Threat detection, incident response |
-| Q4 2026 | Optimization | Performance tuning, cost optimization |
-| Q1 2027 | Maturity Achievement | Full control implementation |
+| Quarter | Milestone             | Success Metric                          |
+| ------- | --------------------- | --------------------------------------- |
+| Q1 2026 | Security Baseline     | Audit completion, monitoring deployment |
+| Q2 2026 | Enhanced Controls     | Rate limiting, alerting operational     |
+| Q3 2026 | Advanced Capabilities | Threat detection, incident response     |
+| Q4 2026 | Optimization          | Performance tuning, cost optimization   |
+| Q1 2027 | Maturity Achievement  | Full control implementation             |
 
 ## Conclusion and Strategic Outlook
 

@@ -526,6 +526,7 @@ graph LR
 - **Currency Conversion**: Cross-chain token swaps
 - **Settlement Coordination**: Unified settlement system
 - **Fee Distribution**: Automated fee allocation
+- **Reentrancy Guarding**: Timelock-to-escrow release paths include cross-contract guard checks
 
 ### **6. Regional Management**
 - **Geographic Distribution**: Regional node deployment

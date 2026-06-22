@@ -1,5 +1,5 @@
 #![no_std]
-#![allow(dead_code)]
+#![allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 
 #[cfg(test)]
 mod test;

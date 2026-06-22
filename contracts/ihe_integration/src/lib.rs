@@ -1,5 +1,5 @@
 #![no_std]
-#![allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
 
 #[cfg(test)]
 mod test;
@@ -1692,7 +1692,7 @@ impl IHEIntegrationContract {
         id
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     fn log_atna_internal(
         env: &Env,
         event_type: ATNAEventType,

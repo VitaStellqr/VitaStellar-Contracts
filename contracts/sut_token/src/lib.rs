@@ -1,6 +1,6 @@
 // SUT Token - Stellar Utility Token with checked arithmetic throughout
 #![no_std]
-#![allow(clippy::arithmetic_side_effects)]
+#![allow(clippy::arithmetic_side_effects)] // Arithmetic side effects are intentional and explicitly checked
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contractmeta, contracttype, Address, Env, String,

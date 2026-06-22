@@ -2,6 +2,7 @@
 
 pub mod errors;
 pub use errors::Error;
+use reentrancy_guard as reentrancy;
 use soroban_sdk::{
     contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map, Symbol,
 };
@@ -77,38 +78,45 @@ impl Timelock {
     }
 
     pub fn execute(env: Env, id: u64) -> Result<(), Error> {
-        let mut q: Map<u64, QueuedTx> = env
-            .storage()
-            .persistent()
-            .get(&QUEUE)
-            .unwrap_or(Map::new(&env));
-        env.storage().persistent().extend_ttl(
-            &QUEUE,
-            PERSISTENT_TTL_THRESHOLD,
-            PERSISTENT_TTL_EXTEND_TO,
-        );
-        let tx = q.get(id).ok_or(Error::NotQueued)?;
-        let now: u64 = env.ledger().timestamp();
-        let _cfg: TimelockConfig = env
-            .storage()
-            .instance()
-            .get(&CFG)
-            .ok_or(Error::NotInitialized)?;
-        if now < tx.eta {
-            return Err(Error::NotReady);
+        if !reentrancy::enter(&env) {
+            return Err(Error::ReentrancyRejected);
         }
-        // In Soroban, cross-contract call dispatch is via auth + address invocations off-chain.
-        // Here we just emit execution event and remove from queue.
-        q.remove(id);
-        env.storage().persistent().set(&QUEUE, &q);
-        env.storage().persistent().extend_ttl(
-            &QUEUE,
-            PERSISTENT_TTL_THRESHOLD,
-            PERSISTENT_TTL_EXTEND_TO,
-        );
-        env.events()
-            .publish((symbol_short!("Exec"), id), (tx.target, tx.call));
-        Ok(())
+        let result = (|| {
+            let mut q: Map<u64, QueuedTx> = env
+                .storage()
+                .persistent()
+                .get(&QUEUE)
+                .unwrap_or(Map::new(&env));
+            env.storage().persistent().extend_ttl(
+                &QUEUE,
+                PERSISTENT_TTL_THRESHOLD,
+                PERSISTENT_TTL_EXTEND_TO,
+            );
+            let tx = q.get(id).ok_or(Error::NotQueued)?;
+            let now: u64 = env.ledger().timestamp();
+            let _cfg: TimelockConfig = env
+                .storage()
+                .instance()
+                .get(&CFG)
+                .ok_or(Error::NotInitialized)?;
+            if now < tx.eta {
+                return Err(Error::NotReady);
+            }
+            // In Soroban, cross-contract call dispatch is via auth + address invocations off-chain.
+            // Here we just emit execution event and remove from queue.
+            q.remove(id);
+            env.storage().persistent().set(&QUEUE, &q);
+            env.storage().persistent().extend_ttl(
+                &QUEUE,
+                PERSISTENT_TTL_THRESHOLD,
+                PERSISTENT_TTL_EXTEND_TO,
+            );
+            env.events()
+                .publish((symbol_short!("Exec"), id), (tx.target, tx.call));
+            Ok(())
+        })();
+        reentrancy::exit(&env);
+        result
     }
 }
 
@@ -116,7 +124,7 @@ impl Timelock {
 mod time_dependent_tests;
 
 #[cfg(all(test, feature = "testutils"))]
-#[allow(clippy::unwrap_used, clippy::panic)]
+#[allow(clippy::unwrap_used, clippy::panic)] // Unwrap is intentionally used in this contract context
 mod test {
     use super::*;
     use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};

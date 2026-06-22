@@ -1,4 +1,4 @@
-#![allow(clippy::new_without_default)]
+#![allow(clippy::new_without_default)] // Intentional lint suppression with a deliberate reason
 
 /// Test data generators for various contract scenarios
 use soroban_sdk::{testutils::Address as _, vec, Address, Env, String as SorobanString, Vec};
@@ -9,7 +9,7 @@ pub fn generate_test_address(env: &Env) -> Address {
     Address::generate(env)
 }
 
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used)] // Allowed in test/benchmark harness where unwrap is acceptable
 /// Medical record data generator
 pub struct MedicalRecordGenerator {
     counter: usize,
@@ -108,7 +108,7 @@ pub struct MedicalEntry {
 }
 
 /// Consent data generator
-#[allow(dead_code)]
+#[allow(dead_code)] // Unused code is intentionally retained for compatibility or test scaffolding
 pub struct ConsentDataGenerator {
     counter: usize,
 }

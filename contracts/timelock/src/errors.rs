@@ -18,6 +18,7 @@ pub enum Error {
     AlreadyQueued = 375,
     NotQueued = 372,
     NotReady = 376,
+    ReentrancyRejected = 377,
 
     // --- Financial & Resource (500–599) ---
     InsufficientFunds = 500,
@@ -35,6 +36,7 @@ pub fn get_suggestion(error: Error) -> Symbol {
         Error::ContractPaused | Error::DeadlineExceeded | Error::CrossChainTimeout => {
             symbol_short!("RE_TRY_L")
         },
+        Error::ReentrancyRejected => symbol_short!("CONTACT"),
         Error::InsufficientFunds => symbol_short!("ADD_FUND"),
         Error::StorageFull => symbol_short!("CLN_OLD"),
         _ => symbol_short!("CONTACT"),

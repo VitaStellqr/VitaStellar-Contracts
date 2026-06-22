@@ -105,6 +105,37 @@ sequenceDiagram
     I->>PR: Close Claim
 ```
 
+## Replay Protection for Payment Mutations
+
+```mermaid
+sequenceDiagram
+    participant SDK as SDK Wallet
+    participant PR as Payment Router
+    participant TS as Token Sale
+    participant REP as Healthcare Reputation
+
+    SDK->>PR: route_payment(payer, recipient, amount, next_nonce)
+    PR->>PR: Load caller nonce_seq
+    alt next_nonce is newer than nonce_seq
+        PR->>PR: Store next_nonce as nonce_seq
+        PR->>PR: Emit NonceConsumed
+        PR->>PR: Route payment and split fees
+        PR->>REP: Payment audit includes nonce
+    else nonce replay or out-of-order nonce
+        PR->>PR: Return ReplayDetected
+    end
+
+    SDK->>TS: buy(buyer, phase_id, token, amount, next_nonce)
+    TS->>TS: Load buyer nonce_seq
+    alt next_nonce is newer than nonce_seq
+        TS->>TS: Store next_nonce as nonce_seq
+        TS->>TS: Emit NonceConsumed
+        TS->>TS: Transfer payment token and allocate sale tokens
+    else nonce replay or out-of-order nonce
+        TS->>TS: Return ReplayDetected
+    end
+```
+
 ## Escrow-Based Appointment Booking Flow
 
 ```mermaid

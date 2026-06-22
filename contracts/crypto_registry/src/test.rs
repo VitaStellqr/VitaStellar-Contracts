@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used)] // Allowed in test/benchmark harness where unwrap is acceptable
 use super::*;
 
 use soroban_sdk::testutils::Address as _;

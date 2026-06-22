@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used)] // Allowed in test/benchmark harness where unwrap is acceptable
 
 use crate::{
     ChainId, CrossChainIdentityContract, CrossChainIdentityContractClient, Error, RequestStatus,

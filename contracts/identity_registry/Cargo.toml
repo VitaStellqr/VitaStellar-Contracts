@@ -15,6 +15,7 @@ vitastellar-sanitization = { path = "../sanitization" }
 contract-template = { path = "../contract_template" }
 
 
+access_utils = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }

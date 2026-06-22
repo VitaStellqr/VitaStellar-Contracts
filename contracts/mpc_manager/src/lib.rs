@@ -186,7 +186,7 @@ impl MPCManager {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn start_session(
         env: Env,
         initiator: Address,
@@ -347,7 +347,7 @@ impl MPCManager {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn finalize_session(
         env: Env,
         initiator: Address,
@@ -440,7 +440,7 @@ impl MPCManager {
     }
 
     /// Create Shamir's Secret Sharing shares for medical record encryption keys
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn create_secret_shares(
         env: Env,
         participant: Address,
@@ -566,7 +566,7 @@ impl MPCManager {
     }
 
     /// Perform privacy-preserving statistical analysis
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn perform_statistical_analysis(
         env: Env,
         participant: Address,
@@ -621,7 +621,7 @@ impl MPCManager {
     }
 
     /// Train machine learning model on encrypted data
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
     pub fn train_secure_ml_model(
         env: Env,
         participant: Address,
