@@ -1,4 +1,5 @@
 use super::*;
+use crate::tests::{MockRbac, MockRbacClient};
 use soroban_sdk::testutils::{Address as _, Ledger as _};
 use soroban_sdk::{Address, BytesN, Env, String, Vec};
 
@@ -585,9 +586,41 @@ fn test_cancel_recovery_not_initiated() {
     client.cancel_recovery(&subject);
 }
 
+// Regression test: cancelling a recovery that was already executed must return
+// RecoveryAlreadyExecuted (not RecoveryNotInitiated).
 #[test]
 #[should_panic(expected = "Error(Contract, #363)")]
-fn test_cancel_recovery_already_executed() {
+fn test_cancel_recovery_after_execution_returns_already_executed() {
+    let (env, client, _owner) = create_test_contract();
+    let subject = Address::generate(&env);
+
+    create_test_did(&env, &client, &subject);
+
+    let guardian1 = Address::generate(&env);
+    let guardian2 = Address::generate(&env);
+
+    client.add_recovery_guardian(&subject, &guardian1, &1u32);
+    client.add_recovery_guardian(&subject, &guardian2, &1u32);
+
+    let new_controller = Address::generate(&env);
+    let new_key = BytesN::from_array(&env, &[5u8; 32]);
+
+    let request_id = client.initiate_recovery(&guardian1, &subject, &new_controller, &new_key);
+    client.approve_recovery(&guardian2, &request_id);
+
+    // Wait for timelock and execute
+    env.ledger().set_timestamp(100_000);
+    client.execute_recovery(&request_id);
+
+    // Attempting to cancel an already-executed recovery must surface
+    // RecoveryAlreadyExecuted (#363), not RecoveryNotInitiated (#360).
+    client.cancel_recovery(&subject);
+}
+
+// Regression test: executing a recovery that was already executed must return
+// RecoveryAlreadyExecuted.
+#[test]
+fn test_execute_recovery_twice_returns_already_executed() {
     let (env, client, _owner) = create_test_contract();
     let subject = Address::generate(&env);
 
@@ -608,11 +641,8 @@ fn test_cancel_recovery_already_executed() {
     env.ledger().set_timestamp(100_000);
     client.execute_recovery(&request_id);
 
-    env.storage()
-        .persistent()
-        .set(&DataKey::ActiveRecovery(subject.clone()), &request_id);
-
-    client.cancel_recovery(&subject);
+    let result = client.try_execute_recovery(&request_id);
+    assert_eq!(result, Err(Ok(Error::RecoveryAlreadyExecuted)));
 }
 
 // ============================================================================

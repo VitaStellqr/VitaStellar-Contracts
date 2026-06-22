@@ -1260,7 +1260,7 @@ impl IdentityRegistryContract {
         if let Some(request_id) = env
             .storage()
             .persistent()
-            .get::<u64>(&DataKey::ActiveRecovery(subject.clone()))
+            .get::<_, u64>(&DataKey::ActiveRecovery(subject.clone()))
         {
             let request: Option<RecoveryRequest> = env
                 .storage()
