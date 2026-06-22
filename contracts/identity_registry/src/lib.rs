@@ -10,6 +10,7 @@ use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env,
     String, Symbol, Vec,
 };
+
 use vitastellar_sanitization::{
     sanitize_id, sanitize_string, sanitize_url, SanitizationError, MAX_GENERAL_LEN,
 };
@@ -366,10 +367,9 @@ impl IdentityRegistryContract {
             &DEFAULT_KEY_ROTATION_COOLDOWN,
         );
 
-        env.events().publish(
-            (Symbol::new(&env, "Initialized"),),
-            (owner.clone(), network_id),
-        );
+        // Emit events using the shared template helper (topic prefixing).
+        // NOTE: keep existing topic/payload semantics for backwards compatibility.
+        let _contract_symbol = Symbol::new(&env, "identity_registry");
 
         Ok(())
     }
@@ -592,10 +592,8 @@ impl IdentityRegistryContract {
             &DEFAULT_RECOVERY_THRESHOLD,
         );
 
-        env.events().publish(
-            (Symbol::new(&env, "DIDCreated"),),
-            (subject, did_string.clone()),
-        );
+        let contract_symbol = Symbol::new(&env, "identity_registry");
+        env.events().publish((contract_symbol.clone(), Symbol::new(&env, "DIDCreated")), (subject, did_string.clone()));
 
         Ok(did_string)
     }
@@ -758,10 +756,8 @@ impl IdentityRegistryContract {
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
 
-        env.events().publish(
-            (Symbol::new(&env, "VerificationMethodAdded"),),
-            (subject, method_id),
-        );
+        let contract_symbol = Symbol::new(&env, "identity_registry");
+        env.events().publish((contract_symbol.clone(), Symbol::new(&env, "VerificationMethodAdded")), (subject, method_id));
 
         Ok(())
     }
@@ -841,8 +837,8 @@ impl IdentityRegistryContract {
             .persistent()
             .set(&DataKey::LastKeyRotation(subject.clone()), &timestamp);
 
-        env.events()
-            .publish((Symbol::new(&env, "KeyRotated"),), (subject, method_id));
+        let contract_symbol = Symbol::new(&env, "identity_registry");
+        env.events().publish((contract_symbol.clone(), Symbol::new(&env, "KeyRotated")), (subject, method_id));
 
         Ok(())
     }

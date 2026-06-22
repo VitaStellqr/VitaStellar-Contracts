@@ -17,10 +17,11 @@ pub struct HealthStatus {
 }
 
 /// Standard health states.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[contracttype]
 #[repr(u32)]
 pub enum HealthState {
+
     /// Contract is initialized and operating normally.
     Ok = 0,
     /// Contract is initialized but paused.

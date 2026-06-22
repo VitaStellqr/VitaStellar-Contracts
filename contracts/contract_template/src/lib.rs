@@ -11,7 +11,7 @@
 #![no_std]
 
 mod errors;
-mod events;
+pub mod events;
 mod health;
 #[cfg(test)]
 mod test;

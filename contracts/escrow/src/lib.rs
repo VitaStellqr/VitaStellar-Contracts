@@ -24,6 +24,11 @@ use soroban_sdk::{
     Vec,
 };
 
+// NOTE: No dependency on contract-template in this crate, so we can't call the shared helper directly.
+// We'll emit canonical topics locally in this contract.
+
+
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[contracttype]
 pub enum EscrowStatus {
