@@ -307,6 +307,7 @@ pub enum DataKey {
     RecoveryRequest(u64),
     ActiveRecovery(Address),
     RecoveryCounter,
+    SubjectRecoveryId(Address),
 
     // Key Rotation
     LastKeyRotation(Address),
@@ -1311,6 +1312,9 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::RecoveryCounter, &request_id);
+        env.storage()
+            .persistent()
+            .set(&DataKey::SubjectRecoveryId(subject.clone()), &request_id);
 
         // Update DID status
         let mut did_doc: DIDDocument = env
@@ -1486,7 +1490,26 @@ impl IdentityRegistryContract {
             .storage()
             .persistent()
             .get(&DataKey::ActiveRecovery(subject.clone()))
-            .ok_or(Error::RecoveryNotInitiated)?;
+            .ok_or_else(|| {
+                // Check if the recovery was already executed (ActiveRecovery was removed
+                // on execution, but SubjectRecoveryId persists until a new recovery starts)
+                if let Some(id) = env
+                    .storage()
+                    .persistent()
+                    .get::<_, u64>(&DataKey::SubjectRecoveryId(subject.clone()))
+                {
+                    if let Some(req) = env
+                        .storage()
+                        .persistent()
+                        .get::<_, RecoveryRequest>(&DataKey::RecoveryRequest(id))
+                    {
+                        if req.executed {
+                            return Error::RecoveryAlreadyExecuted;
+                        }
+                    }
+                }
+                Error::RecoveryNotInitiated
+            })?;
 
         let mut request: RecoveryRequest = env
             .storage()
@@ -1517,6 +1540,9 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .remove(&DataKey::ActiveRecovery(subject.clone()));
+        env.storage()
+            .persistent()
+            .remove(&DataKey::SubjectRecoveryId(subject.clone()));
 
         env.events().publish(
             (Symbol::new(&env, "RecoveryCancelled"),),
@@ -2205,6 +2231,9 @@ impl IdentityRegistryContract {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod comprehensive_tests;
 
 #[cfg(test)]
 mod tests {

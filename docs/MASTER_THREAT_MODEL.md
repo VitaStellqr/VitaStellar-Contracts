@@ -20,7 +20,7 @@ crypto_registry: 935
 emr_integration: 2141
 governor: 451
 homomorphic_registry: 1149
-identity_registry: 3601
+identity_registry: 3691
 medical_record_backup: 1566
 mpc_manager: 1133
 zk_verifier: 490
@@ -72,7 +72,7 @@ The VitaStellar deployment is a graph of focused contracts rather than one monol
    - Decentralized identity and role-based access control
    - Healthcare-specific roles (provider, patient, admin, auditor, …)
    - Permission assignment, attestation, and lookup
-   - ~3,601 lines of Rust code
+   - ~3,691 lines of Rust code
 
 3. **CryptoRegistry** (`contracts/crypto_registry/`)
    - Manages public key infrastructure
