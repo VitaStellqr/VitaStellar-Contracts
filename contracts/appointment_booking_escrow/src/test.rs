@@ -460,6 +460,92 @@ mod tests {
         assert_eq!(appt.status, AppointmentStatus::NoShow);
     }
 
+    // ── No-show penalty flow tests ────────────────────────────────────
+
+    /// (1) Provider marks no-show before scheduled appointment time → should fail
+    #[test]
+    fn test_mark_no_show_before_scheduled_time_fails() {
+        let (env, client, admin, token_id) = setup();
+        client.initialize(&admin, &token_id);
+        let patient = Address::generate(&env);
+        let provider = Address::generate(&env);
+        let amount: i128 = 1000;
+        mint(&env, &token_id, &patient, 10000);
+        let appointment_id = client.book_appointment(&patient, &provider, &amount, &token_id);
+
+        // scheduled_time was set to the booking timestamp (12345 from setup)
+        // Set ledger time before the scheduled time
+        env.ledger().set_timestamp(10_000);
+        let result = client.try_mark_no_show(&provider, &appointment_id);
+        assert_eq!(result, Err(Ok(Error::InvalidState)));
+    }
+
+    /// (2) Provider marks no-show after scheduled appointment time → should succeed
+    #[test]
+    fn test_mark_no_show_after_scheduled_time_succeeds() {
+        let (env, client, admin, token_id) = setup();
+        client.initialize(&admin, &token_id);
+        let patient = Address::generate(&env);
+        let provider = Address::generate(&env);
+        let amount: i128 = 1000;
+        mint(&env, &token_id, &patient, 10000);
+        let appointment_id = client.book_appointment(&patient, &provider, &amount, &token_id);
+
+        // Advance ledger past the scheduled_time
+        env.ledger().set_timestamp(20_000);
+        client.mark_no_show(&provider, &appointment_id);
+        let appt = client.get_appointment(&appointment_id).unwrap();
+        assert_eq!(appt.status, AppointmentStatus::NoShow);
+        assert_eq!(appt.no_show_marked_at, 20_000);
+        assert!(appt.funds_released);
+    }
+
+    /// (3) Double no-show marking is rejected
+    #[test]
+    fn test_mark_no_show_double_fails() {
+        let (env, client, admin, token_id) = setup();
+        client.initialize(&admin, &token_id);
+        let patient = Address::generate(&env);
+        let provider = Address::generate(&env);
+        let amount: i128 = 1000;
+        mint(&env, &token_id, &patient, 10000);
+        let appointment_id = client.book_appointment(&patient, &provider, &amount, &token_id);
+
+        env.ledger().set_timestamp(20_000);
+        client.mark_no_show(&provider, &appointment_id);
+        // Second attempt should fail — status is NoShow, not Booked
+        let result = client.try_mark_no_show(&provider, &appointment_id);
+        assert_eq!(result, Err(Ok(Error::InvalidState)));
+    }
+
+    /// (4) Funds are released to provider on no-show with correct split (full amount)
+    #[test]
+    fn test_mark_no_show_releases_funds_to_provider() {
+        let (env, client, admin, token_id) = setup();
+        client.initialize(&admin, &token_id);
+        let patient = Address::generate(&env);
+        let provider = Address::generate(&env);
+        let amount: i128 = 1000;
+        mint(&env, &token_id, &patient, 10000);
+        let appointment_id = client.book_appointment(&patient, &provider, &amount, &token_id);
+
+        // Check provider's initial token balance
+        let token_client = token::Client::new(&env, &token_id);
+        let provider_balance_before = token_client.balance(&provider);
+
+        // Advance time past scheduled and mark no-show
+        env.ledger().set_timestamp(20_000);
+        client.mark_no_show(&provider, &appointment_id);
+
+        // No-show releases the full escrowed amount to the provider
+        let provider_balance_after = token_client.balance(&provider);
+        assert_eq!(provider_balance_after - provider_balance_before, amount);
+
+        // funds_released flag prevents double withdrawal
+        let appt = client.get_appointment(&appointment_id).unwrap();
+        assert!(appt.funds_released);
+    }
+
     /// Test: reminder sent timestamp
     #[test]
     fn test_reminder_sent_timestamp() {
