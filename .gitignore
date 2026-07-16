@@ -3,7 +3,8 @@
 **/target/
 **/*.rs.bk
 *.pdb
-Cargo.lock
+# Cargo.lock is committed for reproducible CI builds
+# Cargo.lock
 **/test_snapshots/
 contracts/medical_records/test_snapshots/
 
