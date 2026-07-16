@@ -2,9 +2,11 @@ use soroban_sdk::{symbol_short, Address, Env, Map};
 
 use crate::errors::Error;
 use crate::status::update_stats;
-use crate::types::{Escrow, EscrowStatus, CREDITS, ESCROWS};
+use crate::types::EscrowStatus;
+use crate::{get_escrow_by_id, put_escrow};
 
 pub fn add_credit(env: &Env, addr: &Address, delta: i128) {
+    use crate::types::CREDITS;
     let mut credits: Map<Address, i128> = env
         .storage()
         .persistent()
@@ -17,12 +19,7 @@ pub fn add_credit(env: &Env, addr: &Address, delta: i128) {
 
 pub fn approve_release(env: &Env, order_id: u64, approver: Address) -> Result<(), Error> {
     approver.require_auth();
-    let mut escrows: Map<u64, Escrow> = env
-        .storage()
-        .persistent()
-        .get(&ESCROWS)
-        .unwrap_or(Map::new(env));
-    let mut e = escrows.get(order_id).ok_or(Error::EscrowNotFound)?;
+    let mut e = get_escrow_by_id(env, order_id).ok_or(Error::EscrowNotFound)?;
 
     if e.status == EscrowStatus::Settled || e.status == EscrowStatus::Refunded {
         return Err(Error::AlreadySettled);
@@ -39,27 +36,20 @@ pub fn approve_release(env: &Env, order_id: u64, approver: Address) -> Result<()
         update_stats(env, 0, false, false, false, false, 1);
     }
 
-    escrows.set(order_id, e);
-    env.storage().persistent().set(&ESCROWS, &escrows);
+    put_escrow(env, order_id, &e);
     Ok(())
 }
 
 pub fn mark_disputed(env: &Env, caller: Address, order_id: u64) -> Result<(), Error> {
     caller.require_auth();
-    let mut escrows: Map<u64, Escrow> = env
-        .storage()
-        .persistent()
-        .get(&ESCROWS)
-        .unwrap_or(Map::new(env));
-    let mut e = escrows.get(order_id).ok_or(Error::EscrowNotFound)?;
+    let mut e = get_escrow_by_id(env, order_id).ok_or(Error::EscrowNotFound)?;
 
     if e.status == EscrowStatus::Settled || e.status == EscrowStatus::Refunded {
         return Err(Error::AlreadySettled);
     }
 
     e.status = EscrowStatus::Disputed;
-    escrows.set(order_id, e);
-    env.storage().persistent().set(&ESCROWS, &escrows);
+    put_escrow(env, order_id, &e);
 
     update_stats(env, 0, false, false, false, true, 0);
 

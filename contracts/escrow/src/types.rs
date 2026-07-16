@@ -57,7 +57,20 @@ pub struct FeeConfig {
     pub fee_receiver: Address,
 }
 
+/// Per-item persistent storage keys. `Escrow(order_id)` replaces the
+/// legacy bulk `ESCROWS` map: each escrow now lives under its own key,
+/// so reading or writing one escrow no longer deserializes the entire
+/// collection (was O(n), now O(1)).
+#[derive(Clone)]
+#[contracttype]
+pub enum DataKey {
+    Escrow(u64),
+}
+
 // Storage keys
+/// Legacy bulk escrow map key. No longer written to; retained only so
+/// `migrate_storage` can detect and migrate data from pre-upgrade
+/// deployments.
 pub const ESCROWS: Symbol = symbol_short!("escrow");
 pub const FEE_CONF: Symbol = symbol_short!("feeconf");
 pub const REENTRANCY_LOCK: Symbol = symbol_short!("relock");
@@ -110,7 +123,6 @@ mod tests {
         // ensure symbols compile and are accessible
         let _ = ESCROWS;
         let _ = FEE_CONF;
-        let _ = CREDITS;
         let _ = STATS;
         let _ = ADMIN;
         let _ = DAILY_STATS;
