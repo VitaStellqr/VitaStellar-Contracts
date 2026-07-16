@@ -8,12 +8,6 @@ edition = "2021"
 [dependencies]
 soroban-sdk = { workspace = true }
 
-# Pin ed25519-dalek to v2 to work around soroban-env-host 21.2.1's
-# dependency resolution issue with Rust ≥1.92: ed25519-dalek v3 uses
-# rand_core 0.10.x but soroban-env-host's testutils still uses
-# rand_chacha 0.3.1 / rand_core 0.6.x, causing CryptoRng trait mismatch.
-ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["rand_core"] }
-
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
 
