@@ -76,7 +76,7 @@ impl Governor {
         reputation_contract: Option<Address>,
         dispute_contract: Option<Address>,
     ) -> Result<(), Error> {
-        if env.storage().instance().has(&CFG) {
+        if access_utils::is_initialized(&env, &CFG) {
             return Err(Error::AlreadyInitialized);
         }
         let cfg = GovernorConfig {

@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 [dependencies]
 soroban-sdk.workspace = true
 reentrancy-guard = { path = "../reentrancy_guard" }
+access_utils = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }

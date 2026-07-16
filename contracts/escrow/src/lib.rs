@@ -39,10 +39,7 @@ pub struct EscrowContract;
 #[contractimpl]
 impl EscrowContract {
     pub fn initialize(env: Env, admin: Address) -> Result<(), Error> {
-        if env.storage().instance().has(&ADMIN) {
-            return Err(Error::Unauthorized);
-        }
-        env.storage().instance().set(&ADMIN, &admin);
+        access_utils::init_admin(&env, &ADMIN, &admin).map_err(|_| Error::Unauthorized)?;
         Ok(())
     }
 

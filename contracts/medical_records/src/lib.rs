@@ -1,11 +1,14 @@
 #![no_std]
 
+use access_utils;
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String,
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String, Symbol,
 };
 
 mod crypto;
 mod validation;
+
+const ADMIN_KEY: Symbol = symbol_short!("admin");
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -25,6 +28,8 @@ pub enum RecordError {
     Unauthorized = 2,
     RecordNotFound = 3,
     EncryptionFailed = 4,
+    NotInitialized = 5,
+    AlreadyInitialized = 6,
 }
 
 #[contracttype]
@@ -38,6 +43,16 @@ pub struct MedicalRecords;
 
 #[contractimpl]
 impl MedicalRecords {
+    pub fn initialize(env: Env, admin: Address) -> Result<(), RecordError> {
+        access_utils::init_admin(&env, &ADMIN_KEY, &admin)
+            .map_err(|_| RecordError::AlreadyInitialized)?;
+        Ok(())
+    }
+
+    pub fn get_admin(env: Env) -> Option<Address> {
+        env.storage().instance().get(&ADMIN_KEY)
+    }
+
     pub fn write_record(
         env: Env,
         owner: Address,

@@ -47,11 +47,8 @@ impl ContractTemplate {
     /// # Auth
     /// No auth required — the deployer becomes the admin.
     pub fn initialize(env: Env, admin: Address) -> Result<(), Error> {
-        if env.storage().instance().has(&KEY_ADMIN) {
-            return Err(Error::AlreadyInitialized);
-        }
-
-        env.storage().instance().set(&KEY_ADMIN, &admin);
+        access_utils::init_admin(&env, &KEY_ADMIN, &admin)
+            .map_err(|_| Error::AlreadyInitialized)?;
         events::emit_initialized(&env, &admin);
 
         Ok(())

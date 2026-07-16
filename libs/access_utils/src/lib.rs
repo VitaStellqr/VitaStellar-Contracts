@@ -2,6 +2,8 @@
 
 pub mod counter;
 
+use soroban_sdk::{Address, Env};
+
 /// Shared helper for the common admin authorization pattern used across contracts.
 ///
 /// The macro keeps each contract's existing `Self::require_admin(...)` helper and
@@ -12,6 +14,29 @@ macro_rules! require_admin {
         $caller.require_auth();
         Self::require_admin(&$env, &$caller)?;
     }};
+}
+
+/// Check whether a given storage key exists in instance storage.
+/// Used as a generic initialization guard.
+pub fn is_initialized<K>(env: &Env, key: &K) -> bool
+where
+    K: soroban_sdk::IntoVal<Env, soroban_sdk::Val>,
+{
+    env.storage().instance().has(key)
+}
+
+/// Initialize a contract by writing an admin address under the given
+/// instance-storage key. Returns `Err(())` if the key already exists
+/// (contract already initialized).
+pub fn init_admin<K>(env: &Env, key: &K, admin: &Address) -> Result<(), ()>
+where
+    K: soroban_sdk::IntoVal<Env, soroban_sdk::Val>,
+{
+    if is_initialized(env, key) {
+        return Err(());
+    }
+    env.storage().instance().set(key, admin);
+    Ok(())
 }
 
 #[cfg(test)]
