@@ -10,7 +10,7 @@ members = [
 
 [workspace.dependencies]
 access_utils = { package = "access-utils", path = "libs/access_utils" }
-soroban-sdk = { version = "=21.7.7" }
+soroban-sdk = { version = "=27.0.0" }
 soroban-cli = "=21.7.7"
 
 [workspace.package]
