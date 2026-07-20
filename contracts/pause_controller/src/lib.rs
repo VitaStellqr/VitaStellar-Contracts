@@ -85,11 +85,7 @@ impl PauseController {
     }
 
     /// Remove a contract from the registry.
-    pub fn unregister_contract(
-        env: Env,
-        admin: Address,
-        name: Symbol,
-    ) -> Result<(), Error> {
+    pub fn unregister_contract(env: Env, admin: Address, name: Symbol) -> Result<(), Error> {
         admin.require_auth();
         Self::require_admin(&env, &admin)?;
 
@@ -156,11 +152,7 @@ impl PauseController {
     /// The actual unpause takes effect only after calling `execute_unpause`
     /// once the delay has elapsed. Calling this again before the delay elapses
     /// resets the timer.
-    pub fn unpause_all(
-        env: Env,
-        admin: Address,
-        delay: u64,
-    ) -> Result<(), Error> {
+    pub fn unpause_all(env: Env, admin: Address, delay: u64) -> Result<(), Error> {
         admin.require_auth();
         Self::require_admin(&env, &admin)?;
 
@@ -189,11 +181,7 @@ impl PauseController {
             return Err(Error::NotPaused);
         }
 
-        let eta: u64 = env
-            .storage()
-            .instance()
-            .get(&KEY_UNPAUSE_ETA)
-            .unwrap_or(0);
+        let eta: u64 = env.storage().instance().get(&KEY_UNPAUSE_ETA).unwrap_or(0);
         if eta == 0 {
             return Err(Error::UnpauseNotScheduled);
         }
@@ -235,10 +223,7 @@ impl PauseController {
 
     /// Returns `true` if the system is currently paused.
     pub fn is_system_paused(env: Env) -> bool {
-        env.storage()
-            .instance()
-            .get(&KEY_PAUSED)
-            .unwrap_or(false)
+        env.storage().instance().get(&KEY_PAUSED).unwrap_or(false)
     }
 
     /// Returns the list of registered contracts.
@@ -251,10 +236,7 @@ impl PauseController {
 
     /// Returns the scheduled unpause timestamp (0 if none).
     pub fn get_unpause_eta(env: Env) -> u64 {
-        env.storage()
-            .instance()
-            .get(&KEY_UNPAUSE_ETA)
-            .unwrap_or(0)
+        env.storage().instance().get(&KEY_UNPAUSE_ETA).unwrap_or(0)
     }
 
     // -----------------------------------------------------------------------
@@ -262,10 +244,7 @@ impl PauseController {
     // -----------------------------------------------------------------------
 
     fn is_paused_internal(env: &Env) -> bool {
-        env.storage()
-            .instance()
-            .get(&KEY_PAUSED)
-            .unwrap_or(false)
+        env.storage().instance().get(&KEY_PAUSED).unwrap_or(false)
     }
 
     fn require_admin(env: &Env, caller: &Address) -> Result<(), Error> {
@@ -299,16 +278,12 @@ impl PauseController {
 
         if method == set_paused {
             // set_paused(caller: Address, paused: bool)
-            let args: Vec<Val> = Vec::from_array(env, [
-                caller.clone().into_val(env),
-                paused.into_val(env),
-            ]);
+            let args: Vec<Val> =
+                Vec::from_array(env, [caller.clone().into_val(env), paused.into_val(env)]);
             env.invoke_contract::<()>(&contract.address, &method, args);
         } else if paused {
             // call pause(caller)
-            let args: Vec<Val> = Vec::from_array(env, [
-                caller.clone().into_val(env),
-            ]);
+            let args: Vec<Val> = Vec::from_array(env, [caller.clone().into_val(env)]);
             env.invoke_contract::<()>(&contract.address, &method, args);
         } else {
             // For unpause when method is "pause", derive "unpause"
@@ -317,9 +292,7 @@ impl PauseController {
             } else {
                 method
             };
-            let args: Vec<Val> = Vec::from_array(env, [
-                caller.clone().into_val(env),
-            ]);
+            let args: Vec<Val> = Vec::from_array(env, [caller.clone().into_val(env)]);
             env.invoke_contract::<()>(&contract.address, &unpause_method, args);
         }
 
