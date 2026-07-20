@@ -7,6 +7,11 @@ edition = "2021"
 
 [dependencies]
 soroban-sdk = { workspace = true }
+# Pin ed25519-dalek to v2 here as a regular (non-dev) dependency so that
+# Cargo's resolver propagates the v2 constraint across the entire workspace.
+# Without this, soroban-env-host v21.2.1 ends up with both rand_core v0.6
+# (its own requirement) and rand_core v0.10 (from ed25519-dalek v3), causing
+# a trait-bound compile error in testutils.rs.
 ed25519-dalek = { version = "2", features = ["rand_core"] }
 
 [dev-dependencies]
