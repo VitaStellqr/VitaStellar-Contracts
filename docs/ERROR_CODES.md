@@ -805,6 +805,7 @@
 | 430 | VersionNotFound | Generated from contract source |
 | 600 | InvalidProof | Generated from contract source |
 | 601 | VerificationFailed | Generated from contract source |
+| 700 | InsufficientAttestors | Generated from contract source |
 
 ### zkp_registry
 

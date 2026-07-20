@@ -45,8 +45,8 @@ pub enum DataKey {
     // Configurable retention overrides
     RetentionConfig,
     // Counter-based pagination (replaces unbounded Vecs)
-    CategoryCount(u32),        // category -> count
-    CategoryEntry(u32, u32),   // (category, idx) -> item_id
+    CategoryCount(u32),      // category -> count
+    CategoryEntry(u32, u32), // (category, idx) -> item_id
 }
 
 #[contracttype]
@@ -158,10 +158,9 @@ impl StorageCleanup {
             .persistent()
             .get(&DataKey::CategoryCount(category))
             .unwrap_or(0);
-        env.storage().persistent().set(
-            &DataKey::CategoryEntry(category, count),
-            &id,
-        );
+        env.storage()
+            .persistent()
+            .set(&DataKey::CategoryEntry(category, count), &id);
         env.storage().persistent().set(
             &DataKey::CategoryCount(category),
             &(count.saturating_add(1)),
@@ -497,24 +496,22 @@ impl StorageCleanup {
 
         // Compact: rewrite entries contiguously from index 0
         for (new_idx, (_old_idx, id)) in kept_indices.iter().enumerate() {
-            env.storage().persistent().set(
-                &DataKey::CategoryEntry(category, new_idx as u32),
-                &id,
-            );
+            env.storage()
+                .persistent()
+                .set(&DataKey::CategoryEntry(category, new_idx as u32), &id);
         }
 
         // Update count
         let new_count = kept_indices.len() as u32;
-        env.storage().persistent().set(
-            &DataKey::CategoryCount(category),
-            &new_count,
-        );
+        env.storage()
+            .persistent()
+            .set(&DataKey::CategoryCount(category), &new_count);
 
         // Clean up stale entries beyond new count
         for idx in new_count..count {
-            env.storage().persistent().remove(
-                &DataKey::CategoryEntry(category, idx),
-            );
+            env.storage()
+                .persistent()
+                .remove(&DataKey::CategoryEntry(category, idx));
         }
 
         cleaned

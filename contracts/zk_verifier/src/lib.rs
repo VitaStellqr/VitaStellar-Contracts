@@ -189,11 +189,7 @@ impl ZkVerifierContract {
             .unwrap_or(0)
     }
 
-    pub fn set_minimum_attestors(
-        env: Env,
-        caller: Address,
-        min: u32,
-    ) -> Result<bool, Error> {
+    pub fn set_minimum_attestors(env: Env, caller: Address, min: u32) -> Result<bool, Error> {
         caller.require_auth();
         Self::require_initialized(&env)?;
         Self::require_admin(&env, &caller)?;
@@ -203,10 +199,8 @@ impl ZkVerifierContract {
         env.storage()
             .instance()
             .set(&DataKey::MinimumAttestors, &min);
-        env.events().publish(
-            (symbol_short!("ZKVER"), symbol_short!("MINATT")),
-            min,
-        );
+        env.events()
+            .publish((symbol_short!("ZKVER"), symbol_short!("MINATT")), min);
         Ok(true)
     }
 
@@ -246,12 +240,20 @@ impl ZkVerifierContract {
             }
         };
 
-        let attestation_key =
-            Self::compute_attestation_key(&env, vk_version, &public_inputs_hash, &proof_hash, &attestor);
+        let attestation_key = Self::compute_attestation_key(
+            &env,
+            vk_version,
+            &public_inputs_hash,
+            &proof_hash,
+            &attestor,
+        );
 
         // Track per-proof attestation count (unique attestors)
         let proof_key = Self::compute_proof_key(&env, &public_inputs_hash, &proof_hash);
-        let is_new_attestor = !env.storage().persistent().has(&DataKey::Attestation(attestation_key.clone()));
+        let is_new_attestor = !env
+            .storage()
+            .persistent()
+            .has(&DataKey::Attestation(attestation_key.clone()));
         if is_new_attestor {
             let count: u32 = env
                 .storage()
@@ -342,7 +344,13 @@ impl ZkVerifierContract {
         proof_hash: BytesN<32>,
         attestor: Address,
     ) -> Option<ProofAttestation> {
-        let key = Self::compute_attestation_key(&env, vk_version, &public_inputs_hash, &proof_hash, &attestor);
+        let key = Self::compute_attestation_key(
+            &env,
+            vk_version,
+            &public_inputs_hash,
+            &proof_hash,
+            &attestor,
+        );
         env.storage().persistent().get(&DataKey::Attestation(key))
     }
 
@@ -607,14 +615,34 @@ mod tests {
         let proof_hash: BytesN<32> = env.crypto().sha256(&proof).into();
 
         // Only 1 attestation — should fail
-        client.submit_attestation(&attestor_a, &1, &public_inputs_hash, &proof_hash, &true, &300);
+        client.submit_attestation(
+            &attestor_a,
+            &1,
+            &public_inputs_hash,
+            &proof_hash,
+            &true,
+            &300,
+        );
         assert!(!client.verify_proof(&1, &public_inputs_hash, &proof));
-        assert_eq!(client.get_attestation_count(&public_inputs_hash, &proof_hash), 1);
+        assert_eq!(
+            client.get_attestation_count(&public_inputs_hash, &proof_hash),
+            1
+        );
 
         // Second attestation — should pass
-        client.submit_attestation(&attestor_b, &2, &public_inputs_hash, &proof_hash, &true, &300);
+        client.submit_attestation(
+            &attestor_b,
+            &2,
+            &public_inputs_hash,
+            &proof_hash,
+            &true,
+            &300,
+        );
         assert!(client.verify_proof(&1, &public_inputs_hash, &proof));
-        assert_eq!(client.get_attestation_count(&public_inputs_hash, &proof_hash), 2);
+        assert_eq!(
+            client.get_attestation_count(&public_inputs_hash, &proof_hash),
+            2
+        );
     }
 
     #[test]
@@ -645,7 +673,10 @@ mod tests {
         // Same attestor submits twice — should still only count as 1
         client.submit_attestation(&attestor, &1, &public_inputs_hash, &proof_hash, &true, &300);
         client.submit_attestation(&attestor, &1, &public_inputs_hash, &proof_hash, &true, &300);
-        assert_eq!(client.get_attestation_count(&public_inputs_hash, &proof_hash), 1);
+        assert_eq!(
+            client.get_attestation_count(&public_inputs_hash, &proof_hash),
+            1
+        );
         assert!(!client.verify_proof(&1, &public_inputs_hash, &proof));
     }
 }
