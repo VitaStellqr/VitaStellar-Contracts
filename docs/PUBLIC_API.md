@@ -3,7 +3,7 @@
 > **Single source of truth.** Generated from `/// ` doc comments and `pub fn` signatures in each contract's `src/lib.rs`.
 > Do not edit manually — run `make docs` to regenerate.
 
-- **Generated**: `2026-06-27T06:00:08.948Z`
+- **Generated**: `2026-07-20T15:26:53.518Z`
 - **Contracts**: 58
 
 ## Table of Contents
@@ -807,7 +807,8 @@ pub fn refund_appointment( env: Env, patient: Address, appointment_id: u64, ) ->
 ```
 
 > Mark an appointment as a no-show (provider only).
-> Only callable by the appointment's provider. No funds are released.
+> Only callable after the scheduled appointment time.
+> Releases the escrowed funds to the provider on no-show.
 
 ```rust
 pub fn mark_no_show(env: Env, provider: Address, appointment_id: u64) -> Result<(), Error>
@@ -2520,7 +2521,7 @@ pub fn deactivate_manufacturer( env: Env, admin: Address, manufacturer_id: Bytes
 ```
 
 ```rust
-pub fn register_device( env: Env, operator: Address, device_id: BytesN<32>, manufacturer_id: BytesN<32>, device_type: DeviceType, model: String, serial_number: String, location: String, encryption_key_hash: BytesN<32>, metadata_ref: String, ) -> Result<(), Error>
+pub fn register_device( env: Env, operator: Address, device_id: BytesN<32>, manufacturer_id: BytesN<32>, device_type: DeviceType, model: String, serial_number: String, location: String, encryption_key_hash: BytesN<32>, firmware_hash: BytesN<32>, firmware_signature: BytesN<64>, metadata_ref: String, ) -> Result<(), Error>
 ```
 
 ```rust
@@ -2625,6 +2626,38 @@ pub fn get_manufacturer_count(env: Env) -> u32
 
 ```rust
 pub fn get_firmware_update_record( env: Env, update_id: u64, ) -> Result<FirmwareUpdateRecord, Error>
+```
+
+> Configure the `crypto_registry` contract address used to resolve
+> manufacturer signing public keys. Must be called before device
+> registration can succeed, otherwise registration will fail with
+> `CryptoRegistryNotConfigured`.
+
+```rust
+pub fn set_crypto_registry_contract( env: Env, admin: Address, contract: Address, ) -> Result<(), Error>
+```
+
+> Return the configured crypto_registry contract address, if any.
+
+```rust
+pub fn get_crypto_registry_contract(env: Env) -> Option<Address>
+```
+
+> Link a manufacturer record to its on-chain identity (the
+> `crypto_registry` owner address) so device registration can fetch
+> the manufacturer's active signing public key for firmware
+> authentication. Stored separately so the manufacturer record stays
+> focused on certification metadata and is rotation-safe.
+
+```rust
+pub fn set_manufacturer_crypto_owner( env: Env, admin: Address, manufacturer_id: BytesN<32>, crypto_owner: Address, ) -> Result<(), Error>
+```
+
+> Return the linked crypto_registry owner address for a manufacturer
+> (if any).
+
+```rust
+pub fn get_manufacturer_crypto_owner( env: Env, manufacturer_id: BytesN<32>, ) -> Option<Address>
 ```
 
 ---
@@ -3045,11 +3078,19 @@ pub fn get_indexed_entry(env: Env, record_id: u64) -> Result<SearchIndexEntry, E
 ## medical_records
 
 ```rust
+pub fn initialize(env: Env, admin: Address) -> Result<(), RecordError>
+```
+
+```rust
+pub fn get_admin(env: Env) -> Option<Address>
+```
+
+```rust
 pub fn write_record( env: Env, owner: Address, patient_id: String, record_type: String, content: String, timestamp: u64, ) -> Result<(), RecordError>
 ```
 
 ```rust
-pub fn get_record(env: Env, record_id: u64) -> Option<Record>
+pub fn get_record(env: Env, record_id: u64, caller: Address) -> Result<Record, RecordError>
 ```
 
 ---
@@ -4270,6 +4311,14 @@ pub fn get_current_version(env: Env) -> u32
 ```
 
 ```rust
+pub fn set_minimum_attestors(env: Env, caller: Address, min: u32) -> Result<bool, Error>
+```
+
+```rust
+pub fn get_minimum_attestors(env: Env) -> u32
+```
+
+```rust
 pub fn submit_attestation( env: Env, attestor: Address, vk_version: u32, public_inputs_hash: BytesN<32>, proof_hash: BytesN<32>, verified: bool, ttl: u64, ) -> Result<bool, Error>
 ```
 
@@ -4278,7 +4327,11 @@ pub fn verify_proof( env: Env, vk_version: u32, public_inputs_hash: BytesN<32>, 
 ```
 
 ```rust
-pub fn get_attestation( env: Env, vk_version: u32, public_inputs_hash: BytesN<32>, proof_hash: BytesN<32>, ) -> Option<ProofAttestation>
+pub fn get_attestation_count( env: Env, public_inputs_hash: BytesN<32>, proof_hash: BytesN<32>, ) -> u32
+```
+
+```rust
+pub fn get_attestation( env: Env, vk_version: u32, public_inputs_hash: BytesN<32>, proof_hash: BytesN<32>, attestor: Address, ) -> Option<ProofAttestation>
 ```
 
 ```rust

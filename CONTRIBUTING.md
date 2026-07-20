@@ -126,6 +126,38 @@ The project uses GitHub Actions for CI/CD. The pipeline includes:
 - Linting (Clippy)
 - Testing
 - Formatting check
+- Error codes reference drift (`error_codes` job)
+- API / public docs drift (`docs-sync` job — see Issue #195)
+
+## Generating Documentation
+
+Auto-generated reference docs live in the `docs/` folder:
+
+- `docs/API_REFERENCE.md` — produced by `scripts/docs/generate.mjs`. Pulls
+  function signatures, types, error codes and example snippets from each
+  contract's `src/lib.rs` and `src/errors.rs`.
+- `docs/PUBLIC_API.md` — produced by `scripts/generate-public-api.mjs`.
+  Single source of truth for the on-chain entrypoints, generated from `///`
+  doc comments and `pub fn` signatures.
+
+**When to regenerate:** whenever you add, remove or change a public
+function (or a `///` doc comment) on any contract under `contracts/`. The
+CI `docs-sync` job will fail the build otherwise.
+
+**How to regenerate:**
+
+```bash
+make docs
+# or, equivalently:
+node scripts/docs/generate.mjs
+node scripts/generate-public-api.mjs
+```
+
+Commit the updated markdown files alongside your code change.
+
+The `snapshots` test target (`make test-public-api-snapshot`) diffs the
+generated `docs/PUBLIC_API.md` against the committed copy and fails when
+they don't match — handy as a pre-push sanity check.
 
 ## Getting Help
 - Review existing documentation in the `docs/` directory

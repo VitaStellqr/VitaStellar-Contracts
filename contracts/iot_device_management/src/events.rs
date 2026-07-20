@@ -19,6 +19,45 @@ pub fn emit_device_registered(
     );
 }
 
+/// Emitted after a device's `(device_id, firmware_hash)` payload was
+/// successfully verified against the manufacturer's active signing public
+/// key resolved via `crypto_registry`.
+pub fn emit_firmware_signature_verified(
+    env: &Env,
+    device_id: &BytesN<32>,
+    firmware_hash: &BytesN<32>,
+    manufacturer_id: &BytesN<32>,
+) {
+    env.events().publish(
+        ("IoT", symbol_short!("fw_sig")),
+        (device_id.clone(), firmware_hash.clone(), manufacturer_id.clone()),
+    );
+}
+
+/// Emitted when the admin binds the contract to a crypto_registry. This
+/// enables manufacturer-signed firmware verification.
+pub fn emit_crypto_registry_set(env: &Env, admin: &Address, contract: &Address) {
+    env.events().publish(
+        ("IoT", symbol_short!("cry_reg")),
+        (admin.clone(), contract.clone()),
+    );
+}
+
+/// Emitted when the admin links a manufacturer record to its on-chain
+/// identity (the `crypto_registry` owner address) so the contract can fetch
+/// the manufacturer's signing public key.
+pub fn emit_manufacturer_crypto_owner_set(
+    env: &Env,
+    admin: &Address,
+    manufacturer_id: &BytesN<32>,
+    crypto_owner: &Address,
+) {
+    env.events().publish(
+        ("IoT", symbol_short!("mfr_key")),
+        (admin.clone(), manufacturer_id.clone(), crypto_owner.clone()),
+    );
+}
+
 pub fn emit_device_status_changed(
     env: &Env,
     device_id: &BytesN<32>,

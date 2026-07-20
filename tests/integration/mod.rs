@@ -22,3 +22,10 @@ mod unit_tests {
 
 // Integration tests for medical_records contract (Issue #65)
 mod medical_records;
+
+// Integration tests for healthcare_reputation contract (Issue #193).
+//
+// These exercise the real Soroban contract via `soroban_sdk::Env::default()`
+// and replace the previously-mocked Python suite at
+// `tests/healthcare_reputation_test.py`. See tests/FRAMEWORK.md for rationale.
+mod healthcare_reputation;

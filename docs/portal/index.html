@@ -28,7 +28,7 @@
 <body>
   <header>
     <div style="font-weight:bold;color:var(--accent)">⚕ VitaStellar Contracts</div>
-    <div style="font-size:12px;color:var(--text2)">Generated: 2026-06-27T06:00:08.734Z</div>
+    <div style="font-size:12px;color:var(--text2)">Generated: 2026-07-20T15:26:53.107Z</div>
   </header>
   <nav>
     <div style="padding:10px 20px;font-size:11px;color:var(--text2);text-transform:uppercase">Contracts</div>
@@ -39,9 +39,9 @@
       <h1>API Documentation Portal</h1>
       <p>Auto-generated reference for 58 smart contracts.</p>
       <div>
-        <span class="badge">431 Functions</span>
+        <span class="badge">436 Functions</span>
         <span class="badge">380 Types</span>
-        <span class="badge">392 Examples</span>
+        <span class="badge">400 Examples</span>
       </div>
     </div>
     
@@ -135,7 +135,7 @@
             </tbody>
           </table>
         </section>
-
+        
         <section><h3>Examples</h3><pre><code>let env = Env::default();
         env.mock_all_auths();
 
@@ -174,7 +174,7 @@
           </table>
         </section>
         <section><h3>Types</h3><div><h4>struct AlertConfig</h4></div><div><h4>struct FunctionStats</h4></div><div><h4>struct DashboardSnapshot</h4></div><div><h4>enum DataKey</h4></div><div><h4>enum MonitoringError</h4></div></section>
-
+        
       </article>
     
       <article id="contract_template">
@@ -211,7 +211,7 @@
         <section><h3>Types</h3><div><h4>struct FunctionMetric</h4></div><div><h4>struct UserMetric</h4></div><div><h4>struct UsageSnapshot</h4></div><div><h4>enum DataKey</h4></div><div><h4>enum Error</h4></div></section>
         
       </article>
-
+    
       <article id="contract_verification">
         <h2 style="color:var(--accent)">contract_verification</h2>
         <section>
@@ -331,7 +331,7 @@
             </tbody>
           </table>
         </section>
-
+        
         <section><h3>Examples</h3><pre><code>let env = Env::default();
         env.mock_all_auths();
 
@@ -392,7 +392,7 @@
             </tbody>
           </table>
         </section>
-
+        
         
       </article>
     
@@ -554,7 +554,7 @@
           <table>
             <thead><tr><th>Function</th><th>Params</th><th>Returns</th></tr></thead>
             <tbody>
-              <tr><td><code>initialize</code></td><td><code>env: Env, admin: Address</code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>pause</code></td><td><code>env: Env, admin: Address</code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>unpause</code></td><td><code>env: Env, admin: Address</code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>set_role</code></td><td><code>env: Env, admin: Address, user: Address, role: Role</code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>get_role</code></td><td><code>env: Env, user: Address</code></td><td><code>Role</code></td></tr><tr><td><code>get_manufacturer</code></td><td><code>env: Env, manufacturer_id: BytesN<32></code></td><td><code>Result<Manufacturer, Error></code></td></tr><tr><td><code>get_device</code></td><td><code>env: Env, device_id: BytesN<32></code></td><td><code>Result<Device, Error></code></td></tr><tr><td><code>get_device_count</code></td><td><code>env: Env</code></td><td><code>u64</code></td></tr><tr><td><code>get_devices_by_operator</code></td><td><code>env: Env, operator: Address</code></td><td><code>Vec<BytesN<32>></code></td></tr><tr><td><code>activate_device</code></td><td><code>env: Env, caller: Address, device_id: BytesN<32></code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>suspend_device</code></td><td><code>env: Env, caller: Address, device_id: BytesN<32></code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>get_device_heartbeats</code></td><td><code>env: Env, device_id: BytesN<32></code></td><td><code>Result<Vec<Heartbeat>, Error></code></td></tr><tr><td><code>get_device_uptime_bps</code></td><td><code>env: Env, device_id: BytesN<32></code></td><td><code>Result<u32, Error></code></td></tr><tr><td><code>get_active_device_count</code></td><td><code>env: Env</code></td><td><code>u64</code></td></tr><tr><td><code>get_comm_channel</code></td><td><code>env: Env, channel_id: BytesN<32></code></td><td><code>Result<CommChannel, Error></code></td></tr><tr><td><code>get_devices_by_manufacturer</code></td><td><code>env: Env, manufacturer_id: BytesN<32></code></td><td><code>Vec<BytesN<32>></code></td></tr><tr><td><code>get_manufacturer_count</code></td><td><code>env: Env</code></td><td><code>u32</code></td></tr>
+              <tr><td><code>initialize</code></td><td><code>env: Env, admin: Address</code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>pause</code></td><td><code>env: Env, admin: Address</code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>unpause</code></td><td><code>env: Env, admin: Address</code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>set_role</code></td><td><code>env: Env, admin: Address, user: Address, role: Role</code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>get_role</code></td><td><code>env: Env, user: Address</code></td><td><code>Role</code></td></tr><tr><td><code>get_manufacturer</code></td><td><code>env: Env, manufacturer_id: BytesN<32></code></td><td><code>Result<Manufacturer, Error></code></td></tr><tr><td><code>get_device</code></td><td><code>env: Env, device_id: BytesN<32></code></td><td><code>Result<Device, Error></code></td></tr><tr><td><code>get_device_count</code></td><td><code>env: Env</code></td><td><code>u64</code></td></tr><tr><td><code>get_devices_by_operator</code></td><td><code>env: Env, operator: Address</code></td><td><code>Vec<BytesN<32>></code></td></tr><tr><td><code>activate_device</code></td><td><code>env: Env, caller: Address, device_id: BytesN<32></code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>suspend_device</code></td><td><code>env: Env, caller: Address, device_id: BytesN<32></code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>get_device_heartbeats</code></td><td><code>env: Env, device_id: BytesN<32></code></td><td><code>Result<Vec<Heartbeat>, Error></code></td></tr><tr><td><code>get_device_uptime_bps</code></td><td><code>env: Env, device_id: BytesN<32></code></td><td><code>Result<u32, Error></code></td></tr><tr><td><code>get_active_device_count</code></td><td><code>env: Env</code></td><td><code>u64</code></td></tr><tr><td><code>get_comm_channel</code></td><td><code>env: Env, channel_id: BytesN<32></code></td><td><code>Result<CommChannel, Error></code></td></tr><tr><td><code>get_devices_by_manufacturer</code></td><td><code>env: Env, manufacturer_id: BytesN<32></code></td><td><code>Vec<BytesN<32>></code></td></tr><tr><td><code>get_manufacturer_count</code></td><td><code>env: Env</code></td><td><code>u32</code></td></tr><tr><td><code>get_crypto_registry_contract</code></td><td><code>env: Env</code></td><td><code>Option<Address></code></td></tr>
             </tbody>
           </table>
         </section>
@@ -562,11 +562,10 @@
         <section><h3>Examples</h3><pre><code>let env = Env::default();
     let (client, admin) = setup(&env);
     client.initialize(&admin);
-    // Calling initialize again should fail
     let result = client.try_initialize(&admin);
     assert_eq!(result, Err(Ok(Error::AlreadyInitialized)));</code></pre></section>
       </article>
-
+    
       <article id="load_testing">
         <h2 style="color:var(--accent)">load_testing</h2>
         <section>
@@ -579,7 +578,7 @@
           </table>
         </section>
         <section><h3>Types</h3><div><h4>struct LoadTestConfig</h4></div><div><h4>struct LoadTestResult</h4></div><div><h4>enum DataKey</h4></div></section>
-
+        
       </article>
     
       <article id="medical_consent_nft">
@@ -658,7 +657,7 @@
           <table>
             <thead><tr><th>Function</th><th>Params</th><th>Returns</th></tr></thead>
             <tbody>
-              <tr><td><code>get_record</code></td><td><code>env: Env, record_id: u64</code></td><td><code>Option<Record></code></td></tr>
+              <tr><td><code>initialize</code></td><td><code>env: Env, admin: Address</code></td><td><code>Result<(), RecordError></code></td></tr><tr><td><code>get_admin</code></td><td><code>env: Env</code></td><td><code>Option<Address></code></td></tr><tr><td><code>get_record</code></td><td><code>env: Env, record_id: u64, caller: Address</code></td><td><code>Result<Record, RecordError></code></td></tr>
             </tbody>
           </table>
         </section>
@@ -905,7 +904,7 @@
             </tbody>
           </table>
         </section>
-
+        
         <section><h3>Examples</h3><pre><code>let env = Env::default();
         env.mock_all_auths();
 
@@ -1081,7 +1080,7 @@
           <table>
             <thead><tr><th>Function</th><th>Params</th><th>Returns</th></tr></thead>
             <tbody>
-              <tr><td><code>initialize</code></td><td><code>env: Env, admin: Address, default_ttl: u64</code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>set_default_ttl</code></td><td><code>env: Env, caller: Address, ttl: u64</code></td><td><code>Result<bool, Error></code></td></tr><tr><td><code>get_default_ttl</code></td><td><code>env: Env</code></td><td><code>u64</code></td></tr><tr><td><code>get_verifying_key</code></td><td><code>env: Env, version: u32</code></td><td><code>Option<VerifyingKeyConfig></code></td></tr><tr><td><code>get_current_version</code></td><td><code>env: Env</code></td><td><code>u32</code></td></tr><tr><td><code>compute_proof_hash</code></td><td><code>env: Env, proof: Bytes</code></td><td><code>BytesN<32></code></td></tr><tr><td><code>mark_nullifier_used</code></td><td><code>env: Env, nullifier: BytesN<32></code></td><td><code>bool</code></td></tr><tr><td><code>is_nullifier_used</code></td><td><code>env: Env, nullifier: BytesN<32></code></td><td><code>bool</code></td></tr>
+              <tr><td><code>initialize</code></td><td><code>env: Env, admin: Address, default_ttl: u64</code></td><td><code>Result<(), Error></code></td></tr><tr><td><code>set_default_ttl</code></td><td><code>env: Env, caller: Address, ttl: u64</code></td><td><code>Result<bool, Error></code></td></tr><tr><td><code>get_default_ttl</code></td><td><code>env: Env</code></td><td><code>u64</code></td></tr><tr><td><code>get_verifying_key</code></td><td><code>env: Env, version: u32</code></td><td><code>Option<VerifyingKeyConfig></code></td></tr><tr><td><code>get_current_version</code></td><td><code>env: Env</code></td><td><code>u32</code></td></tr><tr><td><code>set_minimum_attestors</code></td><td><code>env: Env, caller: Address, min: u32</code></td><td><code>Result<bool, Error></code></td></tr><tr><td><code>get_minimum_attestors</code></td><td><code>env: Env</code></td><td><code>u32</code></td></tr><tr><td><code>compute_proof_hash</code></td><td><code>env: Env, proof: Bytes</code></td><td><code>BytesN<32></code></td></tr><tr><td><code>mark_nullifier_used</code></td><td><code>env: Env, nullifier: BytesN<32></code></td><td><code>bool</code></td></tr><tr><td><code>is_nullifier_used</code></td><td><code>env: Env, nullifier: BytesN<32></code></td><td><code>bool</code></td></tr>
             </tbody>
           </table>
         </section>

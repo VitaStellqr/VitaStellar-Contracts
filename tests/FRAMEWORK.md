@@ -97,3 +97,35 @@ make test-integration
 cargo test --test integration
 ```
 
+## Healthcare Reputation Test Suite (Issue #193)
+
+The original Python test suite at `tests/healthcare_reputation_test.py` only
+mocked the contract responses with hardcoded return values, meaning it could
+not catch regressions in the actual on-chain logic and required Python +
+`stellar-sdk` dependencies to run. To address this, the suite has been
+replaced by a native Rust integration test file:
+`tests/integration/healthcare_reputation.rs`.
+
+**Approach chosen:** Rust integration tests (preferred per the issue brief).
+
+**Rationale:**
+
+- **Real contract behavior**: under `soroban_sdk::Env::default()`, the tests
+  run against the actual `HealthcareReputationSystem` contract code instead
+  of returning canned JSON from a Python helper. This catches behavioral
+  regressions that the Python mocks would never surface.
+- **Zero external dependencies**: removes the Python + `stellar-sdk`
+  requirement from CI. The CI `test` job picks the new file up via
+  `cargo test --workspace` (or directly via `cargo test --test integration
+  healthcare_reputation`).
+- **Shared tooling**: reuses `tests/utils` (e.g. `Env::default()` plus
+  `mock_all_auths()`) so contributors have a single, idiomatic place to add
+  new healthcare-reputation coverage going forward.
+- **Parity with the original scenarios**: every scenario exercised by the
+  Python file maps to a Rust test in the new file — credentials, reputation
+  scoring, patient feedback, conduct tracking, dispute workflow, and
+  expired-credential detection.
+
+The Python file is retained for history but is no longer referenced from CI
+and is expected to be removed in a follow-up cleanup.
+

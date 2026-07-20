@@ -123,3 +123,37 @@ jobs:
             git diff docs/ERROR_CODES.md
             exit 1
           fi
+
+  # ----------------------------------------------------------
+  # Issue #195: doc drift detector.
+  # Regenerates `docs/API_REFERENCE.md` and `docs/PUBLIC_API.md`
+  # and fails the build when either goes out of sync with the
+  # contract source / public API.
+  # ----------------------------------------------------------
+  docs-sync:
+    name: Docs Sync Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Regenerate docs/API_REFERENCE.md
+        run: node scripts/docs/generate.mjs
+
+      - name: Regenerate docs/PUBLIC_API.md
+        run: node scripts/generate-public-api.mjs
+
+      - name: Verify docs drift
+        run: |
+          if git diff --quiet docs/API_REFERENCE.md docs/PUBLIC_API.md; then
+            echo "✓ docs/API_REFERENCE.md and docs/PUBLIC_API.md are in sync"
+          else
+            echo "✗ Documentation drift detected. Run \`make docs\` locally and commit the result."
+            git diff --stat docs/API_REFERENCE.md docs/PUBLIC_API.md
+            git diff docs/API_REFERENCE.md docs/PUBLIC_API.md | head -200
+            exit 1
+          fi

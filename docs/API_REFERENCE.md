@@ -3,7 +3,7 @@
 > Auto-generated from contract source code. Do not edit manually.
 
 - **API version**: `1.0.0`
-- **Generated**: `2026-06-27T06:00:08.686Z`
+- **Generated**: `2026-07-20T15:26:53.086Z`
 - **Contracts documented**: 58
 
 ## Table of Contents
@@ -464,7 +464,7 @@ let env = Env::default();
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
 | `initialize` | `env: Env, admin: Address, _token: Address` | `Result<(), Error>` | Initialize the contract with an admin and token address |
-| `mark_no_show` | `env: Env, provider: Address, appointment_id: u64` | `Result<(), Error>` | Mark an appointment as a no-show (provider only). Only callable by the appointment's provider. No funds are released. |
+| `mark_no_show` | `env: Env, provider: Address, appointment_id: u64` | `Result<(), Error>` | Mark an appointment as a no-show (provider only). Only callable after the scheduled appointment time. Releases the escrowed funds to the provider on no-show. |
 | `send_reminder` | `env: Env, caller: Address, appointment_id: u64` | `Result<(), Error>` | Send an appointment reminder (provider or admin only). Records the timestamp when the reminder was last sent. |
 | `get_appointment` | `env: Env, appointment_id: u64` | `Option<AppointmentEscrow>` | Get appointment details |
 | `get_patient_appointments` | `env: Env, patient: Address` | `Vec<u64>` | Get all appointments for a patient |
@@ -4526,6 +4526,7 @@ let (env, _, client) = setup();
 | `get_comm_channel` | `env: Env, channel_id: BytesN<32>` | `Result<CommChannel, Error>` | — |
 | `get_devices_by_manufacturer` | `env: Env, manufacturer_id: BytesN<32>` | `Vec<BytesN<32>>` | — |
 | `get_manufacturer_count` | `env: Env` | `u32` | — |
+| `get_crypto_registry_contract` | `env: Env` | `Option<Address>` | Return the configured crypto_registry contract address, if any. |
 
 ### Types
 
@@ -4605,6 +4606,7 @@ let (env, _, client) = setup();
 | `model` | `String` | — |
 | `serial_number` | `String` | — |
 | `firmware_version` | `u32` | — |
+| `firmware_hash` | `BytesN<32>` | — |
 | `status` | `DeviceStatus` | — |
 | `operator` | `Address` | — |
 | `location` | `String` | — |
@@ -4750,6 +4752,60 @@ let (env, _, client) = setup();
 | `KeyRotationMinInterval` | — | — |
 | `u64` | — | — |
 | `seconds` | — | — |
+| `Issue` | — | — |
+| `194` | — | — |
+| `manufacturer` | — | — |
+| `signed` | — | — |
+| `firmware` | — | — |
+| `verification` | — | — |
+| `Address` | — | — |
+| `of` | — | — |
+| `the` | — | — |
+| `deployed` | — | — |
+| `crypto_registry` | — | — |
+| `contract` | — | — |
+| `used` | — | — |
+| `to` | — | — |
+| `look` | — | — |
+| `up` | — | — |
+| `the` | — | — |
+| `manufacturer` | — | — |
+| `signing` | — | — |
+| `public` | — | — |
+| `key` | — | — |
+| `for` | — | — |
+| `firmware` | — | — |
+| `authentication` | — | — |
+| `CryptoRegistryContract` | — | — |
+| `The` | — | — |
+| `on` | — | — |
+| `chain` | — | — |
+| `identity` | — | — |
+| `crypto_registry` | — | — |
+| `owner` | — | — |
+| `whose` | — | — |
+| `key` | — | — |
+| `bundle` | — | — |
+| `belongs` | — | — |
+| `to` | — | — |
+| `manufacturer` | — | — |
+| `BytesN` | — | — |
+| `32` | — | — |
+| `Only` | — | — |
+| `set` | — | — |
+| `after` | — | — |
+| `admin` | — | — |
+| `explicitly` | — | — |
+| `links` | — | — |
+| `the` | — | — |
+| `manufacturer` | — | — |
+| `to` | — | — |
+| `its` | — | — |
+| `key` | — | — |
+| `bundle` | — | — |
+| `ManufacturerCryptoOwner` | — | — |
+| `BytesN` | — | — |
+| `32` | — | — |
 
 ### Error Codes
 
@@ -4778,6 +4834,11 @@ let (env, _, client) = setup();
 | `ChannelNotFound` | 440 | — |
 | `InvalidEncryptionKey` | 602 | — |
 | `KeyRotationTooFrequent` | 603 | — |
+| `CryptoRegistryNotConfigured` | 604 | — |
+| `ManufacturerCryptoOwnerNotSet` | 605 | — |
+| `InvalidFirmwareSignature` | 606 | — |
+| `CryptoKeyBundleNotFound` | 607 | — |
+| `InvalidSigningKeyAlgorithm` | 608 | — |
 | `DeviceDecommissioned` | 820 | — |
 | `FirmwareNotApproved` | 821 | — |
 | `HeartbeatTooFrequent` | 822 | — |
@@ -4794,7 +4855,6 @@ let (env, _, client) = setup();
 let env = Env::default();
     let (client, admin) = setup(&env);
     client.initialize(&admin);
-    // Calling initialize again should fail
     let result = client.try_initialize(&admin);
     assert_eq!(result, Err(Ok(Error::AlreadyInitialized)));
 ```
@@ -4806,11 +4866,11 @@ let env = Env::default();
     let (client, admin) = setup(&env);
     client.initialize(&admin);
     client.pause(&admin);
-    // set_role should fail when paused
     let user = Address::generate(&env);
     let result = client.try_set_role(&admin, &user, &Role::Operator);
     assert_eq!(result, Err(Ok(Error::ContractPaused)));
     client.unpause(&admin);
+    client.set_role(&admin, &user, &Role::Operator);
 ```
 
 #### `test_pause_not_admin`
@@ -5764,7 +5824,9 @@ let env = Env::default();
 
 | Function | Parameters | Returns | Description |
 |---|---|---|---|
-| `get_record` | `env: Env, record_id: u64` | `Option<Record>` | — |
+| `initialize` | `env: Env, admin: Address` | `Result<(), RecordError>` | — |
+| `get_admin` | `env: Env` | `Option<Address>` | — |
+| `get_record` | `env: Env, record_id: u64, caller: Address` | `Result<Record, RecordError>` | — |
 
 ### Types
 
@@ -5787,6 +5849,8 @@ let env = Env::default();
 | `Unauthorized` | 2 | — |
 | `RecordNotFound` | 3 | — |
 | `EncryptionFailed` | 4 | — |
+| `NotInitialized` | 5 | — |
+| `AlreadyInitialized` | 6 | — |
 
 #### `enum DataKey`
 
@@ -7475,6 +7539,10 @@ let env = Env::default();
 | `IDs` | — | — |
 | `per` | — | — |
 | `category` | — | — |
+| `kept` | — | — |
+| `for` | — | — |
+| `backward` | — | — |
+| `compat` | — | — |
 | `CredentialIds` | — | — |
 | `AuditLogIds` | — | — |
 | `EscrowIds` | — | — |
@@ -7503,6 +7571,22 @@ let env = Env::default();
 | `retention` | — | — |
 | `overrides` | — | — |
 | `RetentionConfig` | — | — |
+| `Counter` | — | — |
+| `based` | — | — |
+| `pagination` | — | — |
+| `replaces` | — | — |
+| `unbounded` | — | — |
+| `Vecs` | — | — |
+| `CategoryCount` | — | — |
+| `u32` | — | — |
+| `category` | — | — |
+| `count` | — | — |
+| `CategoryEntry` | — | — |
+| `u32` | — | — |
+| `u32` | — | — |
+| `category` | — | — |
+| `idx` | — | — |
+| `item_id` | — | — |
 
 #### `struct RetentionConfig`
 
@@ -8038,6 +8122,8 @@ let env = Env::default();
 | `get_default_ttl` | `env: Env` | `u64` | — |
 | `get_verifying_key` | `env: Env, version: u32` | `Option<VerifyingKeyConfig>` | — |
 | `get_current_version` | `env: Env` | `u32` | — |
+| `set_minimum_attestors` | `env: Env, caller: Address, min: u32` | `Result<bool, Error>` | — |
+| `get_minimum_attestors` | `env: Env` | `u32` | — |
 | `compute_proof_hash` | `env: Env, proof: Bytes` | `BytesN<32>` | — |
 | `mark_nullifier_used` | `env: Env, nullifier: BytesN<32>` | `bool` | — |
 | `is_nullifier_used` | `env: Env, nullifier: BytesN<32>` | `bool` | — |
@@ -8091,6 +8177,10 @@ let env = Env::default();
 | `Nullifier` | — | — |
 | `BytesN` | — | — |
 | `32` | — | — |
+| `MinimumAttestors` | — | — |
+| `ProofAttestationCount` | — | — |
+| `BytesN` | — | — |
+| `32` | — | — |
 
 ### Error Codes
 
@@ -8103,6 +8193,7 @@ let env = Env::default();
 | `VersionNotFound` | 430 | — |
 | `InvalidProof` | 600 | — |
 | `VerificationFailed` | 601 | — |
+| `InsufficientAttestors` | 700 | — |
 
 ---
 

@@ -12,7 +12,12 @@ pub use errors::Error;
 #[cfg(test)]
 mod test;
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, BytesN, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Bytes, BytesN, Env, String, Vec};
+
+// Client import for cross-contract call into the crypto_registry contract,
+// which stores the manufacturer signing public keys used for firmware
+// authentication (see Issue #194).
+mod crypto_registry_client;
 
 // ============================================================
 // ENUMS
@@ -96,7 +101,12 @@ pub struct Device {
     pub device_type: DeviceType,
     pub model: String,
     pub serial_number: String,
+    /// Firmware version currently installed on the device.
     pub firmware_version: u32,
+    /// SHA-256 hash of the firmware binary that was running when the device
+    /// was registered. Verified at registration against the manufacturer's
+    /// signing public key (see Issue #194).
+    pub firmware_hash: BytesN<32>,
     pub status: DeviceStatus,
     pub operator: Address,
     pub location: String,
@@ -205,6 +215,15 @@ pub enum DataKey {
     CommChannel(BytesN<32>),   // channel_id -> CommChannel
     DeviceChannel(BytesN<32>), // device_id -> channel_id
     KeyRotationMinInterval,    // u64 seconds
+
+    // Issue #194: manufacturer-signed firmware verification
+    /// Address of the deployed `crypto_registry` contract used to look up
+    /// the manufacturer signing public key for firmware authentication.
+    CryptoRegistryContract,
+    /// The on-chain identity (crypto_registry owner) whose key bundle belongs
+    /// to manufacturer `BytesN<32>`. Only set after admin explicitly links
+    /// the manufacturer to its key bundle.
+    ManufacturerCryptoOwner(BytesN<32>),
 }
 
 // ============================================================
@@ -429,6 +448,8 @@ impl IoTDeviceManagement {
         serial_number: String,
         location: String,
         encryption_key_hash: BytesN<32>,
+        firmware_hash: BytesN<32>,
+        firmware_signature: BytesN<64>,
         metadata_ref: String,
     ) -> Result<(), Error> {
         operator.require_auth();
@@ -456,6 +477,20 @@ impl IoTDeviceManagement {
             return Err(Error::ManufacturerNotRegistered);
         }
 
+        // Issue #194: manufacturer-signed firmware authentication.
+        // 1. The crypto_registry contract address must be configured.
+        // 2. The manufacturer must be linked to an on-chain identity whose
+        //    signing key bundle is registered in crypto_registry.
+        // 3. The Ed25519 signature over `device_id || firmware_hash` must
+        //    verify against the manufacturer's active signing public key.
+        Self::verify_manufacturer_firmware_signature(
+            &env,
+            &manufacturer_id,
+            &device_id,
+            &firmware_hash,
+            &firmware_signature,
+        )?;
+
         let now = env.ledger().timestamp();
         let device = Device {
             device_id: device_id.clone(),
@@ -464,6 +499,7 @@ impl IoTDeviceManagement {
             model,
             serial_number,
             firmware_version: 0,
+            firmware_hash: firmware_hash.clone(),
             status: DeviceStatus::Provisioning,
             operator: operator.clone(),
             location,
@@ -509,7 +545,7 @@ impl IoTDeviceManagement {
         updated_mfr.device_count = updated_mfr.device_count.checked_add(1).unwrap();
         env.storage()
             .persistent()
-            .set(&DataKey::Manufacturer(manufacturer_id), &updated_mfr);
+            .set(&DataKey::Manufacturer(manufacturer_id.clone()), &updated_mfr);
 
         // Increment device count
         let count: u64 = env
@@ -522,6 +558,7 @@ impl IoTDeviceManagement {
             .set(&DataKey::DeviceCount, &count.checked_add(1).unwrap());
 
         events::emit_device_registered(&env, &device_id, device_type, &operator);
+        events::emit_firmware_signature_verified(&env, &device_id, &firmware_hash, &manufacturer_id);
         Ok(())
     }
 
@@ -1241,5 +1278,152 @@ impl IoTDeviceManagement {
             .persistent()
             .get(&DataKey::FirmwareUpdateRecord(update_id))
             .ok_or(Error::FirmwareVersionNotFound)
+    }
+
+    // ============================================================
+    // Issue #194: manufacturer-signed firmware authentication
+    // ============================================================
+
+    /// Configure the `crypto_registry` contract address used to resolve
+    /// manufacturer signing public keys. Must be called before device
+    /// registration can succeed, otherwise registration will fail with
+    /// `CryptoRegistryNotConfigured`.
+    pub fn set_crypto_registry_contract(
+        env: Env,
+        admin: Address,
+        contract: Address,
+    ) -> Result<(), Error> {
+        access_utils::require_admin!(env, admin);
+        Self::check_not_paused(&env)?;
+        env.storage()
+            .instance()
+            .set(&DataKey::CryptoRegistryContract, &contract);
+        events::emit_crypto_registry_set(&env, &admin, &contract);
+        Ok(())
+    }
+
+    /// Return the configured crypto_registry contract address, if any.
+    pub fn get_crypto_registry_contract(env: Env) -> Option<Address> {
+        env.storage()
+            .instance()
+            .get(&DataKey::CryptoRegistryContract)
+    }
+
+    /// Link a manufacturer record to its on-chain identity (the
+    /// `crypto_registry` owner address) so device registration can fetch
+    /// the manufacturer's active signing public key for firmware
+    /// authentication. Stored separately so the manufacturer record stays
+    /// focused on certification metadata and is rotation-safe.
+    pub fn set_manufacturer_crypto_owner(
+        env: Env,
+        admin: Address,
+        manufacturer_id: BytesN<32>,
+        crypto_owner: Address,
+    ) -> Result<(), Error> {
+        access_utils::require_admin!(env, admin);
+        Self::check_not_paused(&env)?;
+        if env
+            .storage()
+            .persistent()
+            .get::<DataKey, Manufacturer>(&DataKey::Manufacturer(
+                manufacturer_id.clone(),
+            ))
+            .is_none()
+        {
+            return Err(Error::ManufacturerNotRegistered);
+        }
+        env.storage().persistent().set(
+            &DataKey::ManufacturerCryptoOwner(manufacturer_id.clone()),
+            &crypto_owner,
+        );
+        events::emit_manufacturer_crypto_owner_set(&env, &admin, &manufacturer_id, &crypto_owner);
+        Ok(())
+    }
+
+    /// Return the linked crypto_registry owner address for a manufacturer
+    /// (if any).
+    pub fn get_manufacturer_crypto_owner(
+        env: Env,
+        manufacturer_id: BytesN<32>,
+    ) -> Option<Address> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::ManufacturerCryptoOwner(manufacturer_id))
+    }
+
+    /// Verify the `(device_id, firmware_hash, firmware_signature)` tuple
+    /// against the manufacturer's active signing public key stored in
+    /// `crypto_registry`. Called by `register_device` before persisting a
+    /// new device record.
+    ///
+    /// Steps performed:
+    /// 1. Ensure the crypto_registry contract address is configured.
+    /// 2. Resolve the manufacturer's crypto_owner address (set via
+    ///    `set_manufacturer_crypto_owner`).
+    /// 3. Cross-contract call to `crypto_registry.get_current_key_bundle`
+    ///    to fetch the manufacturer's signing public key.
+    /// 4. Validate that the bundle advertises an Ed25519 signing key.
+    /// 5. Verify the Ed25519 signature over `device_id || firmware_hash`.
+    fn verify_manufacturer_firmware_signature(
+        env: &Env,
+        manufacturer_id: &BytesN<32>,
+        device_id: &BytesN<32>,
+        firmware_hash: &BytesN<32>,
+        firmware_signature: &BytesN<64>,
+    ) -> Result<(), Error> {
+        let crypto_registry_contract: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::CryptoRegistryContract)
+            .ok_or(Error::CryptoRegistryNotConfigured)?;
+
+        let crypto_owner: Address = env
+            .storage()
+            .persistent()
+            .get(&DataKey::ManufacturerCryptoOwner(manufacturer_id.clone()))
+            .ok_or(Error::ManufacturerCryptoOwnerNotSet)?;
+
+        let client =
+            crypto_registry_client::Client::new(env, &crypto_registry_contract);
+        // All upstream errors (`NotInitialized`, `NotAuthorized`, etc.) surface as
+        // `CryptoRegistryNotConfigured` because they all indicate the contract
+        // is not properly wired up for firmware authentication.
+        let bundle = client
+            .get_current_key_bundle(&crypto_owner)
+            .map_err(|_| Error::CryptoRegistryNotConfigured)?;
+
+        let bundle = bundle.ok_or(Error::CryptoKeyBundleNotFound)?;
+        if bundle.revoked {
+            return Err(Error::CryptoKeyBundleNotFound);
+        }
+        if !bundle.has_signing_key {
+            return Err(Error::CryptoKeyBundleNotFound);
+        }
+        if bundle.signing_key.algorithm != crypto_registry_client::KeyAlgorithm::Ed25519 {
+            return Err(Error::InvalidSigningKeyAlgorithm);
+        }
+
+        // Ed25519 signing keys in crypto_registry are exactly 32 bytes.
+        if bundle.signing_key.key.len() != 32 {
+            return Err(Error::InvalidSigningKeyAlgorithm);
+        }
+        let mut pubkey_arr = [0u8; 32];
+        bundle.signing_key.key.copy_into_slice(&mut pubkey_arr);
+        let pubkey = BytesN::<32>::from_array(env, &pubkey_arr);
+
+        // Domain-separated message: prefix || device_id || firmware_hash.
+        // The 16-byte prefix binds the signature to this contract + version so
+        // the same `(device_id, firmware_hash)` tuple cannot be replayed as a
+        // valid signature in any other protocol that happens to also sign over
+        // an id+hash pairing.
+        const DOMAIN_PREFIX: &[u8] = b"iot_fw_sig_v1__";
+        let mut msg = Bytes::new(env);
+        msg.append(&Bytes::from_slice(env, DOMAIN_PREFIX));
+        msg.append(&Bytes::from_slice(env, device_id.to_array().as_slice()));
+        msg.append(&Bytes::from_slice(env, firmware_hash.to_array().as_slice()));
+
+        env.crypto()
+            .ed25519_verify(&pubkey, &msg, firmware_signature);
+        Ok(())
     }
 }

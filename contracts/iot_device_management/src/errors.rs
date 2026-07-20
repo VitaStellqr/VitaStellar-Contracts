@@ -36,6 +36,25 @@ pub enum Error {
     // --- Cryptography (600–699) ---
     InvalidEncryptionKey = 602,
     KeyRotationTooFrequent = 603,
+    /// The crypto_registry contract address has not been configured on this
+    /// contract instance. Operators cannot register firmware-authenticated
+    /// devices until the cross-contract dependency is wired up.
+    CryptoRegistryNotConfigured = 604,
+    /// The manufacturer has no crypto_owner address linked to it, so its
+    /// signing public key cannot be resolved via crypto_registry.
+    ManufacturerCryptoOwnerNotSet = 605,
+    /// The Ed25519 signature provided with a device registration did not
+    /// verify against the manufacturer's active signing public key. The most
+    /// common cause is a tampered firmware hash or replay of a stolen
+    /// signature.
+    InvalidFirmwareSignature = 606,
+    /// The crypto_owner address linked to a manufacturer has no published key
+    /// bundle in the configured crypto_registry contract.
+    CryptoKeyBundleNotFound = 607,
+    /// The key bundle stored for a manufacturer uses a non-Ed25519 signing
+    /// algorithm. This contract only authenticates against Ed25519
+    /// signatures.
+    InvalidSigningKeyAlgorithm = 608,
 
     // --- Domain-Specific: IoT (800–899) ---
     DeviceDecommissioned = 820,
@@ -56,6 +75,13 @@ pub fn get_suggestion(error: Error) -> Symbol {
         | Error::NotManufacturer => {
             symbol_short!("CHK_AUTH")
         },
+        Error::CryptoRegistryNotConfigured | Error::ManufacturerCryptoOwnerNotSet => {
+            symbol_short!("CFG_LINK")
+        },
+        Error::InvalidFirmwareSignature | Error::InvalidSigningKeyAlgorithm => {
+            symbol_short!("BAD_SIG")
+        },
+        Error::CryptoKeyBundleNotFound => symbol_short!("NO_KEYS"),
         Error::NotInitialized => symbol_short!("INIT_CTR"),
         Error::AlreadyInitialized
         | Error::DeviceAlreadyRegistered

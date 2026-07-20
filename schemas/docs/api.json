@@ -1508,7 +1508,7 @@
         "name": "mark_no_show",
         "params": "env: Env, provider: Address, appointment_id: u64",
         "returns": "Result<(), Error>",
-        "description": "Mark an appointment as a no-show (provider only). Only callable by the appointment's provider. No funds are released."
+        "description": "Mark an appointment as a no-show (provider only). Only callable after the scheduled appointment time. Releases the escrowed funds to the provider on no-show."
       },
       {
         "name": "send_reminder",
@@ -15709,6 +15709,12 @@
         "params": "env: Env",
         "returns": "u32",
         "description": "—"
+      },
+      {
+        "name": "get_crypto_registry_contract",
+        "params": "env: Env",
+        "returns": "Option<Address>",
+        "description": "Return the configured crypto_registry contract address, if any."
       }
     ],
     "types": [
@@ -15960,6 +15966,11 @@
           {
             "name": "firmware_version",
             "type": "u32",
+            "description": "—"
+          },
+          {
+            "name": "firmware_hash",
+            "type": "BytesN<32>",
             "description": "—"
           },
           {
@@ -16591,6 +16602,276 @@
             "variant": "seconds",
             "value": "—",
             "description": "—"
+          },
+          {
+            "variant": "Issue",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "194",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "manufacturer",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "signed",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "firmware",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "verification",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "Address",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "of",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "the",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "deployed",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "crypto_registry",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "contract",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "used",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "to",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "look",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "up",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "the",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "manufacturer",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "signing",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "public",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "key",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "for",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "firmware",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "authentication",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "CryptoRegistryContract",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "The",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "on",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "chain",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "identity",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "crypto_registry",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "owner",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "whose",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "key",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "bundle",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "belongs",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "to",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "manufacturer",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "BytesN",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "32",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "Only",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "set",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "after",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "admin",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "explicitly",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "links",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "the",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "manufacturer",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "to",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "its",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "key",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "bundle",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "ManufacturerCryptoOwner",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "BytesN",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "32",
+            "value": "—",
+            "description": "—"
           }
         ]
       }
@@ -16689,6 +16970,26 @@
         "code": "603"
       },
       {
+        "name": "CryptoRegistryNotConfigured",
+        "code": "604"
+      },
+      {
+        "name": "ManufacturerCryptoOwnerNotSet",
+        "code": "605"
+      },
+      {
+        "name": "InvalidFirmwareSignature",
+        "code": "606"
+      },
+      {
+        "name": "CryptoKeyBundleNotFound",
+        "code": "607"
+      },
+      {
+        "name": "InvalidSigningKeyAlgorithm",
+        "code": "608"
+      },
+      {
         "name": "DeviceDecommissioned",
         "code": "820"
       },
@@ -16720,11 +17021,11 @@
     "examples": [
       {
         "name": "test_initialize",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    // Calling initialize again should fail\n    let result = client.try_initialize(&admin);\n    assert_eq!(result, Err(Ok(Error::AlreadyInitialized)));"
+        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let result = client.try_initialize(&admin);\n    assert_eq!(result, Err(Ok(Error::AlreadyInitialized)));"
       },
       {
         "name": "test_pause_unpause",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    client.pause(&admin);\n    // set_role should fail when paused\n    let user = Address::generate(&env);\n    let result = client.try_set_role(&admin, &user, &Role::Operator);\n    assert_eq!(result, Err(Ok(Error::ContractPaused)));\n    client.unpause(&admin);"
+        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    client.pause(&admin);\n    let user = Address::generate(&env);\n    let result = client.try_set_role(&admin, &user, &Role::Operator);\n    assert_eq!(result, Err(Ok(Error::ContractPaused)));\n    client.unpause(&admin);\n    client.set_role(&admin, &user, &Role::Operator);"
       },
       {
         "name": "test_pause_not_admin",
@@ -16748,87 +17049,119 @@
       },
       {
         "name": "test_register_device",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n    let device = client.get_device(&device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _admin_key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n\n    let device_id =\n        register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);"
+      },
+      {
+        "name": "test_register_device_requires_crypto_registry_configured",
+        "code": "let env = Env::default();\n    let (iot_client, admin) = setup(&env);\n    iot_client.initialize(&admin);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &iot_client, &admin, 1);\n\n    // Build params without configuring crypto_registry.\n    let device_id = make_bytes32(&env, 10);"
+      },
+      {
+        "name": "test_register_device_requires_manufacturer_crypto_owner",
+        "code": "let env = Env::default();\n    let (iot_client, _crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    // Do NOT link manufacturer crypto owner.\n    let mfr_id = register_manufacturer(&env, &iot_client, &admin, 1);\n\n    let device_id = make_bytes32(&env, 10);\n    let firmware_hash = make_firmware_hash(&env, 10);"
+      },
+      {
+        "name": "test_register_device_rejects_invalid_signature",
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, _mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n\n    // Sign with a key the contract does NOT trust.\n    let attacker_key = make_ed25519_keypair();"
+      },
+      {
+        "name": "test_register_device_rejects_missing_key_bundle",
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n\n    // Manufacturer registered but link points to an address with NO key\n    // bundle in crypto_registry.\n    let empty_owner = Address::generate(&env);\n    let mfr_id = make_bytes32(&env, 1);"
       },
       {
         "name": "test_register_device_duplicate",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n\n    let model = String::from_str(&env, \"M\");"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n\n    let device_id_dup = make_bytes32(&env, 10);"
+      },
+      {
+        "name": "test_set_crypto_registry_contract_admin_only",
+        "code": "let env = Env::default();\n    let (iot_client, _crypto_client, admin, _key) = setup_with_crypto(&env);\n    let non_admin = Address::generate(&env);\n    let arbitrary = Address::generate(&env);\n    let result = iot_client.try_set_crypto_registry_contract(&non_admin, &arbitrary);\n    assert_eq!(result, Err(Ok(Error::NotAdmin)));\n    // Admin succeeds.\n    iot_client.set_crypto_registry_contract(&admin, &arbitrary);\n    assert_eq!(iot_client.get_crypto_registry_contract(), Some(arbitrary));"
+      },
+      {
+        "name": "test_set_manufacturer_crypto_owner_admin_only",
+        "code": "let env = Env::default();\n    let (iot_client, _crypto_client, admin, _key) = setup_with_crypto(&env);\n    let mfr_id = register_manufacturer(&env, &iot_client, &admin, 1);\n    let non_admin = Address::generate(&env);\n    let crypto_owner = Address::generate(&env);\n    let result = iot_client.try_set_manufacturer_crypto_owner(&non_admin, &mfr_id, &crypto_owner);\n    assert_eq!(result, Err(Ok(Error::NotAdmin)));"
+      },
+      {
+        "name": "test_manufacturer_crypto_owner_rotation_uses_new_key",
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n\n    // Manufacturer registered against the initial admin key bundle.\n    let (mfr_id, mfr_key_a) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);"
+      },
+      {
+        "name": "test_firmware_hash_stored_on_device",
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 42, &mfr_key);\n    let device = iot_client.get_device(&device_id);\n    assert_eq!(device.firmware_hash, make_firmware_hash(&env, 42));"
       },
       {
         "name": "test_activate_device",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n\n    client.activate_device(&operator, &device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n\n    iot_client.activate_device(&operator, &device_id);"
       },
       {
         "name": "test_suspend_and_reactivate_device",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n    client.activate_device(&operator, &device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    iot_client.activate_device(&operator, &device_id);"
       },
       {
         "name": "test_decommission_device",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n\n    client.decommission_device(&admin, &device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n\n    iot_client.decommission_device(&admin, &device_id);"
       },
       {
         "name": "test_get_device_count",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    register_device(&env, &client, &operator, &mfr_id, 10);\n    register_device(&env, &client, &operator, &mfr_id, 11);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    register_device(&env, &iot_client, &operator, &mfr_id, 11, &mfr_key);"
       },
       {
         "name": "test_publish_firmware",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n\n    let binary_hash = make_bytes32(&env, 200);\n    let notes = String::from_str(&env, \"ipfs://release-notes\");\n    client.publish_firmware(\n        &admin,"
+        "code": "let env = Env::default();\n    let (iot_client, _crypto_client, admin, _key) = setup_with_crypto(&env);\n    // Need to grant the admin the Manufacturer role.\n    iot_client.set_role(&admin, &admin, &Role::Manufacturer);\n    let mfr_id = register_manufacturer(&env, &iot_client, &admin, 1);\n\n    let binary_hash = make_bytes32(&env, 200);\n    let notes = String::from_str(&env, \"ipfs://release-notes\");\n    iot_client.publish_firmware("
       },
       {
         "name": "test_approve_firmware",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n\n    let binary_hash = make_bytes32(&env, 200);\n    let notes = String::from_str(&env, \"notes\");\n    client.publish_firmware(\n        &admin,"
+        "code": "let env = Env::default();\n    let (iot_client, _crypto_client, admin, _key) = setup_with_crypto(&env);\n    iot_client.set_role(&admin, &admin, &Role::Manufacturer);\n    let mfr_id = register_manufacturer(&env, &iot_client, &admin, 1);\n\n    let binary_hash = make_bytes32(&env, 200);\n    let notes = String::from_str(&env, \"notes\");\n    iot_client.publish_firmware(\n        &admin,"
       },
       {
         "name": "test_update_device_firmware",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n    client.activate_device(&operator, &device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    iot_client.set_role(&admin, &admin, &Role::Manufacturer);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    iot_client.activate_device(&operator, &device_id);"
       },
       {
         "name": "test_firmware_downgrade_not_allowed",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n    client.activate_device(&operator, &device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    iot_client.set_role(&admin, &admin, &Role::Manufacturer);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    iot_client.activate_device(&operator, &device_id);"
       },
       {
         "name": "test_submit_heartbeat",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n    client.activate_device(&operator, &device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    iot_client.activate_device(&operator, &device_id);"
       },
       {
         "name": "test_heartbeat_too_frequent",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n    client.activate_device(&operator, &device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    iot_client.activate_device(&operator, &device_id);"
       },
       {
         "name": "test_get_device_uptime",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n\n    env.ledger().with_mut(|li| li.timestamp = 1000);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n\n    env.ledger().with_mut(|li| li.timestamp = 1000);"
       },
       {
         "name": "test_get_active_device_count",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n\n    let d1 = register_device(&env, &client, &operator, &mfr_id, 10);\n    let d2 = register_device(&env, &client, &operator, &mfr_id, 11);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n\n    let d1 = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    let d2 = register_device(&env, &iot_client, &operator, &mfr_id, 11, &mfr_key);"
       },
       {
         "name": "test_create_comm_channel",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n    client.activate_device(&operator, &device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    iot_client.activate_device(&operator, &device_id);"
       },
       {
         "name": "test_rotate_encryption_key",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n    client.activate_device(&operator, &device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    iot_client.activate_device(&operator, &device_id);"
       },
       {
         "name": "test_rotate_key_too_frequent",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n    client.activate_device(&operator, &device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    iot_client.activate_device(&operator, &device_id);"
       },
       {
         "name": "test_rotate_device_encryption_key",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n\n    let new_key = make_bytes32(&env, 99);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n\n    let new_key = make_bytes32(&env, 99);"
       },
       {
         "name": "test_get_devices_by_manufacturer",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n\n    register_device(&env, &client, &operator, &mfr_id, 10);\n    register_device(&env, &client, &operator, &mfr_id, 11);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n\n    register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    register_device(&env, &iot_client, &operator, &mfr_id, 11, &mfr_key);"
       },
       {
         "name": "test_get_firmware_update_history",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    let operator = Address::generate(&env);\n    client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &client, &admin, 1);\n    let device_id = register_device(&env, &client, &operator, &mfr_id, 10);\n    client.activate_device(&operator, &device_id);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    iot_client.set_role(&admin, &admin, &Role::Manufacturer);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    iot_client.activate_device(&operator, &device_id);"
       },
       {
         "name": "test_get_manufacturer_count",
-        "code": "let env = Env::default();\n    let (client, admin) = setup(&env);\n    client.initialize(&admin);\n    register_manufacturer(&env, &client, &admin, 1);\n    register_manufacturer(&env, &client, &admin, 2);\n    assert_eq!(client.get_manufacturer_count(), 2);"
+        "code": "let env = Env::default();\n    let (iot_client, _crypto_client, admin, _key) = setup_with_crypto(&env);\n    register_manufacturer(&env, &iot_client, &admin, 1);\n    register_manufacturer(&env, &iot_client, &admin, 2);\n    assert_eq!(iot_client.get_manufacturer_count(), 2);"
       },
       {
         "name": "test_error_codes_are_stable",
@@ -19981,9 +20314,21 @@
     "name": "medical_records",
     "functions": [
       {
+        "name": "initialize",
+        "params": "env: Env, admin: Address",
+        "returns": "Result<(), RecordError>",
+        "description": "—"
+      },
+      {
+        "name": "get_admin",
+        "params": "env: Env",
+        "returns": "Option<Address>",
+        "description": "—"
+      },
+      {
         "name": "get_record",
-        "params": "env: Env, record_id: u64",
-        "returns": "Option<Record>",
+        "params": "env: Env, record_id: u64, caller: Address",
+        "returns": "Result<Record, RecordError>",
         "description": "—"
       }
     ],
@@ -20046,6 +20391,16 @@
           {
             "variant": "EncryptionFailed",
             "value": "4",
+            "description": "—"
+          },
+          {
+            "variant": "NotInitialized",
+            "value": "5",
+            "description": "—"
+          },
+          {
+            "variant": "AlreadyInitialized",
+            "value": "6",
             "description": "—"
           }
         ]
@@ -25360,6 +25715,26 @@
             "description": "—"
           },
           {
+            "variant": "kept",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "for",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "backward",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "compat",
+            "value": "—",
+            "description": "—"
+          },
+          {
             "variant": "CredentialIds",
             "value": "—",
             "description": "—"
@@ -25496,6 +25871,86 @@
           },
           {
             "variant": "RetentionConfig",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "Counter",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "based",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "pagination",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "replaces",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "unbounded",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "Vecs",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "CategoryCount",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "u32",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "category",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "count",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "CategoryEntry",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "u32",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "u32",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "category",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "idx",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "item_id",
             "value": "—",
             "description": "—"
           }
@@ -26817,6 +27272,18 @@
         "description": "—"
       },
       {
+        "name": "set_minimum_attestors",
+        "params": "env: Env, caller: Address, min: u32",
+        "returns": "Result<bool, Error>",
+        "description": "—"
+      },
+      {
+        "name": "get_minimum_attestors",
+        "params": "env: Env",
+        "returns": "u32",
+        "description": "—"
+      },
+      {
         "name": "compute_proof_hash",
         "params": "env: Env, proof: Bytes",
         "returns": "BytesN<32>",
@@ -26997,6 +27464,26 @@
             "variant": "32",
             "value": "—",
             "description": "—"
+          },
+          {
+            "variant": "MinimumAttestors",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "ProofAttestationCount",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "BytesN",
+            "value": "—",
+            "description": "—"
+          },
+          {
+            "variant": "32",
+            "value": "—",
+            "description": "—"
           }
         ]
       }
@@ -27029,6 +27516,10 @@
       {
         "name": "VerificationFailed",
         "code": "601"
+      },
+      {
+        "name": "InsufficientAttestors",
+        "code": "700"
       }
     ],
     "examples": []
