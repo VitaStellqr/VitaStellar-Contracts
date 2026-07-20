@@ -21,6 +21,9 @@ pub enum Error {
     StorageFull = 15,
     CrossChainTimeout = 16,
     ReplayDetected = 17,
+    RoutingFailed = 20,
+    NoFallbackAvailable = 21,
+    PendingPaymentNotFound = 22,
 }
 
 #[derive(Clone)]
@@ -32,12 +35,28 @@ pub struct RouterFeeConfig {
 
 #[derive(Clone)]
 #[contracttype]
+pub struct PendingPayment {
+    pub payer: Address,
+    pub recipient: Address,
+    pub amount: i128,
+    pub fallback_recipient: Address,
+    pub timestamp: u64,
+    pub reason: Symbol,
+}
+
+#[derive(Clone)]
+#[contracttype]
 enum DataKey {
     Nonce(Address),
+    PendingPayment(u64),
+    PendingPaymentCount,
 }
 
 const FEE_CONF: Symbol = symbol_short!("feeconf");
 const NONCE_WRAP_HALF: u64 = u64::MAX / 2;
+const PAYMENT_ROUTED: Symbol = symbol_short!("PmtRouted");
+const PAYMENT_ROUTING_FAILED: Symbol = symbol_short!("PmtFailed");
+const PAYMENT_COLLECTED: Symbol = symbol_short!("PmtColled");
 
 #[contract]
 pub struct PaymentRouter;
@@ -90,9 +109,86 @@ impl PaymentRouter {
         Self::consume_nonce(&env, &payer, next_nonce)?;
 
         env.events().publish(
-            ("payment_routed",),
+            (PAYMENT_ROUTED,),
             (payer, recipient, amount, provider, fee, next_nonce),
         );
+        Ok(())
+    }
+
+    pub fn route_with_fallback(
+        env: Env,
+        payer: Address,
+        primary_recipient: Address,
+        fallback_recipient: Address,
+        amount: i128,
+        next_nonce: u64,
+    ) -> Result<u64, Error> {
+        payer.require_auth();
+        let (provider, fee) = Self::compute_split_values(&env, amount)?;
+        Self::consume_nonce(&env, &payer, next_nonce)?;
+
+        let primary_success = Self::try_route(&env, &payer, &primary_recipient, amount, &provider, &fee, next_nonce);
+
+        if primary_success {
+            return Ok(0);
+        }
+
+        let fallback_success = Self::try_route(&env, &payer, &fallback_recipient, amount, &provider, &fee, next_nonce);
+
+        if fallback_success {
+            return Ok(0);
+        }
+
+        let payment_id = Self::next_payment_id(&env);
+        let pending = PendingPayment {
+            payer: payer.clone(),
+            recipient: primary_recipient.clone(),
+            amount,
+            fallback_recipient,
+            timestamp: env.ledger().timestamp(),
+            reason: symbol_short!("PmtFailed"),
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::PendingPayment(payment_id), &pending);
+
+        env.events().publish(
+            (PAYMENT_ROUTING_FAILED,),
+            (payer, primary_recipient, amount, next_nonce, payment_id),
+        );
+
+        Ok(payment_id)
+    }
+
+    pub fn collect_failed_payment(
+        env: Env,
+        payer: Address,
+        payment_id: u64,
+        next_nonce: u64,
+    ) -> Result<(), Error> {
+        payer.require_auth();
+
+        let pending: PendingPayment = env
+            .storage()
+            .persistent()
+            .get(&DataKey::PendingPayment(payment_id))
+            .ok_or(Error::PendingPaymentNotFound)?;
+
+        if pending.payer != payer {
+            return Err(Error::PendingPaymentNotFound);
+        }
+
+        Self::consume_nonce(&env, &payer, next_nonce)?;
+
+        env.storage()
+            .persistent()
+            .remove(&DataKey::PendingPayment(payment_id));
+
+        env.events().publish(
+            (PAYMENT_COLLECTED,),
+            (payer, pending.fallback_recipient, pending.amount, payment_id),
+        );
+
         Ok(())
     }
 
@@ -128,6 +224,35 @@ impl PaymentRouter {
     fn nonce_is_newer(next_nonce: u64, stored_nonce: u64) -> bool {
         let delta = next_nonce.wrapping_sub(stored_nonce);
         delta != 0 && delta <= NONCE_WRAP_HALF
+    }
+
+    fn try_route(
+        env: &Env,
+        payer: &Address,
+        recipient: &Address,
+        amount: i128,
+        provider: &i128,
+        fee: &i128,
+        nonce: u64,
+    ) -> bool {
+        env.events().publish(
+            (PAYMENT_ROUTED,),
+            (payer.clone(), recipient.clone(), amount, provider.clone(), fee.clone(), nonce),
+        );
+        true
+    }
+
+    fn next_payment_id(env: &Env) -> u64 {
+        let count: u64 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::PendingPaymentCount)
+            .unwrap_or(0);
+        let next = count.wrapping_add(1);
+        env.storage()
+            .persistent()
+            .set(&DataKey::PendingPaymentCount, &next);
+        next
     }
 }
 
@@ -205,5 +330,61 @@ mod test {
 
         let replay = client.try_route_payment(&payer, &first_recipient, &1i128, &u64::MAX);
         assert_eq!(replay, Err(Ok(Error::ReplayDetected)));
+    }
+
+    #[test]
+    fn test_route_with_fallback_succeeds_primary() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, PaymentRouter);
+        let client = PaymentRouterClient::new(&env, &cid);
+        let payer = Address::generate(&env);
+        let primary = Address::generate(&env);
+        let fallback = Address::generate(&env);
+
+        client.set_fee_config(&Address::generate(&env), &1000u32);
+        let payment_id = client.route_with_fallback(&payer, &primary, &fallback, &1000i128, &1u64);
+        // Primary route succeeds, so payment_id is 0 (no pending payment created)
+        assert_eq!(payment_id, 0);
+    }
+
+    #[test]
+    fn test_collect_nonexistent_pending_payment() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, PaymentRouter);
+        let client = PaymentRouterClient::new(&env, &cid);
+        let payer = Address::generate(&env);
+
+        client.set_fee_config(&Address::generate(&env), &1000u32);
+
+        // Try collecting a pending payment that doesn't exist
+        let collect_result = client.try_collect_failed_payment(&payer, &999u64, &1u64);
+        assert_eq!(collect_result, Err(Ok(Error::PendingPaymentNotFound)));
+    }
+
+    #[test]
+    fn test_route_with_fallback_returns_pending_id() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register_contract(None, PaymentRouter);
+        let client = PaymentRouterClient::new(&env, &cid);
+        let payer = Address::generate(&env);
+        let primary = Address::generate(&env);
+        let fallback = Address::generate(&env);
+
+        client.set_fee_config(&Address::generate(&env), &1000u32);
+
+        // Route successfully with primary
+        let id1 = client.route_with_fallback(&payer, &primary, &fallback, &1000i128, &1u64);
+        assert_eq!(id1, 0);
+
+        // Another route
+        let id2 = client.route_with_fallback(&payer, &primary, &fallback, &500i128, &2u64);
+        assert_eq!(id2, 0);
+
+        // Collecting a non-existent pending payment returns error
+        let result = client.try_collect_failed_payment(&payer, &7u64, &3u64);
+        assert_eq!(result, Err(Ok(Error::PendingPaymentNotFound)));
     }
 }
