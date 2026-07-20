@@ -123,3 +123,76 @@ jobs:
             git diff docs/ERROR_CODES.md
             exit 1
           fi
+
+  # WASM size monitoring — prevents bloat from merging undetected.
+  # See docs/WASM_SIZE_MONITORING.md for details.
+  wasm-size-check:
+    name: WASM Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq bc
+
+      - name: Build all contracts (release)
+        run: |
+          mkdir -p dist
+          for contract in contracts/*/; do
+            if [ -d "$contract" ] && [ -f "${contract}Cargo.toml" ]; then
+              contract_name=$(basename "$contract")
+              echo "Building: $contract_name"
+              (cd "$contract" && cargo build --target wasm32-unknown-unknown --release) || exit 1
+              wasm_file="target/wasm32-unknown-unknown/release/${contract_name}.wasm"
+              if [ -f "$wasm_file" ]; then
+                cp "$wasm_file" dist/
+              fi
+            fi
+          done
+
+      - name: Check WASM sizes against budgets
+        run: |
+          chmod +x scripts/wasm_size_monitor.sh
+          ./scripts/wasm_size_monitor.sh
+
+      - name: Verify budgets
+        run: |
+          echo "=== Checking contracts against committed budgets ==="
+          BUDGETS_FILE="config/wasm_budgets.json"
+          if [ ! -f "$BUDGETS_FILE" ]; then
+            echo "Error: $BUDGETS_FILE not found"
+            exit 1
+          fi
+
+          exit_code=0
+          for wasm_file in dist/*.wasm; do
+            if [ -f "$wasm_file" ]; then
+              contract_name=$(basename "$wasm_file" .wasm)
+              size=$(wc -c < "$wasm_file")
+              budget=$(jq -r --arg name "$contract_name" '.budgets[$name] // empty' "$BUDGETS_FILE")
+
+              if [ -z "$budget" ]; then
+                echo "WARNING: No budget defined for $contract_name (size: ${size}B)"
+                continue
+              fi
+
+              if [ "$size" -gt "$budget" ]; then
+                echo "FAIL: $contract_name exceeds budget! Size: ${size}B, Budget: ${budget}B"
+                exit_code=1
+              else
+                echo "OK: $contract_name (${size}B / ${budget}B)"
+              fi
+            fi
+          done
+
+          if [ "$exit_code" -ne 0 ]; then
+            echo ""
+            echo "Some contracts exceeded their size budgets."
+            echo "Update config/wasm_budgets.json if the increase is intentional."
+          fi
+          exit "$exit_code"
