@@ -590,6 +590,9 @@
 | 15 | StorageFull | Generated from contract source |
 | 16 | CrossChainTimeout | Generated from contract source |
 | 17 | ReplayDetected | Generated from contract source |
+| 20 | RoutingFailed | Generated from contract source |
+| 21 | NoFallbackAvailable | Generated from contract source |
+| 22 | PendingPaymentNotFound | Generated from contract source |
 
 ### pharma_supply_chain
 
