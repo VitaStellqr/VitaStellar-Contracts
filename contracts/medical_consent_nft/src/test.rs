@@ -257,8 +257,7 @@ mod test {
         let token_id = client.mint_consent(&issuer, &patient, &metadata_uri, &consent_type, &0);
 
         let reason = String::from_str(&env, "Life-threatening emergency");
-        let override_id = client
-            .emergency_override(&emergency_auth, &token_id, &reason, &0);
+        let override_id = client.emergency_override(&emergency_auth, &token_id, &reason, &0);
 
         assert!(override_id >= 0);
     }
