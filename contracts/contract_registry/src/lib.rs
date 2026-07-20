@@ -1,6 +1,8 @@
 #![no_std]
 
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Map, Symbol};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Map, Symbol,
+};
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -81,10 +83,8 @@ impl ContractRegistry {
 
         env.storage().instance().set(&DataKey::Registry, &registry);
 
-        env.events().publish(
-            (symbol_short!("REG"), symbol_short!("BATCH")),
-            names.len(),
-        );
+        env.events()
+            .publish((symbol_short!("REG"), symbol_short!("BATCH")), names.len());
         Ok(())
     }
 
