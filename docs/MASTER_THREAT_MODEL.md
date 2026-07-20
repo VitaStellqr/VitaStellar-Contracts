@@ -15,7 +15,7 @@ This master threat model consolidates all security threat analyses for the VitaS
 The fenced `loc-manifest` block below is the authoritative size-of-contract record cited by this threat model. It is validated by `scripts/loc_report.sh --check` (invoked by the `loc-check` CI job in `.github/workflows/ci.yml`) against `wc -l` on `contracts/<name>/src/**/*.rs` — tests and `target/` are excluded. Drift fails CI; to update intentionally, regenerate with `./scripts/loc_report.sh --emit-manifest` and paste the result into the block.
 
 ```loc-manifest
-audit_forensics: 790
+audit_forensics: 921
 crypto_registry: 935
 emr_integration: 2141
 governor: 452

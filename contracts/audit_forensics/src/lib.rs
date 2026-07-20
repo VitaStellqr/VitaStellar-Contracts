@@ -4,9 +4,17 @@
 mod test;
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map, String, Symbol,
-    Vec,
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map,
+    String, Symbol, Vec,
 };
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[contracterror]
+pub enum AuditError {
+    Unauthorized = 1,
+    AlreadyInitialized = 2,
+    NotAdmin = 3,
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[contracttype]
@@ -28,6 +36,7 @@ pub struct AuditEntry {
     pub id: u64,
     pub timestamp: u64,
     pub actor: Address,
+    pub caller_contract: Address,
     pub action: AuditAction,
     pub record_id: Option<u64>,
     pub details_hash: BytesN<32>,
@@ -112,6 +121,7 @@ pub enum DataKey {
     Finding(u64),
     FindingsByExecution(u64),
     FormalSummary(u64),
+    AuthorizedLoggers,
 }
 
 #[contract]
@@ -121,7 +131,7 @@ pub struct AuditForensicsContract;
 #[contractimpl]
 impl AuditForensicsContract {
     #[allow(clippy::panic)] // Panic is intentional for internal invariant or invalid-state handling
-    pub fn initialize(env: Env, admin: Address) {
+    pub fn initialize(env: Env, admin: Address, authorized_loggers: Vec<Address>) {
         if env.storage().instance().has(&DataKey::Admin) {
             panic!("Already initialized");
         }
@@ -132,6 +142,9 @@ impl AuditForensicsContract {
             .instance()
             .set(&DataKey::NextExecutionId, &0u64);
         env.storage().instance().set(&DataKey::NextFindingId, &0u64);
+        env.storage()
+            .instance()
+            .set(&DataKey::AuthorizedLoggers, &authorized_loggers);
     }
 
     #[allow(clippy::too_many_arguments)] // All parameters are individually required by the Soroban contract ABI
@@ -167,21 +180,47 @@ impl AuditForensicsContract {
         rule_id
     }
 
+    pub fn add_authorized_logger(env: Env, admin: Address, logger: Address) {
+        admin.require_auth();
+        Self::require_admin(&env, &admin);
+
+        let mut loggers: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&DataKey::AuthorizedLoggers)
+            .unwrap_or(Vec::new(&env));
+        loggers.push_back(logger);
+        env.storage()
+            .instance()
+            .set(&DataKey::AuthorizedLoggers, &loggers);
+    }
+
     pub fn log_event(
         env: Env,
         actor: Address,
+        caller_contract: Address,
         action: AuditAction,
         record_id: Option<u64>,
         details_hash: BytesN<32>,
         metadata: Map<String, String>,
-    ) -> u64 {
+    ) -> Result<u64, AuditError> {
         actor.require_auth();
+
+        let loggers: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&DataKey::AuthorizedLoggers)
+            .unwrap_or(Vec::new(&env));
+        if !loggers.contains(&caller_contract) {
+            return Err(AuditError::Unauthorized);
+        }
 
         let id = Self::get_next_id(&env);
         let entry = AuditEntry {
             id,
             timestamp: env.ledger().timestamp(),
             actor: actor.clone(),
+            caller_contract,
             action,
             record_id,
             details_hash,
@@ -223,7 +262,7 @@ impl AuditForensicsContract {
             (id, entry.timestamp, entry.action),
         );
 
-        id
+        Ok(id)
     }
 
     #[allow(clippy::too_many_arguments)] // All parameters are individually required by the Soroban contract ABI
@@ -614,6 +653,7 @@ impl AuditForensicsContract {
             id,
             timestamp: env.ledger().timestamp(),
             actor,
+            caller_contract: env.current_contract_address(),
             action,
             record_id,
             details_hash: BytesN::from_array(env, &[0u8; 32]),
