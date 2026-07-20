@@ -2,7 +2,7 @@
 
 .PHONY: help build test clean fmt lint deploy-local start-local stop-local install-deps check-deps shellcheck dist dev-deploy monitor-wasm check-wasm-size optimize analyze-optimizations
 .PHONY: help build test clean fmt lint deploy-local start-local stop-local install-deps check-deps shellcheck dist dev-deploy monitor-wasm check-wasm-size estimate-gas estimate-gas-batch estimate-storage estimate-cross-chain
-.PHONY: docs test-public-api-snapshot
+.PHONY: docs test-public-api-snapshot mutation-test
 
 # Default target
 help:
@@ -33,6 +33,7 @@ help:
 	@echo "  estimate-gas-batch  - Estimate gas for multiple functions"
 	@echo "  estimate-storage    - Calculate storage costs"
 	@echo "  estimate-cross-chain- Estimate cross-chain fees"
+	@echo "  mutation-test  - Run mutation tests on 5 core contracts"
 	@echo "  release VERSION=X.Y.Z - Automated release process"
 	@echo "  bump-version VERSION=X.Y.Z - Bump version in all files"
 	@echo "  generate-changelog VERSION=X.Y.Z - Generate changelog entry"
@@ -230,6 +231,24 @@ watch:
 bench:
 	@echo "Running benchmarks..."
 	cargo bench
+
+# ─── Mutation Testing (Issue #201) ───────────────────────────────────────────
+
+mutation-test: check-deps
+	@echo "Running mutation tests on 5 core contracts..."
+	@command -v cargo-mutants >/dev/null 2>&1 || { echo "cargo-mutants not installed. Run: cargo install cargo-mutants"; exit 1; }
+	@echo "=== fp_math ==="
+	cargo mutants -p fp_math --timeout 120 --no-times || true
+	@echo "=== medical_records ==="
+	cargo mutants -p medical_records --timeout 120 --no-times || true
+	@echo "=== escrow ==="
+	cargo mutants -p escrow --timeout 120 --no-times || true
+	@echo "=== governor ==="
+	cargo mutants -p governor --timeout 120 --no-times || true
+	@echo "=== identity_registry ==="
+	cargo mutants -p identity_registry --timeout 120 --no-times || true
+	@echo "Mutation tests complete. Results in mutants.out/"
+	@echo "Update baseline scores in docs/mutation-testing.md"
 
 # Profile contract performance metrics
 profile:
