@@ -23,7 +23,7 @@ homomorphic_registry: 1149
 identity_registry: 3809
 medical_record_backup: 1566
 mpc_manager: 1133
-zk_verifier: 490
+zk_verifier: 726
 ```
 
 ## Executive Summary

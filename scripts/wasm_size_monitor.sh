@@ -7,8 +7,8 @@ set -euo pipefail
 
 # Configuration
 MAX_CONTRACT_SIZE=65536      # 64KB Stellar limit
-WARNING_THRESHOLD=0.8        # 80% warning threshold
-CRITICAL_THRESHOLD=0.95     # 95% critical threshold
+WARNING_THRESHOLD_PCT=80        # 80% warning threshold
+CRITICAL_THRESHOLD_PCT=95     # 95% critical threshold
 TREND_DATA_FILE=".wasm_size_trends.json"
 OPTIMIZATION_TIPS_FILE=".wasm_optimization_tips.json"
 
@@ -179,10 +179,10 @@ check_contract() {
     printf "%-25s %8s %6s%% " "$contract_name" "$size_human" "$percentage"
     
     # Status indicators
-    if [[ $size -gt $((MAX_CONTRACT_SIZE * CRITICAL_THRESHOLD / 100)) ]]; then
+    if [[ $size -gt $((MAX_CONTRACT_SIZE * CRITICAL_THRESHOLD_PCT / 100)) ]]; then
         log "${RED}CRITICAL${NC}"
         log "${RED}  Risk: Contract will likely fail deployment!${NC}"
-    elif [[ $size -gt $((MAX_CONTRACT_SIZE * WARNING_THRESHOLD / 100)) ]]; then
+    elif [[ $size -gt $((MAX_CONTRACT_SIZE * WARNING_THRESHOLD_PCT / 100)) ]]; then
         log "${YELLOW}WARNING${NC}"
         log "${YELLOW}  Risk: Approaching deployment limit${NC}"
     else
@@ -221,9 +221,9 @@ generate_summary() {
             total_contracts=$((total_contracts + 1))
             total_size=$((total_size + size))
             
-            if [[ $size -gt $((MAX_CONTRACT_SIZE * CRITICAL_THRESHOLD / 100)) ]]; then
+            if [[ $size -gt $((MAX_CONTRACT_SIZE * CRITICAL_THRESHOLD_PCT / 100)) ]]; then
                 critical_count=$((critical_count + 1))
-            elif [[ $size -gt $((MAX_CONTRACT_SIZE * WARNING_THRESHOLD / 100)) ]]; then
+            elif [[ $size -gt $((MAX_CONTRACT_SIZE * WARNING_THRESHOLD_PCT / 100)) ]]; then
                 warning_count=$((warning_count + 1))
             fi
         fi
@@ -274,8 +274,8 @@ check_dependencies() {
 main() {
     log "${BLUE}=== WASM Size Monitor ===${NC}"
     log "Stellar contract size limit: $(bytes_to_human $MAX_CONTRACT_SIZE)"
-    log "Warning threshold: $((WARNING_THRESHOLD * 100))%"
-    log "Critical threshold: $((CRITICAL_THRESHOLD * 100))%"
+    log "Warning threshold: ${WARNING_THRESHOLD_PCT}%"
+    log "Critical threshold: ${CRITICAL_THRESHOLD_PCT}%"
     
     # Check dependencies first
     check_dependencies
@@ -330,7 +330,7 @@ main() {
     for wasm_file in dist/*.wasm; do
         if [[ -f "$wasm_file" ]]; then
             local size=$(wc -c < "$wasm_file")
-            if [[ $size -gt $((MAX_CONTRACT_SIZE * CRITICAL_THRESHOLD / 100)) ]]; then
+            if [[ $size -gt $((MAX_CONTRACT_SIZE * CRITICAL_THRESHOLD_PCT / 100)) ]]; then
                 critical_count=$((critical_count + 1))
             fi
         fi

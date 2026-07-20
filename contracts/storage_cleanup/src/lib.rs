@@ -16,12 +16,19 @@ const SAFETY_MARGIN: u64 = 24 * 3600; // 1 day
 
 const MAX_BATCH: u32 = 100;
 
+// Category constants for counter-based pagination
+const CAT_CREDENTIAL: u32 = 0;
+const CAT_AUDIT_LOG: u32 = 1;
+const CAT_ESCROW: u32 = 2;
+const CAT_CONSENT: u32 = 3;
+const CAT_SCHEDULE: u32 = 4;
+
 // ── Storage keys ─────────────────────────────────────────────────────────────
 #[contracttype]
 pub enum DataKey {
     Admin,
     Paused,
-    // Indexed lists of item IDs per category
+    // Indexed lists of item IDs per category (kept for backward compat)
     CredentialIds,
     AuditLogIds,
     EscrowIds,
@@ -37,6 +44,9 @@ pub enum DataKey {
     CleanupLog,
     // Configurable retention overrides
     RetentionConfig,
+    // Counter-based pagination (replaces unbounded Vecs)
+    CategoryCount(u32),      // category -> count
+    CategoryEntry(u32, u32), // (category, idx) -> item_id
 }
 
 #[contracttype]
@@ -107,70 +117,54 @@ impl StorageCleanup {
     // ── Registration helpers (called by other contracts or admin) ─────────────
 
     pub fn register_credential(env: Env, id: u64, expires_at: u64) {
-        let mut ids: Vec<u64> = env
-            .storage()
-            .persistent()
-            .get(&DataKey::CredentialIds)
-            .unwrap_or(Vec::new(&env));
-        ids.push_back(id);
-        env.storage()
-            .persistent()
-            .set(&DataKey::CredentialIds, &ids);
+        Self::register_item(&env, CAT_CREDENTIAL, id);
         env.storage()
             .persistent()
             .set(&DataKey::CredentialExpiry(id), &expires_at);
     }
 
     pub fn register_audit_log(env: Env, id: u64, logged_at: u64) {
-        let mut ids: Vec<u64> = env
-            .storage()
-            .persistent()
-            .get(&DataKey::AuditLogIds)
-            .unwrap_or(Vec::new(&env));
-        ids.push_back(id);
-        env.storage().persistent().set(&DataKey::AuditLogIds, &ids);
+        Self::register_item(&env, CAT_AUDIT_LOG, id);
         env.storage()
             .persistent()
             .set(&DataKey::AuditLogExpiry(id), &logged_at);
     }
 
     pub fn register_escrow(env: Env, id: u64, settled_at: u64) {
-        let mut ids: Vec<u64> = env
-            .storage()
-            .persistent()
-            .get(&DataKey::EscrowIds)
-            .unwrap_or(Vec::new(&env));
-        ids.push_back(id);
-        env.storage().persistent().set(&DataKey::EscrowIds, &ids);
+        Self::register_item(&env, CAT_ESCROW, id);
         env.storage()
             .persistent()
             .set(&DataKey::EscrowSettledAt(id), &settled_at);
     }
 
     pub fn register_consent(env: Env, id: u64, revoked_at: u64) {
-        let mut ids: Vec<u64> = env
-            .storage()
-            .persistent()
-            .get(&DataKey::ConsentIds)
-            .unwrap_or(Vec::new(&env));
-        ids.push_back(id);
-        env.storage().persistent().set(&DataKey::ConsentIds, &ids);
+        Self::register_item(&env, CAT_CONSENT, id);
         env.storage()
             .persistent()
             .set(&DataKey::ConsentRevokedAt(id), &revoked_at);
     }
 
     pub fn register_schedule(env: Env, id: u64, end_at: u64) {
-        let mut ids: Vec<u64> = env
-            .storage()
-            .persistent()
-            .get(&DataKey::ScheduleIds)
-            .unwrap_or(Vec::new(&env));
-        ids.push_back(id);
-        env.storage().persistent().set(&DataKey::ScheduleIds, &ids);
+        Self::register_item(&env, CAT_SCHEDULE, id);
         env.storage()
             .persistent()
             .set(&DataKey::ScheduleEndAt(id), &end_at);
+    }
+
+    /// Register an item using counter-based pagination (no unbounded Vec).
+    fn register_item(env: &Env, category: u32, id: u64) {
+        let count: u32 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::CategoryCount(category))
+            .unwrap_or(0);
+        env.storage()
+            .persistent()
+            .set(&DataKey::CategoryEntry(category, count), &id);
+        env.storage().persistent().set(
+            &DataKey::CategoryCount(category),
+            &(count.saturating_add(1)),
+        );
     }
 
     // ── Core cleanup ──────────────────────────────────────────────────────────
@@ -214,9 +208,9 @@ impl StorageCleanup {
         let cfg = Self::get_config(&env);
         let per_cat = (max_items / 5).max(1);
 
-        let c = Self::count_expired_in_list(
+        let c = Self::count_expired_in_category(
             &env,
-            &DataKey::CredentialIds,
+            CAT_CREDENTIAL,
             |id| {
                 env.storage()
                     .persistent()
@@ -227,9 +221,9 @@ impl StorageCleanup {
             now,
             per_cat,
         );
-        let a = Self::count_expired_in_list(
+        let a = Self::count_expired_in_category(
             &env,
-            &DataKey::AuditLogIds,
+            CAT_AUDIT_LOG,
             |id| {
                 env.storage()
                     .persistent()
@@ -240,9 +234,9 @@ impl StorageCleanup {
             now,
             per_cat,
         );
-        let e = Self::count_expired_in_list(
+        let e = Self::count_expired_in_category(
             &env,
-            &DataKey::EscrowIds,
+            CAT_ESCROW,
             |id| {
                 env.storage()
                     .persistent()
@@ -253,9 +247,9 @@ impl StorageCleanup {
             now,
             per_cat,
         );
-        let co = Self::count_expired_in_list(
+        let co = Self::count_expired_in_category(
             &env,
-            &DataKey::ConsentIds,
+            CAT_CONSENT,
             |id| {
                 env.storage()
                     .persistent()
@@ -266,9 +260,9 @@ impl StorageCleanup {
             now,
             per_cat,
         );
-        let s = Self::count_expired_in_list(
+        let s = Self::count_expired_in_category(
             &env,
-            &DataKey::ScheduleIds,
+            CAT_SCHEDULE,
             |id| {
                 env.storage()
                     .persistent()
@@ -354,7 +348,7 @@ impl StorageCleanup {
         let cfg = Self::get_config(env);
         Self::remove_expired(
             env,
-            &DataKey::CredentialIds,
+            CAT_CREDENTIAL,
             |id| {
                 env.storage()
                     .persistent()
@@ -375,7 +369,7 @@ impl StorageCleanup {
         let cfg = Self::get_config(env);
         Self::remove_expired(
             env,
-            &DataKey::AuditLogIds,
+            CAT_AUDIT_LOG,
             |id| {
                 env.storage()
                     .persistent()
@@ -396,7 +390,7 @@ impl StorageCleanup {
         let cfg = Self::get_config(env);
         Self::remove_expired(
             env,
-            &DataKey::EscrowIds,
+            CAT_ESCROW,
             |id| {
                 env.storage()
                     .persistent()
@@ -417,7 +411,7 @@ impl StorageCleanup {
         let cfg = Self::get_config(env);
         Self::remove_expired(
             env,
-            &DataKey::ConsentIds,
+            CAT_CONSENT,
             |id| {
                 env.storage()
                     .persistent()
@@ -438,7 +432,7 @@ impl StorageCleanup {
         let cfg = Self::get_config(env);
         Self::remove_expired(
             env,
-            &DataKey::ScheduleIds,
+            CAT_SCHEDULE,
             |id| {
                 env.storage()
                     .persistent()
@@ -455,10 +449,11 @@ impl StorageCleanup {
         )
     }
 
-    /// Generic removal: iterates the ID list, removes expired entries, rewrites the list.
+    /// Generic removal: iterates by index range (counter-based pagination),
+    /// removes expired entries, and compacts the remaining entries.
     fn remove_expired<FGet, FDel>(
         env: &Env,
-        list_key: &DataKey,
+        category: u32,
         get_ts: FGet,
         del_data: FDel,
         retention: u64,
@@ -471,16 +466,22 @@ impl StorageCleanup {
         let now = env.ledger().timestamp();
         let cutoff = now.saturating_sub(retention).saturating_sub(SAFETY_MARGIN);
 
-        let ids: Vec<u64> = env
+        let count: u32 = env
             .storage()
             .persistent()
-            .get(list_key)
-            .unwrap_or(Vec::new(env));
+            .get(&DataKey::CategoryCount(category))
+            .unwrap_or(0);
 
-        let mut kept = Vec::new(env);
+        let mut kept_indices = Vec::new(env);
         let mut cleaned = 0u32;
 
-        for id in ids.iter() {
+        for idx in 0..count {
+            let id: u64 = env
+                .storage()
+                .persistent()
+                .get(&DataKey::CategoryEntry(category, idx))
+                .unwrap_or(0);
+
             if cleaned < max_items {
                 let ts = get_ts(id);
                 // ts == 0 means not yet set (active item) — keep it
@@ -490,17 +491,36 @@ impl StorageCleanup {
                     continue;
                 }
             }
-            kept.push_back(id);
+            kept_indices.push_back((idx, id));
         }
 
-        env.storage().persistent().set(list_key, &kept);
+        // Compact: rewrite entries contiguously from index 0
+        for (new_idx, (_old_idx, id)) in kept_indices.iter().enumerate() {
+            env.storage()
+                .persistent()
+                .set(&DataKey::CategoryEntry(category, new_idx as u32), &id);
+        }
+
+        // Update count
+        let new_count = kept_indices.len() as u32;
+        env.storage()
+            .persistent()
+            .set(&DataKey::CategoryCount(category), &new_count);
+
+        // Clean up stale entries beyond new count
+        for idx in new_count..count {
+            env.storage()
+                .persistent()
+                .remove(&DataKey::CategoryEntry(category, idx));
+        }
+
         cleaned
     }
 
     /// Count-only variant (no mutations) used by preview_cleanup.
-    fn count_expired_in_list<FGet>(
+    fn count_expired_in_category<FGet>(
         env: &Env,
-        list_key: &DataKey,
+        category: u32,
         get_ts: FGet,
         retention: u64,
         now: u64,
@@ -510,22 +530,27 @@ impl StorageCleanup {
         FGet: Fn(u64) -> u64,
     {
         let cutoff = now.saturating_sub(retention).saturating_sub(SAFETY_MARGIN);
-        let ids: Vec<u64> = env
+        let count: u32 = env
             .storage()
             .persistent()
-            .get(list_key)
-            .unwrap_or(Vec::new(env));
-        let mut count = 0u32;
-        for id in ids.iter() {
-            if count >= max_items {
+            .get(&DataKey::CategoryCount(category))
+            .unwrap_or(0);
+        let mut result = 0u32;
+        for idx in 0..count {
+            if result >= max_items {
                 break;
             }
+            let id: u64 = env
+                .storage()
+                .persistent()
+                .get(&DataKey::CategoryEntry(category, idx))
+                .unwrap_or(0);
             let ts = get_ts(id);
             if ts > 0 && ts < cutoff {
-                count += 1;
+                result += 1;
             }
         }
-        count
+        result
     }
 
     fn record_cleanup(env: &Env, caller: &Address, category: u32, count: u32) {
