@@ -11,6 +11,7 @@ pub enum Error {
     VersionNotFound = 430,
     InvalidProof = 600,
     VerificationFailed = 601,
+    InsufficientAttestors = 700,
 }
 
 pub fn get_suggestion(error: Error) -> Symbol {
@@ -21,5 +22,6 @@ pub fn get_suggestion(error: Error) -> Symbol {
         Error::InvalidInput => symbol_short!("CHK_LEN"),
         Error::VersionNotFound => symbol_short!("CHK_ID"),
         Error::InvalidProof | Error::VerificationFailed => symbol_short!("CONTACT"),
+        Error::InsufficientAttestors => symbol_short!("NEED_MORE"),
     }
 }
