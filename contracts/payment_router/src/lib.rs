@@ -127,13 +127,29 @@ impl PaymentRouter {
         let (provider, fee) = Self::compute_split_values(&env, amount)?;
         Self::consume_nonce(&env, &payer, next_nonce)?;
 
-        let primary_success = Self::try_route(&env, &payer, &primary_recipient, amount, &provider, &fee, next_nonce);
+        let primary_success = Self::try_route(
+            &env,
+            &payer,
+            &primary_recipient,
+            amount,
+            &provider,
+            &fee,
+            next_nonce,
+        );
 
         if primary_success {
             return Ok(0);
         }
 
-        let fallback_success = Self::try_route(&env, &payer, &fallback_recipient, amount, &provider, &fee, next_nonce);
+        let fallback_success = Self::try_route(
+            &env,
+            &payer,
+            &fallback_recipient,
+            amount,
+            &provider,
+            &fee,
+            next_nonce,
+        );
 
         if fallback_success {
             return Ok(0);
@@ -186,7 +202,12 @@ impl PaymentRouter {
 
         env.events().publish(
             (PAYMENT_COLLECTED,),
-            (payer, pending.fallback_recipient, pending.amount, payment_id),
+            (
+                payer,
+                pending.fallback_recipient,
+                pending.amount,
+                payment_id,
+            ),
         );
 
         Ok(())
@@ -237,7 +258,14 @@ impl PaymentRouter {
     ) -> bool {
         env.events().publish(
             (PAYMENT_ROUTED,),
-            (payer.clone(), recipient.clone(), amount, provider.clone(), fee.clone(), nonce),
+            (
+                payer.clone(),
+                recipient.clone(),
+                amount,
+                provider.clone(),
+                fee.clone(),
+                nonce,
+            ),
         );
         true
     }
