@@ -17,4 +17,6 @@ pub enum Error {
     /// Raised when `reentrancy::enter` returns `false` because the lock is
     /// already held — i.e. a guarded function was re-entered mid-call.
     ReentrantCall = 5,
+    /// Contract is paused by the system-wide PauseController.
+    ContractPaused = 6,
 }
