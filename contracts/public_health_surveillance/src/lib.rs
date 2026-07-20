@@ -395,10 +395,7 @@ impl PublicHealthSurveillance {
     /// Grant consent for public health data aggregation.
     /// Patients must explicitly consent before their data can be included in
     /// public health aggregates (GDPR Article 9, HIPAA research exemptions).
-    pub fn grant_consent(
-        env: Env,
-        patient: Address,
-    ) -> Result<(), Error> {
+    pub fn grant_consent(env: Env, patient: Address) -> Result<(), Error> {
         patient.require_auth();
 
         env.storage()
@@ -416,10 +413,7 @@ impl PublicHealthSurveillance {
     /// Revoke consent for public health data aggregation.
     /// Patients can revoke consent at any time. Their data will be excluded
     /// from future aggregates.
-    pub fn revoke_consent(
-        env: Env,
-        patient: Address,
-    ) -> Result<(), Error> {
+    pub fn revoke_consent(env: Env, patient: Address) -> Result<(), Error> {
         patient.require_auth();
 
         env.storage()
@@ -435,10 +429,7 @@ impl PublicHealthSurveillance {
     }
 
     /// Check if a patient has granted consent for public health data aggregation.
-    pub fn has_consent(
-        env: Env,
-        patient: Address,
-    ) -> bool {
+    pub fn has_consent(env: Env, patient: Address) -> bool {
         env.storage()
             .persistent()
             .get(&DataKey::PatientConsent(patient))

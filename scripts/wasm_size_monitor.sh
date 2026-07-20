@@ -7,8 +7,8 @@ set -euo pipefail
 
 # Configuration
 MAX_CONTRACT_SIZE=65536      # 64KB Stellar limit
-WARNING_THRESHOLD_PCT=80        # 80% warning threshold
-CRITICAL_THRESHOLD_PCT=95     # 95% critical threshold
+WARNING_THRESHOLD_PCT=80     # 80% warning threshold
+CRITICAL_THRESHOLD_PCT=95    # 95% critical threshold
 TREND_DATA_FILE=".wasm_size_trends.json"
 OPTIMIZATION_TIPS_FILE=".wasm_optimization_tips.json"
 

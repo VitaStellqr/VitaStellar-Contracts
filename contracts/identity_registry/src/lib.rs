@@ -1674,12 +1674,14 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::DIDDocument(request.subject.clone()), &did_doc);
-        env.storage()
-            .persistent()
-            .set(&DataKey::DIDMeta(request.subject.clone()), &did_doc.to_meta());
-        env.storage()
-            .persistent()
-            .set(&DataKey::DIDDetail(request.subject.clone()), &did_doc.to_detail());
+        env.storage().persistent().set(
+            &DataKey::DIDMeta(request.subject.clone()),
+            &did_doc.to_meta(),
+        );
+        env.storage().persistent().set(
+            &DataKey::DIDDetail(request.subject.clone()),
+            &did_doc.to_detail(),
+        );
 
         // Mark request as executed
         request.executed = true;

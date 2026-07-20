@@ -658,6 +658,7 @@
 | 13 | CollaborationNotFound | Generated from contract source |
 | 14 | InvalidTimeRange | Generated from contract source |
 | 15 | InvalidRegion | Generated from contract source |
+| 16 | ConsentNotGranted | Generated from contract source |
 
 ### regulatory_compliance
 
