@@ -18,25 +18,31 @@ struct MockPausable;
 #[contractimpl]
 impl MockPausable {
     pub fn initialize(env: Env, admin: Address) {
-        env.storage().instance().set(&symbol_short!("admin"), &admin);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("admin"), &admin);
     }
 
     pub fn set_paused(env: Env, _caller: Address, paused: bool) {
-        env.storage().instance().set(&symbol_short!("paused"), &paused);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("paused"), &paused);
         env.events()
             .publish((symbol_short!("mock_set"),), (paused,));
     }
 
     pub fn pause(env: Env, _caller: Address) {
-        env.storage().instance().set(&symbol_short!("paused"), &true);
-        env.events()
-            .publish((symbol_short!("mck_pause"),), ());
+        env.storage()
+            .instance()
+            .set(&symbol_short!("paused"), &true);
+        env.events().publish((symbol_short!("mck_pause"),), ());
     }
 
     pub fn unpause(env: Env, _caller: Address) {
-        env.storage().instance().set(&symbol_short!("paused"), &false);
-        env.events()
-            .publish((symbol_short!("mck_unp"),), ());
+        env.storage()
+            .instance()
+            .set(&symbol_short!("paused"), &false);
+        env.events().publish((symbol_short!("mck_unp"),), ());
     }
 
     pub fn is_paused(env: Env) -> bool {
@@ -181,10 +187,7 @@ fn test_pause_all_already_paused() {
     client.register_contract(&admin, &name, &mock_addr, &sp);
     client.pause_all(&admin);
 
-    assert_eq!(
-        client.try_pause_all(&admin),
-        Err(Ok(Error::AlreadyPaused))
-    );
+    assert_eq!(client.try_pause_all(&admin), Err(Ok(Error::AlreadyPaused)));
 }
 
 #[test]
