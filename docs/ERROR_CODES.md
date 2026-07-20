@@ -70,6 +70,18 @@
 | 6 | ReviewRouteNotFound | Generated from contract source |
 | 7 | InvalidOwnerCount | Generated from contract source |
 
+### contract_registry
+
+| Code | Symbol | Description |
+|------|--------|-------------|
+| 1 | AlreadyInitialized | Generated from contract source |
+| 2 | Unauthorized | Generated from contract source |
+| 3 | NameNotFound | Generated from contract source |
+| 100 | Unauthorized | Generated from contract source |
+| 230 | MismatchedLength | Generated from contract source |
+| 300 | NotInitialized | Generated from contract source |
+| 301 | AlreadyInitialized | Generated from contract source |
+
 ### contract_template
 
 | Code | Symbol | Description |
