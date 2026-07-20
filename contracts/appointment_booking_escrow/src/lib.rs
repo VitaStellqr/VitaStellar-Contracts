@@ -400,7 +400,8 @@ impl AppointmentBookingEscrow {
     }
 
     /// Mark an appointment as a no-show (provider only).
-    /// Only callable by the appointment's provider. No funds are released.
+    /// Only callable after the scheduled appointment time.
+    /// Releases the escrowed funds to the provider on no-show.
     pub fn mark_no_show(env: Env, provider: Address, appointment_id: u64) -> Result<(), Error> {
         provider.require_auth();
         Self::require_initialized(&env)?;
@@ -430,10 +431,28 @@ impl AppointmentBookingEscrow {
             return Err(Error::InvalidState);
         }
 
-        let timestamp = env.ledger().timestamp();
+        // Prevent double withdrawal
+        if appointment.funds_released {
+            events::diag_validation_fail(&env, "mark_no_show", "double_withdrawal");
+            Self::record_operation(&env, false);
+            return Err(Error::DoubleWithdrawal);
+        }
 
+        // No-show can only be marked after the scheduled appointment time
+        let timestamp = env.ledger().timestamp();
+        if timestamp < appointment.scheduled_time {
+            events::diag_validation_fail(&env, "mark_no_show", "before_scheduled_time");
+            Self::record_operation(&env, false);
+            return Err(Error::InvalidState);
+        }
+
+        let transfer_amount = appointment.amount;
+        let token_addr = appointment.token.clone();
+
+        // CEI: Update state BEFORE external call to prevent reentrancy
         appointment.status = AppointmentStatus::NoShow;
         appointment.no_show_marked_at = timestamp;
+        appointment.funds_released = true;
 
         env.storage()
             .persistent()
@@ -453,6 +472,12 @@ impl AppointmentBookingEscrow {
             &appointment.patient,
             timestamp,
         );
+
+        // Interaction: Transfer funds from contract to provider (patient was a no-show)
+        let token_client = token::Client::new(&env, &token_addr);
+        token_client.transfer(&env.current_contract_address(), &provider, &transfer_amount);
+
+        events::publish_funds_released(&env, appointment_id, &provider, transfer_amount, timestamp);
 
         events::diag_fn_exit(&env, "mark_no_show");
         Self::record_operation(&env, true);
