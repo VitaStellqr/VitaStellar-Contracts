@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, Map, String, Vec};
+use soroban_sdk::{contracttype, Address, BytesN, Map, String, Vec};
 
 // ==================== Channel & Priority ====================
 
@@ -80,6 +80,9 @@ pub struct NotificationPreferences {
 }
 
 /// A single immutable notification record.
+///
+/// Title and message bodies are stored as SHA-256 hashes on-chain.
+/// The plaintext content lives in an off-chain store keyed by these hashes.
 #[derive(Clone)]
 #[contracttype]
 pub struct Notification {
@@ -89,10 +92,10 @@ pub struct Notification {
     pub notif_type: NotificationType,
     pub priority: AlertPriority,
     pub status: NotificationStatus,
-    /// Short summary, max 100 bytes.
-    pub title: String,
-    /// Full message body, max 500 bytes.
-    pub message: String,
+    /// SHA-256 hash of the title string.
+    pub title_hash: BytesN<32>,
+    /// SHA-256 hash of the message body.
+    pub message_hash: BytesN<32>,
     /// Optional linked entity ID (record_id, proposal_id, …).
     pub reference_id: Option<u64>,
     pub created_at: u64,
