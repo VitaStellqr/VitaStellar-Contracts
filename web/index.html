@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VitaStellar - Decentralized Health & Wellness DApp</title>
+  <meta name="description" content="Decentralized health and medical record management platform built on Stellar/Soroban smart contracts.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div>
+        <div class="brand">
+          <div class="brand-logo">✨</div>
+          <div class="brand-text">
+            <h1>VitaStellar</h1>
+            <span>Soroban DApp</span>
+          </div>
+        </div>
+
+        <nav>
+          <ul class="nav-menu">
+            <li class="nav-item active" data-tab="dashboard">
+              <button><span class="nav-icon">📊</span> Dashboard</button>
+            </li>
+            <li class="nav-item" data-tab="medical-records">
+              <button><span class="nav-icon">📁</span> Medical Records</button>
+            </li>
+            <li class="nav-item" data-tab="wellness-goals">
+              <button><span class="nav-icon">🏃</span> Wellness Goals</button>
+            </li>
+            <li class="nav-item" data-tab="consent-management">
+              <button><span class="nav-icon">🔐</span> Consent & Access</button>
+            </li>
+            <li class="nav-item" data-tab="audit-trail">
+              <button><span class="nav-icon">📜</span> On-Chain Audit Log</button>
+            </li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="network-card">
+        <div class="network-header">
+          <span>Network</span>
+          <span class="status-dot"></span>
+        </div>
+        <div class="network-name">Stellar Soroban Testnet</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Sticky Header -->
+      <header class="top-header">
+        <div class="page-title">
+          <h2 id="current-tab-title">Dashboard Overview</h2>
+        </div>
+
+        <div class="header-actions">
+          <div class="identity-pill">
+            <span>DID:</span>
+            <strong id="user-did-display">did:stellar:P-9842</strong>
+          </div>
+          <button class="btn-primary" id="open-new-record-modal">+ New Record</button>
+        </div>
+      </header>
+
+      <!-- Content Views -->
+      <div class="content-body">
+        
+        <!-- Tab 1: Dashboard View -->
+        <section id="tab-dashboard" class="tab-view active">
+          <!-- Metric Overview Grid -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-info">
+                <h4>Encrypted Records</h4>
+                <div class="metric-value" id="metric-records-count">1</div>
+              </div>
+              <div class="metric-icon icon-cyan">📁</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-info">
+                <h4>Active Health Goals</h4>
+                <div class="metric-value" id="metric-goals-count">3</div>
+              </div>
+              <div class="metric-icon icon-purple">🎯</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-info">
+                <h4>VITA Reward Balance</h4>
+                <div class="metric-value" id="metric-rewards-balance">45 VITA</div>
+              </div>
+              <div class="metric-icon icon-emerald">💎</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-info">
+                <h4>Access Grants</h4>
+                <div class="metric-value" id="metric-grants-count">2 Active</div>
+              </div>
+              <div class="metric-icon icon-amber">🛡️</div>
+            </div>
+          </div>
+
+          <!-- Quick Record Creation & Recent Feed -->
+          <div class="glass-panel">
+            <div class="panel-header">
+              <h3>🔒 On-Chain Medical Data Overview</h3>
+              <button class="btn-secondary" id="btn-refresh-dashboard">Refresh State</button>
+            </div>
+            
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Record ID</th>
+                    <th>Type</th>
+                    <th>Patient ID</th>
+                    <th>Doctor ID</th>
+                    <th>Encryption Standard</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-records-tbody">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 2: Medical Records -->
+        <section id="tab-medical-records" class="tab-view">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <h3>📝 Add Encrypted Medical Record</h3>
+            </div>
+            
+            <form id="form-write-record">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="input-patient-id">Patient ID</label>
+                  <input type="text" id="input-patient-id" value="P-9842" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="input-doctor-id">Doctor / Provider ID</label>
+                  <input type="text" id="input-doctor-id" value="DOC-7721" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="input-record-type">Record Category</label>
+                  <select id="input-record-type">
+                    <option value="VACCINATION">Vaccination Record</option>
+                    <option value="LAB_RESULT">Lab & Blood Test Result</option>
+                    <option value="PRESCRIPTION">Prescription / Medication</option>
+                    <option value="TRADITIONAL_HEALING">Traditional Healing Practice</option>
+                    <option value="GENERAL_DIAGNOSIS">General Diagnosis</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="input-metadata">Metadata Tags</label>
+                  <input type="text" id="input-metadata" value="hospital_central, encrypted_v2">
+                </div>
+
+                <div class="form-group full-width">
+                  <label for="input-content">Sensitive Health Content (Will be Encrypted On-Chain)</label>
+                  <textarea id="input-content" placeholder="Enter patient diagnosis, dosage, or clinical notes..." required></textarea>
+                </div>
+              </div>
+              <br>
+              <button type="submit" class="btn-primary">🔐 Encrypt & Submit to Soroban Smart Contract</button>
+            </form>
+          </div>
+
+          <div class="glass-panel">
+            <div class="panel-header">
+              <h3>📋 Patient Medical Records Ledger</h3>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Record ID</th>
+                    <th>Category</th>
+                    <th>Decrypted Preview</th>
+                    <th>Metadata</th>
+                    <th>Block Height</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="full-records-tbody">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 3: Wellness Goals -->
+        <section id="tab-wellness-goals" class="tab-view">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <h3>🏃 Decentralized Health & Wellness Goals</h3>
+              <span class="tag tag-emerald">VITA Token Incentives Active</span>
+            </div>
+
+            <div class="goals-grid" id="goals-cards-container">
+              <!-- Dynamically populated goal cards -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 4: Consent Management -->
+        <section id="tab-consent-management" class="tab-view">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <h3>🔐 Patient Consent & Access Rights Control</h3>
+            </div>
+            
+            <form id="form-grant-consent">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="input-grantee">Doctor / Institution Public Key or ID</label>
+                  <input type="text" id="input-grantee" placeholder="e.g. DOC-9921 or GXXXX..." required>
+                </div>
+
+                <div class="form-group">
+                  <label for="input-consent-record-id">Target Record ID</label>
+                  <input type="text" id="input-consent-record-id" value="REC-1001" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="input-duration">Access Duration (Days)</label>
+                  <input type="number" id="input-duration" value="30" min="1" max="365" required>
+                </div>
+              </div>
+              <br>
+              <button type="submit" class="btn-primary">🛡️ Issue Signed Consent Grant</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- Tab 5: On-Chain Audit Log -->
+        <section id="tab-audit-trail" class="tab-view">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <h3>📜 Real-Time Soroban Audit Trail</h3>
+              <span class="tag tag-cyan">Immutable Ledger Stream</span>
+            </div>
+
+            <div class="audit-feed" id="audit-logs-container">
+              <!-- Dynamically injected events -->
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="vitastellar-sdk.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

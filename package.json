@@ -3,7 +3,8 @@
   "scripts": {
     "events:generate": "node scripts/events/generate-registry.mjs",
     "events:validate": "node scripts/events/validate.mjs",
-    "test:pyramid:report": "node scripts/testing/pyramid-report.mjs"
+    "test:pyramid:report": "node scripts/testing/pyramid-report.mjs",
+    "serve:web": "python3 scripts/serve_web.py"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^16.0.0",
