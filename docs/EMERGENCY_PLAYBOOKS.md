@@ -12,6 +12,7 @@ This document contains detailed emergency playbooks for the VitaStellar Contract
 4. [Market Crash Playbook](#market-crash-playbook)
 5. [Emergency Response Team Procedures](#emergency-response-team-procedures)
 6. [Communication Protocols](#communication-protocols)
+7. [System-Wide Pause Controller](#system-wide-pause-controller)
 
 ---
 
@@ -808,6 +809,98 @@ Post-Incident:
 
 Emergency Response Team
 ```
+
+---
+
+## System-Wide Pause Controller
+
+> Added in Issue #204. The `pause_controller` contract provides a centralized
+> circuit breaker that can pause and unpause all registered production contracts
+> atomically.
+
+### Architecture
+
+The `PauseController` contract maintains a registry of production contracts and
+exposes three core operations:
+
+| Function | Description |
+|---|---|
+| `register_contract(admin, name, address, method)` | Add a contract to the registry (admin-only) |
+| `pause_all(admin)` | Immediately call `pause`/`set_paused` on every registered contract |
+| `unpause_all(admin, delay)` | Schedule an unpause with a timelock delay |
+| `execute_unpause(admin)` | Execute a previously scheduled unpause after the timelock elapses |
+
+### Pause Procedure (Step-by-Step)
+
+1. **Verify the threat.** Confirm that an exploit or anomaly requires an
+   immediate system-wide pause.
+2. **Call `pause_all`:**
+   ```text
+   soroban contract invoke \
+     --id <PAUSE_CONTROLLER_ADDRESS> \
+     --fn pause_all \
+     --arg <ADMIN_ADDRESS>
+   ```
+   This iterates over every registered contract and calls either
+   `set_paused(caller, true)` or `pause(caller)` depending on the registered
+   method.
+3. **Verify the pause took effect:**
+   ```text
+   soroban contract invoke \
+     --id <PAUSE_CONTROLLER_ADDRESS> \
+     --fn is_system_paused
+   ```
+4. **Notify stakeholders** per the Communication Protocols section.
+
+### Unpause Procedure (Timelock-Enforced)
+
+Unpausing is a two-step process to prevent hasty reversals:
+
+1. **Schedule the unpause:**
+   ```text
+   soroban contract invoke \
+     --id <PAUSE_CONTROLLER_ADDRESS> \
+     --fn unpause_all \
+     --arg <ADMIN_ADDRESS> \
+     --arg <DELAY_IN_SECONDS>
+   ```
+2. **Wait for the timelock** to elapse. The ETA is returned by:
+   ```text
+   soroban contract invoke \
+     --id <PAUSE_CONTROLLER_ADDRESS> \
+     --fn get_unpause_eta
+   ```
+3. **Execute the unpause** after the delay:
+   ```text
+   soroban contract invoke \
+     --id <PAUSE_CONTROLLER_ADDRESS> \
+     --fn execute_unpause \
+     --arg <ADMIN_ADDRESS>
+   ```
+
+### Contract Integration Checklist
+
+Production contracts must implement the pause check pattern:
+
+- [ ] Add `ContractPaused` variant to the contract's error enum.
+- [ ] Store a `PAUSED` boolean in instance storage (default `false`).
+- [ ] Expose `set_paused(caller: Address, paused: bool)` for the PauseController
+      to call.
+- [ ] Call `require_not_paused()` at the top of every state-mutating function.
+- [ ] Register the contract with the PauseController:
+      `register_contract(admin, name, address, "set_paused")`
+
+See `contracts/contract_template/src/lib.rs` for the canonical example.
+
+### Events
+
+| Event | Topics | Data |
+|---|---|---|
+| `SysPause` | — | `(admin, contract_count)` |
+| `SysUnpaus` | — | `(admin, contract_count)` |
+| `UnpSched` | — | `(admin, eta)` |
+| `ctr_reg` | — | `(name, address)` |
+| `ctr_unreg` | — | `(name)` |
 
 ---
 

@@ -155,6 +155,50 @@ pub struct DIDDocument {
     pub previous_hash: BytesN<32>,
 }
 
+/// Lightweight DID metadata — always loaded for status checks.
+/// Contains only the fields needed for `is_did_active` and `has_role` lookups.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DIDMeta {
+    /// The DID identifier (did:stellar:uzima:<network>:<address>)
+    pub id: String,
+    /// Controller(s) of this DID - who can make changes
+    pub controller: Address,
+    /// Document status
+    pub status: DIDStatus,
+    /// Creation timestamp
+    pub created: u64,
+    /// Last update timestamp
+    pub updated: u64,
+}
+
+/// Extended DID details — loaded only for full document resolution.
+/// Contains verification methods, services, and relationship data.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DIDDetail {
+    /// Alternative controller (for recovery scenarios)
+    pub also_known_as: Vec<String>,
+    /// All verification methods (public keys)
+    pub verification_methods: Vec<VerificationMethod>,
+    /// IDs of methods used for authentication
+    pub authentication: Vec<String>,
+    /// IDs of methods used for issuing credentials (assertion)
+    pub assertion_method: Vec<String>,
+    /// IDs of methods used for key agreement
+    pub key_agreement: Vec<String>,
+    /// IDs of methods for capability invocation
+    pub capability_invocation: Vec<String>,
+    /// IDs of methods for capability delegation
+    pub capability_delegation: Vec<String>,
+    /// Service endpoints
+    pub services: Vec<ServiceEndpoint>,
+    /// Version number (incremented on each update)
+    pub version: u32,
+    /// Hash of previous document version (for audit trail)
+    pub previous_hash: BytesN<32>,
+}
+
 // === Verifiable Credentials Structures ===
 
 /// Credential Types for Healthcare
@@ -288,9 +332,13 @@ pub enum DataKey {
     Attestation(Address, BytesN<32>),
     SubjectAttestations(Address),
 
-    // DID Document Storage
+    // DID Document Storage (legacy — kept for backward compatibility)
     DIDDocument(Address),
     DIDByString(String),
+
+    // Lazy-loading DID storage
+    DIDMeta(Address),
+    DIDDetail(Address),
 
     // Verification Methods
     VerificationMethod(Address, String),
@@ -324,6 +372,60 @@ const DEFAULT_RECOVERY_TIMELOCK: u64 = 86_400; // 24 hours
 const DEFAULT_KEY_ROTATION_COOLDOWN: u64 = 3_600; // 1 hour
 const ZERO_HASH: [u8; 32] = [0u8; 32];
 const MAX_GUARDIAN_WEIGHT: u32 = 100;
+
+// === DIDMeta/DIDDetail Conversion Helpers ===
+
+impl DIDDocument {
+    /// Extract lightweight metadata for status checks (no verification methods or services).
+    pub fn to_meta(&self) -> DIDMeta {
+        DIDMeta {
+            id: self.id.clone(),
+            controller: self.controller.clone(),
+            status: self.status.clone(),
+            created: self.created,
+            updated: self.updated,
+        }
+    }
+
+    /// Extract extended details for full document resolution.
+    pub fn to_detail(&self) -> DIDDetail {
+        DIDDetail {
+            also_known_as: self.also_known_as.clone(),
+            verification_methods: self.verification_methods.clone(),
+            authentication: self.authentication.clone(),
+            assertion_method: self.assertion_method.clone(),
+            key_agreement: self.key_agreement.clone(),
+            capability_invocation: self.capability_invocation.clone(),
+            capability_delegation: self.capability_delegation.clone(),
+            services: self.services.clone(),
+            version: self.version,
+            previous_hash: self.previous_hash.clone(),
+        }
+    }
+}
+
+impl DIDMeta {
+    /// Reconstruct a full DIDDocument by combining meta + detail.
+    pub fn to_document(&self, detail: &DIDDetail) -> DIDDocument {
+        DIDDocument {
+            id: self.id.clone(),
+            controller: self.controller.clone(),
+            also_known_as: detail.also_known_as.clone(),
+            verification_methods: detail.verification_methods.clone(),
+            authentication: detail.authentication.clone(),
+            assertion_method: detail.assertion_method.clone(),
+            key_agreement: detail.key_agreement.clone(),
+            capability_invocation: detail.capability_invocation.clone(),
+            capability_delegation: detail.capability_delegation.clone(),
+            services: detail.services.clone(),
+            status: self.status.clone(),
+            created: self.created,
+            updated: self.updated,
+            version: detail.version,
+            previous_hash: detail.previous_hash.clone(),
+        }
+    }
+}
 
 // === Contract Implementation ===
 
@@ -608,10 +710,16 @@ impl IdentityRegistryContract {
             previous_hash: BytesN::from_array(&env, &ZERO_HASH),
         };
 
-        // Store DID document
+        // Store DID document (both legacy full doc and lazy-loaded split)
         env.storage()
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDMeta(subject.clone()), &did_doc.to_meta());
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDDetail(subject.clone()), &did_doc.to_detail());
         env.storage()
             .persistent()
             .set(&DataKey::DIDByString(did_string.clone()), &subject);
@@ -660,6 +768,47 @@ impl IdentityRegistryContract {
         Self::resolve_did(env, subject)
     }
 
+    /// Check if a DID is active using only lightweight metadata.
+    /// This avoids deserializing the full DID document (verification methods, services, etc.).
+    pub fn is_did_active(env: Env, subject: Address) -> Result<bool, Error> {
+        let did_meta: DIDMeta = env
+            .storage()
+            .persistent()
+            .get(&DataKey::DIDMeta(subject))
+            .ok_or(Error::DIDNotFound)?;
+
+        Ok(matches!(did_meta.status, DIDStatus::Active))
+    }
+
+    /// Get DID metadata only (lightweight — no verification methods or services).
+    pub fn get_did_meta(env: Env, subject: Address) -> Result<DIDMeta, Error> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::DIDMeta(subject))
+            .ok_or(Error::DIDNotFound)
+    }
+
+    /// Get full DID document by loading meta + detail and reconstructing.
+    pub fn get_did_document(env: Env, subject: Address) -> Result<DIDDocument, Error> {
+        let did_meta: DIDMeta = env
+            .storage()
+            .persistent()
+            .get(&DataKey::DIDMeta(subject.clone()))
+            .ok_or(Error::DIDNotFound)?;
+
+        if matches!(did_meta.status, DIDStatus::Deactivated) {
+            return Err(Error::DIDDeactivated);
+        }
+
+        let did_detail: DIDDetail = env
+            .storage()
+            .persistent()
+            .get(&DataKey::DIDDetail(subject))
+            .ok_or(Error::DIDNotFound)?;
+
+        Ok(did_meta.to_document(&did_detail))
+    }
+
     /// Update DID Document (add/modify services, also_known_as)
     pub fn update_did(
         env: Env,
@@ -692,6 +841,12 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDMeta(subject.clone()), &did_doc.to_meta());
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDDetail(subject.clone()), &did_doc.to_detail());
 
         env.events().publish(
             (Symbol::new(&env, "DIDUpdated"),),
@@ -717,6 +872,9 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDMeta(subject.clone()), &did_doc.to_meta());
 
         env.events()
             .publish((Symbol::new(&env, "DIDDeactivated"),), subject);
@@ -791,6 +949,12 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDMeta(subject.clone()), &did_doc.to_meta());
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDDetail(subject.clone()), &did_doc.to_detail());
 
         env.events().publish(
             (Symbol::new(&env, "VerificationMethodAdded"),),
@@ -873,6 +1037,12 @@ impl IdentityRegistryContract {
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
         env.storage()
             .persistent()
+            .set(&DataKey::DIDMeta(subject.clone()), &did_doc.to_meta());
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDDetail(subject.clone()), &did_doc.to_detail());
+        env.storage()
+            .persistent()
             .set(&DataKey::LastKeyRotation(subject.clone()), &timestamp);
 
         env.events()
@@ -942,6 +1112,12 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDMeta(subject.clone()), &did_doc.to_meta());
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDDetail(subject.clone()), &did_doc.to_detail());
 
         env.events().publish(
             (Symbol::new(&env, "VerificationMethodRevoked"),),
@@ -1354,6 +1530,9 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDMeta(subject.clone()), &did_doc.to_meta());
 
         env.events().publish(
             (Symbol::new(&env, "RecoveryInitiated"),),
@@ -1495,6 +1674,14 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::DIDDocument(request.subject.clone()), &did_doc);
+        env.storage().persistent().set(
+            &DataKey::DIDMeta(request.subject.clone()),
+            &did_doc.to_meta(),
+        );
+        env.storage().persistent().set(
+            &DataKey::DIDDetail(request.subject.clone()),
+            &did_doc.to_detail(),
+        );
 
         // Mark request as executed
         request.executed = true;
@@ -1565,6 +1752,9 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDMeta(subject.clone()), &did_doc.to_meta());
 
         env.storage()
             .persistent()
@@ -1625,6 +1815,12 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDMeta(subject.clone()), &did_doc.to_meta());
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDDetail(subject.clone()), &did_doc.to_detail());
 
         env.events()
             .publish((Symbol::new(&env, "ServiceAdded"),), (subject, service_id));
@@ -1667,6 +1863,12 @@ impl IdentityRegistryContract {
         env.storage()
             .persistent()
             .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDMeta(subject.clone()), &did_doc.to_meta());
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDDetail(subject.clone()), &did_doc.to_detail());
 
         env.events().publish(
             (Symbol::new(&env, "ServiceRemoved"),),
@@ -2149,7 +2351,13 @@ impl IdentityRegistryContract {
 
         env.storage()
             .persistent()
-            .set(&DataKey::DIDDocument(subject), &did_doc);
+            .set(&DataKey::DIDDocument(subject.clone()), &did_doc);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDMeta(subject.clone()), &did_doc.to_meta());
+        env.storage()
+            .persistent()
+            .set(&DataKey::DIDDetail(subject.clone()), &did_doc.to_detail());
 
         Ok(())
     }

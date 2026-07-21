@@ -70,6 +70,18 @@
 | 6 | ReviewRouteNotFound | Generated from contract source |
 | 7 | InvalidOwnerCount | Generated from contract source |
 
+### contract_registry
+
+| Code | Symbol | Description |
+|------|--------|-------------|
+| 1 | AlreadyInitialized | Generated from contract source |
+| 2 | Unauthorized | Generated from contract source |
+| 3 | NameNotFound | Generated from contract source |
+| 100 | Unauthorized | Generated from contract source |
+| 230 | MismatchedLength | Generated from contract source |
+| 300 | NotInitialized | Generated from contract source |
+| 301 | AlreadyInitialized | Generated from contract source |
+
 ### contract_template
 
 | Code | Symbol | Description |
@@ -79,6 +91,7 @@
 | 3 | Unauthorized | Caller is not authorized to perform this action. |
 | 4 | InputTooLong | A string or bytes input exceeded the maximum allowed length. |
 | 5 | ReentrantCall | Raised when `reentrancy::enter` returns `false` because the lock is already held — i.e. a guarded function was re-entered mid-call. |
+| 6 | ContractPaused | Contract is paused by the system-wide PauseController. |
 
 ### contract_usage_analytics
 
@@ -580,6 +593,21 @@
 | 7 | InvalidModel | Generated from contract source |
 | 8 | DuplicateModel | Generated from contract source |
 
+### pause_controller
+
+| Code | Symbol | Description |
+|------|--------|-------------|
+| 1 | NotInitialized | Generated from contract source |
+| 2 | AlreadyInitialized | Generated from contract source |
+| 3 | Unauthorized | Generated from contract source |
+| 4 | AlreadyRegistered | Generated from contract source |
+| 5 | NotFound | Generated from contract source |
+| 6 | AlreadyPaused | Generated from contract source |
+| 7 | NotPaused | Generated from contract source |
+| 8 | UnpauseNotScheduled | Generated from contract source |
+| 9 | TimelockNotElapsed | Generated from contract source |
+| 10 | ReentrantCall | Generated from contract source |
+
 ### payment_router
 
 | Code | Symbol | Description |
@@ -595,6 +623,9 @@
 | 15 | StorageFull | Generated from contract source |
 | 16 | CrossChainTimeout | Generated from contract source |
 | 17 | ReplayDetected | Generated from contract source |
+| 20 | RoutingFailed | Generated from contract source |
+| 21 | NoFallbackAvailable | Generated from contract source |
+| 22 | PendingPaymentNotFound | Generated from contract source |
 
 ### pharma_supply_chain
 
@@ -663,6 +694,7 @@
 | 13 | CollaborationNotFound | Generated from contract source |
 | 14 | InvalidTimeRange | Generated from contract source |
 | 15 | InvalidRegion | Generated from contract source |
+| 16 | ConsentNotGranted | Generated from contract source |
 
 ### regulatory_compliance
 
