@@ -6,7 +6,7 @@ mod test;
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env,
-    String, Symbol, Vec,
+    IntoVal, String, Symbol, Val, Vec,
 };
 
 const ROLE_OPERATOR: u32 = 1;
@@ -24,6 +24,7 @@ const NEXT_TST: Symbol = symbol_short!("NEXT_TST");
 const NEXT_RST: Symbol = symbol_short!("NEXT_RST");
 const LAST_RUN: Symbol = symbol_short!("LAST_RUN");
 const NEXT_RUN: Symbol = symbol_short!("NEXT_RUN");
+const BKP_RSTR: Symbol = symbol_short!("BKP_RSTR");
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[contracttype]
@@ -237,6 +238,17 @@ pub struct CleanupReport {
     pub remaining_active_backups: u32,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[contracttype]
+pub struct RestoredRecordInfo {
+    pub request_id: u64,
+    pub artifact_id: u64,
+    pub requested_by: Address,
+    pub target_contract: Address,
+    pub restored_at: u64,
+    pub success: bool,
+}
+
 #[derive(Clone)]
 #[contracttype]
 pub enum DataKey {
@@ -253,6 +265,8 @@ pub enum DataKey {
     RecoveryTest(u64),
     RestoreRequest(u64),
     Health,
+    RestoredRecord(u64),
+    RestoredRecordIds,
 }
 
 #[contracterror]
@@ -722,6 +736,138 @@ impl MedicalRecordBackupContract {
         env.events()
             .publish((symbol_short!("BKP_TEST"),), (test_id, passed));
         Ok(test_id)
+    }
+
+    /// Directly restore a backup record to a target medical records contract.
+    ///
+    /// This provides a streamlined restore path bypassing the multi-step
+    /// approval workflow for authorized recovery personnel.
+    ///
+    /// The function:
+    /// 1. Verifies caller authorization (recovery role).
+    /// 2. Retrieves the backup artifact by ID.
+    /// 3. Invokes the target contract's `write_record` function with
+    ///    the provided record data via a cross-contract call.
+    /// 4. Emits a `record_restored` event with restore metadata.
+    /// 5. Marks the artifact's `last_restored_at` timestamp and stores
+    ///    a `RestoredRecordInfo` entry for audit trail.
+    ///
+    /// Returns the restore request ID on success.
+    ///
+    /// Reference: `docs/MEDICAL_BACKUP_DISASTER_RECOVERY.md` —
+    /// Disaster recovery procedures using the backup contract.
+    pub fn restore_record(
+        env: Env,
+        caller: Address,
+        backup_id: u64,
+        target_contract: Address,
+        owner: Address,
+        patient_id: String,
+        record_type: String,
+        content: String,
+        timestamp: u64,
+    ) -> Result<u64, Error> {
+        caller.require_auth();
+        Self::require_recovery(&env, &caller)?;
+
+        // Validate the backup artifact exists
+        let artifact: BackupArtifact = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Artifact(backup_id))
+            .ok_or(Error::BackupNotFound)?;
+
+        // Invoke the target medical_records contract's write_record function
+        // via cross-contract call. The write_record signature is:
+        //   write_record(owner, patient_id, record_type, content, timestamp) -> Result<(), RecordError>
+        let args = (
+            owner.clone(),
+            patient_id.clone(),
+            record_type.clone(),
+            content.clone(),
+            timestamp,
+        )
+            .into_val(&env);
+
+        let result: Result<Val, soroban_sdk::Error> = env.try_invoke_contract(
+            &target_contract,
+            &Symbol::new(&env, "write_record"),
+            args,
+        );
+
+        let success = result.is_ok();
+        if !success {
+            // Log the restore failure but don't fail the function — the caller
+            // should check the result via get_restored_record.
+            let details =
+                Self::compute_reason_hash(&env, Error::RestoreNotApproved as u32, backup_id);
+            Self::append_alert(
+                &env,
+                AlertKind::RestoreFailure,
+                AlertSeverity::High,
+                details,
+            );
+        }
+
+        // Update artifact restore timestamp
+        let mut updated_artifact = artifact.clone();
+        updated_artifact.last_restored_at = env.ledger().timestamp();
+        env.storage()
+            .persistent()
+            .set(&DataKey::Artifact(backup_id), &updated_artifact);
+
+        // Record the restore action for audit trail
+        let restore_id = Self::next_restore_request_id(&env);
+        let restore_info = RestoredRecordInfo {
+            request_id: restore_id,
+            artifact_id: backup_id,
+            requested_by: caller.clone(),
+            target_contract: target_contract.clone(),
+            restored_at: env.ledger().timestamp(),
+            success,
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::RestoredRecord(restore_id), &restore_info);
+
+        let mut restored_ids: Vec<u64> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::RestoredRecordIds)
+            .unwrap_or(Vec::new(&env));
+        restored_ids.push_back(restore_id);
+        env.storage()
+            .persistent()
+            .set(&DataKey::RestoredRecordIds, &restored_ids);
+
+        // Emit record_restored event
+        env.events().publish(
+            (BKP_RSTR,),
+            (
+                restore_id,
+                backup_id,
+                target_contract,
+                caller,
+                success,
+            ),
+        );
+
+        Ok(restore_id)
+    }
+
+    /// Retrieve a specific restored record info entry for audit purposes.
+    pub fn get_restored_record(env: Env, restore_id: u64) -> Option<RestoredRecordInfo> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::RestoredRecord(restore_id))
+    }
+
+    /// List all restored record IDs for audit and verification.
+    pub fn list_restored_records(env: Env) -> Vec<u64> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::RestoredRecordIds)
+            .unwrap_or(Vec::new(&env))
     }
 
     pub fn optimize_and_cleanup(env: Env, caller: Address) -> Result<CleanupReport, Error> {
