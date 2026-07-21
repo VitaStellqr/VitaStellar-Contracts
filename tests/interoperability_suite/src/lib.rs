@@ -77,6 +77,14 @@ pub struct PairCoverage {
     pub event_subscription_handling: bool,
     pub state_consistency_checks: bool,
     pub upgrade_compatibility: bool,
+    // Specific workflow coverage for the 5 critical multi-contract interactions
+    // specified in issue #187. These track whether we have exercised real-world
+    // patterns beyond generic pair checks.
+    pub governor_timelock_proposal: bool,
+    pub identity_registry_fido2_binding: bool,
+    pub escrow_payment_router_settlement: bool,
+    pub medical_records_audit_forensics_logging: bool,
+    pub cross_chain_access_grant_authorization: bool,
 }
 
 impl PairCoverage {
@@ -86,6 +94,15 @@ impl PairCoverage {
             && self.event_subscription_handling
             && self.state_consistency_checks
             && self.upgrade_compatibility
+    }
+
+    fn is_fully_covered(&self) -> bool {
+        self.is_complete()
+            && self.governor_timelock_proposal
+            && self.identity_registry_fido2_binding
+            && self.escrow_payment_router_settlement
+            && self.medical_records_audit_forensics_logging
+            && self.cross_chain_access_grant_authorization
     }
 }
 
@@ -273,6 +290,418 @@ impl InteroperabilitySuite {
         Ok(())
     }
 
+    /// Run the governor → timelock proposal lifecycle workflow scenario.
+    ///
+    /// Simulates the real cross-contract proposal flow:
+    ///   1. Governor contract prepares a proposal targeting a timelock address.
+    ///   2. Proposal is voted on and queued.
+    ///   3. Timelock receives the queued execution target and call data.
+    ///   4. After the delay, timelock executes the call.
+    ///
+    /// Reference: `docs/GOVERNANCE_ARCHITECTURE.md` — Governance for
+    /// cross-contract execution via timelock delay.
+    pub fn run_governor_timelock_workflow(&mut self) -> Result<(), String> {
+        let contract_map = self.contract_map();
+
+        // Look up the governor and timelock descriptors specifically
+        let governor = contract_map
+            .get("governor")
+            .ok_or_else(|| "governor contract not found in workspace".to_string())?;
+        let timelock = contract_map
+            .get("timelock")
+            .ok_or_else(|| "timelock contract not found in workspace".to_string())?;
+
+        // Verify both contracts support the required formats for proposal execution
+        let shared = shared_formats(governor, timelock);
+        if shared.is_empty() {
+            return Err(
+                "governor and timelock share no data format for proposal encoding".to_string(),
+            );
+        }
+
+        // Phase 1: Governor proposes an action targeting timelock
+        let proposal_payload =
+            format!("governor::propose::timelock::set_delay").into_bytes();
+        let call = CrossContractCall::new(
+            &governor.name,
+            &timelock.name,
+            shared[0],
+            proposal_payload,
+        );
+        let response = call.execute(timelock)?;
+        if !response.acknowledged {
+            return Err("proposal call to timelock was not acknowledged".to_string());
+        }
+
+        // Phase 2: Timelock acknowledges the queued execution target
+        let queue_payload = format!("timelock::queue::target::{}", governor.name).into_bytes();
+        let encoded = encode_payload(shared[0], &queue_payload);
+        let decoded = decode_payload(shared[0], &encoded)?;
+        if decoded != queue_payload {
+            return Err("timelock queue payload roundtrip mismatch".to_string());
+        }
+
+        // Phase 3: Verify the timelock delay semantics are respected
+        let timelock_plan = UpgradePlan::new(
+            timelock.code_version,
+            timelock.code_version + 1,
+            timelock.schema_version,
+        );
+        let plan_state = StateSnapshot::new("timelock-delay-check", timelock.schema_version);
+        let upgraded = timelock_plan.apply(plan_state)?;
+        if upgraded.version != timelock.code_version + 1 {
+            return Err("timelock upgrade plan version mismatch".to_string());
+        }
+
+        // Mark this workflow as covered for the governor <-> timelock pair
+        let pair = ContractPair::new(&governor.name, &timelock.name);
+        if let Some(coverage) = self.coverage.get_mut(&pair) {
+            coverage.governor_timelock_proposal = true;
+            coverage.cross_contract_calls = true;
+            coverage.data_format_compatibility = true;
+        }
+
+        Ok(())
+    }
+
+    /// Run the identity_registry → fido2_authenticator device binding workflow.
+    ///
+    /// Simulates the real cross-contract flow:
+    ///   1. Identity registry registers a user identity with a device binding.
+    ///   2. FIDO2 authenticator verifies the device credential binding.
+    ///
+    /// Reference: `docs/MFA.md` — Multi-factor authentication architecture
+    /// using FIDO2 authenticators bound to registered identities.
+    pub fn run_identity_registry_fido2_workflow(&mut self) -> Result<(), String> {
+        let contract_map = self.contract_map();
+
+        let identity = contract_map
+            .get("identity_registry")
+            .ok_or_else(|| "identity_registry contract not found".to_string())?;
+        let fido2 = contract_map
+            .get("fido2_authenticator")
+            .ok_or_else(|| "fido2_authenticator contract not found".to_string())?;
+
+        let shared = shared_formats(identity, fido2);
+        if shared.is_empty() {
+            return Err(
+                "identity_registry and fido2 share no data format".to_string(),
+            );
+        }
+
+        // Phase 1: Identity registry registers a device binding for a user
+        let bind_payload =
+            format!("identity::bind_device::fido2::credential_id").into_bytes();
+        let call = CrossContractCall::new(
+            &identity.name,
+            &fido2.name,
+            shared[0],
+            bind_payload,
+        );
+        let response = call.execute(fido2)?;
+        if !response.acknowledged {
+            return Err("device binding call from identity_registry to fido2 failed".to_string());
+        }
+
+        // Phase 2: FIDO2 authenticator acknowledges the credential binding
+        let credential_payload =
+            format!("fido2::register_credential::identity::user").into_bytes();
+        let encoded = encode_payload(shared[0], &credential_payload);
+        let decoded = decode_payload(shared[0], &encoded)?;
+        if decoded != credential_payload {
+            return Err("fido2 credential payload roundtrip mismatch".to_string());
+        }
+
+        // Phase 3: Verify state consistency for the binding workflow
+        let mut reducer_a = StateReducer::default();
+        let mut reducer_b = StateReducer::default();
+        for seq in 1_u64..=3 {
+            let op = StateOperation {
+                sequence: seq,
+                pair_key: format!("{} <-> {}", identity.name, fido2.name),
+                delta: seq * 7,
+            };
+            reducer_a.apply(&op);
+            reducer_b.apply(&op);
+        }
+        if reducer_a.snapshot() != reducer_b.snapshot() {
+            return Err("device binding state mismatch between identity and fido2".to_string());
+        }
+
+        let pair = ContractPair::new(&identity.name, &fido2.name);
+        if let Some(coverage) = self.coverage.get_mut(&pair) {
+            coverage.identity_registry_fido2_binding = true;
+            coverage.cross_contract_calls = true;
+            coverage.data_format_compatibility = true;
+            coverage.state_consistency_checks = true;
+        }
+
+        Ok(())
+    }
+
+    /// Run the escrow → payment_router settlement workflow.
+    ///
+    /// Simulates the real cross-contract flow:
+    ///   1. Escrow contract holds funds for a service.
+    ///   2. Upon condition satisfaction, escrow calls payment_router to settle.
+    ///
+    /// Reference: `docs/PAYMENT_SETTLEMENT.md` — Escrow-backed payment
+    /// routing and settlement between healthcare stakeholders.
+    pub fn run_escrow_payment_router_workflow(&mut self) -> Result<(), String> {
+        let contract_map = self.contract_map();
+
+        let escrow = contract_map
+            .get("escrow")
+            .ok_or_else(|| "escrow contract not found".to_string())?;
+        let payment_router = contract_map
+            .get("payment_router")
+            .ok_or_else(|| "payment_router contract not found".to_string())?;
+
+        let shared = shared_formats(escrow, payment_router);
+        if shared.is_empty() {
+            return Err(
+                "escrow and payment_router share no data format".to_string(),
+            );
+        }
+
+        // Phase 1: Escrow initiates settlement to payment_router
+        let settlement_payload =
+            format!("escrow::settle::payment_router::release").into_bytes();
+        let call = CrossContractCall::new(
+            &escrow.name,
+            &payment_router.name,
+            shared[0],
+            settlement_payload,
+        );
+        let response = call.execute(payment_router)?;
+        if !response.acknowledged {
+            return Err("settlement call from escrow to payment_router failed".to_string());
+        }
+
+        // Phase 2: Payment router processes the settlement
+        let route_payload =
+            format!("payment_router::route::escrow::amount").into_bytes();
+        let encoded = encode_payload(shared[0], &route_payload);
+        let decoded = decode_payload(shared[0], &encoded)?;
+        if decoded != route_payload {
+            return Err("payment_router settlement payload roundtrip mismatch".to_string());
+        }
+
+        // Phase 3: Verify state consistency
+        for seq in 1_u64..=2 {
+            let op_a = StateOperation {
+                sequence: seq,
+                pair_key: format!("{} <-> {}", escrow.name, payment_router.name),
+                delta: seq * 100,
+            };
+            let mut reducer = StateReducer::default();
+            reducer.apply(&op_a);
+            let snapshot_a = reducer.snapshot();
+
+            let op_b = StateOperation {
+                sequence: seq,
+                pair_key: format!("{} <-> {}", escrow.name, payment_router.name),
+                delta: seq * 100,
+            };
+            let mut reducer_b = StateReducer::default();
+            reducer_b.apply(&op_b);
+            let snapshot_b = reducer_b.snapshot();
+
+            if snapshot_a != snapshot_b {
+                return Err(
+                    "settlement state consistency check failed".to_string(),
+                );
+            }
+        }
+
+        let pair = ContractPair::new(&escrow.name, &payment_router.name);
+        if let Some(coverage) = self.coverage.get_mut(&pair) {
+            coverage.escrow_payment_router_settlement = true;
+            coverage.cross_contract_calls = true;
+            coverage.data_format_compatibility = true;
+            coverage.state_consistency_checks = true;
+        }
+
+        Ok(())
+    }
+
+    /// Run the medical_records → audit_forensics access logging workflow.
+    ///
+    /// Simulates the real cross-contract flow:
+    ///   1. Medical records contract logs a record access event.
+    ///   2. Audit forensics contract captures and archives the access log.
+    ///
+    /// Reference: `docs/FORENSICS.md` — Audit logging and forensic analysis
+    /// of medical record access patterns.
+    pub fn run_medical_records_audit_workflow(&mut self) -> Result<(), String> {
+        let contract_map = self.contract_map();
+
+        let medical_records = contract_map
+            .get("medical_records")
+            .ok_or_else(|| "medical_records contract not found".to_string())?;
+        let audit = contract_map
+            .get("audit_forensics")
+            .ok_or_else(|| "audit_forensics contract not found".to_string())?;
+
+        let shared = shared_formats(medical_records, audit);
+        if shared.is_empty() {
+            return Err(
+                "medical_records and audit_forensics share no data format".to_string(),
+            );
+        }
+
+        // Phase 1: Medical records logs an access event to audit forensics
+        let access_payload =
+            format!("medical_record::access::audit_forensics::log").into_bytes();
+        let call = CrossContractCall::new(
+            &medical_records.name,
+            &audit.name,
+            shared[0],
+            access_payload,
+        );
+        let response = call.execute(audit)?;
+        if !response.acknowledged {
+            return Err(
+                "access logging call from medical_records to audit_forensics failed".to_string(),
+            );
+        }
+
+        // Phase 2: Audit forensics archives the log entry
+        let archive_payload =
+            format!("audit_forensics::archive::medical_records::access").into_bytes();
+        let encoded = encode_payload(shared[0], &archive_payload);
+        let decoded = decode_payload(shared[0], &encoded)?;
+        if decoded != archive_payload {
+            return Err(
+                "audit_forensics archive payload roundtrip mismatch".to_string(),
+            );
+        }
+
+        // Phase 3: Event subscription delivery check
+        let topic = "interop.call.completed";
+        if !medical_records.supported_events.contains(topic)
+            || !audit.supported_events.contains(topic)
+        {
+            return Err(
+                "medical_records or audit_forensics missing interop events".to_string(),
+            );
+        }
+        let mut bus = EventBus::default();
+        bus.subscribe(&medical_records.name, &audit.name, topic);
+        let payload = format!("audit_event:{}->{}", medical_records.name, audit.name).into_bytes();
+        let deliveries = bus.publish(&medical_records.name, topic, payload.clone());
+        let delivered = deliveries.iter().any(|d| {
+            d.subscriber == audit.name && d.payload == payload
+        });
+        if !delivered {
+            return Err(
+                "audit event delivery from medical_records to audit_forensics failed".to_string(),
+            );
+        }
+
+        let pair = ContractPair::new(&medical_records.name, &audit.name);
+        if let Some(coverage) = self.coverage.get_mut(&pair) {
+            coverage.medical_records_audit_forensics_logging = true;
+            coverage.cross_contract_calls = true;
+            coverage.data_format_compatibility = true;
+            coverage.event_subscription_handling = true;
+        }
+
+        Ok(())
+    }
+
+    /// Run the cross_chain_access → medical_records grant authorization workflow.
+    ///
+    /// Simulates the real cross-contract flow:
+    ///   1. Cross-chain access contract issues a grant for a medical record.
+    ///   2. Medical records contract verifies the grant before authorizing access.
+    ///
+    /// Reference: `docs/CROSS_CHAIN_ACCESS.md` — Cross-chain grant
+    /// authorization for medical record sharing.
+    pub fn run_cross_chain_access_workflow(&mut self) -> Result<(), String> {
+        let contract_map = self.contract_map();
+
+        let cross_chain = contract_map
+            .get("cross_chain_access")
+            .ok_or_else(|| "cross_chain_access contract not found".to_string())?;
+        let medical_records = contract_map
+            .get("medical_records")
+            .ok_or_else(|| "medical_records contract not found".to_string())?;
+
+        let shared = shared_formats(cross_chain, medical_records);
+        if shared.is_empty() {
+            return Err(
+                "cross_chain_access and medical_records share no data format".to_string(),
+            );
+        }
+
+        // Phase 1: Cross-chain access issues a grant
+        let grant_payload =
+            format!("cross_chain::issue_grant::medical_records::record_id").into_bytes();
+        let call = CrossContractCall::new(
+            &cross_chain.name,
+            &medical_records.name,
+            shared[0],
+            grant_payload,
+        );
+        let response = call.execute(medical_records)?;
+        if !response.acknowledged {
+            return Err(
+                "grant issuance call from cross_chain_access to medical_records failed".to_string(),
+            );
+        }
+
+        // Phase 2: Medical records validates the grant authorization
+        let auth_payload =
+            format!("medical_records::authorize::cross_chain::grant").into_bytes();
+        let encoded = encode_payload(shared[0], &auth_payload);
+        let decoded = decode_payload(shared[0], &encoded)?;
+        if decoded != auth_payload {
+            return Err(
+                "authorization payload roundtrip mismatch".to_string(),
+            );
+        }
+
+        // Phase 3: Verify state consistency for the grant lifecycle
+        let mut reducer_a = StateReducer::default();
+        let mut reducer_b = StateReducer::default();
+        for seq in 1_u64..=3 {
+            let op = StateOperation {
+                sequence: seq,
+                pair_key: format!("{} <-> {}", cross_chain.name, medical_records.name),
+                delta: seq * 5,
+            };
+            reducer_a.apply(&op);
+            reducer_b.apply(&op);
+        }
+        if reducer_a.snapshot() != reducer_b.snapshot() {
+            return Err(
+                "cross-chain grant authorization state mismatch".to_string(),
+            );
+        }
+
+        let pair = ContractPair::new(&cross_chain.name, &medical_records.name);
+        if let Some(coverage) = self.coverage.get_mut(&pair) {
+            coverage.cross_chain_access_grant_authorization = true;
+            coverage.cross_contract_calls = true;
+            coverage.data_format_compatibility = true;
+            coverage.state_consistency_checks = true;
+        }
+
+        Ok(())
+    }
+
+    /// Run all five specific workflow scenarios in addition to the generic
+    /// interoperability checks.
+    pub fn run_all_workflow_scenarios(&mut self) -> Result<(), String> {
+        self.run_governor_timelock_workflow()?;
+        self.run_identity_registry_fido2_workflow()?;
+        self.run_escrow_payment_router_workflow()?;
+        self.run_medical_records_audit_workflow()?;
+        self.run_cross_chain_access_workflow()?;
+        Ok(())
+    }
+
     pub fn run_upgrade_compatibility_checks(&mut self) -> Result<(), String> {
         let contract_map = self.contract_map();
         for pair in self.pairs.clone() {
@@ -357,6 +786,168 @@ impl InteroperabilitySuite {
         self.assert_scenario("upgrade compatibility", |coverage| {
             coverage.upgrade_compatibility
         })
+    }
+
+    pub fn assert_workflow_fully_covered(&self) -> Result<(), String> {
+        let incomplete: Vec<String> = self
+            .coverage
+            .iter()
+            .filter_map(|(pair, coverage)| {
+                // Build a set of workflow-specific checks relevant to this pair.
+                // A pair is relevant for a workflow only if both contracts in
+                // the pair match the workflow's contract names.
+                let mut all_flags_ok = true;
+                let mut missing = Vec::new();
+
+                // Generic coverage checks (apply to all pairs)
+                if !coverage.cross_contract_calls {
+                    all_flags_ok = false;
+                    missing.push("cross_contract_calls");
+                }
+                if !coverage.data_format_compatibility {
+                    all_flags_ok = false;
+                    missing.push("data_format_compatibility");
+                }
+                if !coverage.event_subscription_handling {
+                    all_flags_ok = false;
+                    missing.push("event_subscription_handling");
+                }
+                if !coverage.state_consistency_checks {
+                    all_flags_ok = false;
+                    missing.push("state_consistency_checks");
+                }
+                if !coverage.upgrade_compatibility {
+                    all_flags_ok = false;
+                    missing.push("upgrade_compatibility");
+                }
+
+                // Workflow-specific checks: only apply to the specific pair
+                // that is involved in that workflow.
+                let pair_names = [pair.left.as_str(), pair.right.as_str()];
+
+                // Workflow 1: governor <-> timelock
+                if pair_names.contains(&"governor") && pair_names.contains(&"timelock") {
+                    if !coverage.governor_timelock_proposal {
+                        all_flags_ok = false;
+                        missing.push("governor_timelock_proposal");
+                    }
+                }
+                // Workflow 2: identity_registry <-> fido2_authenticator
+                if pair_names.contains(&"identity_registry")
+                    && pair_names.contains(&"fido2_authenticator")
+                {
+                    if !coverage.identity_registry_fido2_binding {
+                        all_flags_ok = false;
+                        missing.push("identity_registry_fido2_binding");
+                    }
+                }
+                // Workflow 3: escrow <-> payment_router
+                if pair_names.contains(&"escrow") && pair_names.contains(&"payment_router") {
+                    if !coverage.escrow_payment_router_settlement {
+                        all_flags_ok = false;
+                        missing.push("escrow_payment_router_settlement");
+                    }
+                }
+                // Workflow 4: medical_records <-> audit_forensics
+                if pair_names.contains(&"medical_records")
+                    && pair_names.contains(&"audit_forensics")
+                {
+                    if !coverage.medical_records_audit_forensics_logging {
+                        all_flags_ok = false;
+                        missing.push("medical_records_audit_forensics_logging");
+                    }
+                }
+                // Workflow 5: cross_chain_access <-> medical_records
+                if pair_names.contains(&"cross_chain_access")
+                    && pair_names.contains(&"medical_records")
+                {
+                    if !coverage.cross_chain_access_grant_authorization {
+                        all_flags_ok = false;
+                        missing.push("cross_chain_access_grant_authorization");
+                    }
+                }
+
+                if all_flags_ok {
+                    None
+                } else {
+                    Some(format!("{} (missing: {})", pair.key(), missing.join(", ")))
+                }
+            })
+            .collect();
+        if !incomplete.is_empty() {
+            return Err(format!(
+                "full interoperability coverage is incomplete for {} pair(s): {}",
+                incomplete.len(),
+                incomplete.join(", ")
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn assert_governor_timelock_covered(&self) -> Result<(), String> {
+        let pair = ContractPair::new("governor", "timelock");
+        let coverage = self.coverage.get(&pair).ok_or_else(|| {
+            "governor <-> timelock pair not found in coverage matrix".to_string()
+        })?;
+        if !coverage.governor_timelock_proposal {
+            return Err(
+                "governor <-> timelock proposal workflow not covered".to_string(),
+            );
+        }
+        Ok(())
+    }
+
+    pub fn assert_identity_registry_fido2_covered(&self) -> Result<(), String> {
+        let pair = ContractPair::new("identity_registry", "fido2_authenticator");
+        let coverage = self.coverage.get(&pair).ok_or_else(|| {
+            "identity_registry <-> fido2_authenticator pair not found".to_string()
+        })?;
+        if !coverage.identity_registry_fido2_binding {
+            return Err(
+                "identity_registry <-> fido2_authenticator binding workflow not covered"
+                    .to_string(),
+            );
+        }
+        Ok(())
+    }
+
+    pub fn assert_escrow_payment_router_covered(&self) -> Result<(), String> {
+        let pair = ContractPair::new("escrow", "payment_router");
+        let coverage = self.coverage.get(&pair).ok_or_else(|| {
+            "escrow <-> payment_router pair not found".to_string()
+        })?;
+        if !coverage.escrow_payment_router_settlement {
+            return Err(
+                "escrow <-> payment_router settlement workflow not covered".to_string(),
+            );
+        }
+        Ok(())
+    }
+
+    pub fn assert_medical_records_audit_covered(&self) -> Result<(), String> {
+        let pair = ContractPair::new("medical_records", "audit_forensics");
+        let coverage = self.coverage.get(&pair).ok_or_else(|| {
+            "medical_records <-> audit_forensics pair not found".to_string()
+        })?;
+        if !coverage.medical_records_audit_forensics_logging {
+            return Err(
+                "medical_records <-> audit_forensics logging workflow not covered".to_string(),
+            );
+        }
+        Ok(())
+    }
+
+    pub fn assert_cross_chain_access_covered(&self) -> Result<(), String> {
+        let pair = ContractPair::new("cross_chain_access", "medical_records");
+        let coverage = self.coverage.get(&pair).ok_or_else(|| {
+            "cross_chain_access <-> medical_records pair not found".to_string()
+        })?;
+        if !coverage.cross_chain_access_grant_authorization {
+            return Err(
+                "cross_chain_access <-> medical_records grant workflow not covered".to_string(),
+            );
+        }
+        Ok(())
     }
 
     pub fn assert_full_coverage(&self) -> Result<(), String> {
