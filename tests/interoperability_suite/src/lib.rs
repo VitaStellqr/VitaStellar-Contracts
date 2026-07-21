@@ -321,13 +321,9 @@ impl InteroperabilitySuite {
 
         // Phase 1: Governor proposes an action targeting timelock
         let proposal_payload =
-            format!("governor::propose::timelock::set_delay").into_bytes();
-        let call = CrossContractCall::new(
-            &governor.name,
-            &timelock.name,
-            shared[0],
-            proposal_payload,
-        );
+            format!("{}::{}::request", governor.name, timelock.name).into_bytes();
+        let call =
+            CrossContractCall::new(&governor.name, &timelock.name, shared[0], proposal_payload);
         let response = call.execute(timelock)?;
         if !response.acknowledged {
             return Err("proposal call to timelock was not acknowledged".to_string());
@@ -384,28 +380,19 @@ impl InteroperabilitySuite {
 
         let shared = shared_formats(identity, fido2);
         if shared.is_empty() {
-            return Err(
-                "identity_registry and fido2 share no data format".to_string(),
-            );
+            return Err("identity_registry and fido2 share no data format".to_string());
         }
 
         // Phase 1: Identity registry registers a device binding for a user
-        let bind_payload =
-            format!("identity::bind_device::fido2::credential_id").into_bytes();
-        let call = CrossContractCall::new(
-            &identity.name,
-            &fido2.name,
-            shared[0],
-            bind_payload,
-        );
+        let bind_payload = format!("{}::{}::request", identity.name, fido2.name).into_bytes();
+        let call = CrossContractCall::new(&identity.name, &fido2.name, shared[0], bind_payload);
         let response = call.execute(fido2)?;
         if !response.acknowledged {
             return Err("device binding call from identity_registry to fido2 failed".to_string());
         }
 
         // Phase 2: FIDO2 authenticator acknowledges the credential binding
-        let credential_payload =
-            format!("fido2::register_credential::identity::user").into_bytes();
+        let credential_payload = format!("fido2::register_credential::identity::user").into_bytes();
         let encoded = encode_payload(shared[0], &credential_payload);
         let decoded = decode_payload(shared[0], &encoded)?;
         if decoded != credential_payload {
@@ -459,14 +446,12 @@ impl InteroperabilitySuite {
 
         let shared = shared_formats(escrow, payment_router);
         if shared.is_empty() {
-            return Err(
-                "escrow and payment_router share no data format".to_string(),
-            );
+            return Err("escrow and payment_router share no data format".to_string());
         }
 
         // Phase 1: Escrow initiates settlement to payment_router
         let settlement_payload =
-            format!("escrow::settle::payment_router::release").into_bytes();
+            format!("{}::{}::request", escrow.name, payment_router.name).into_bytes();
         let call = CrossContractCall::new(
             &escrow.name,
             &payment_router.name,
@@ -479,8 +464,7 @@ impl InteroperabilitySuite {
         }
 
         // Phase 2: Payment router processes the settlement
-        let route_payload =
-            format!("payment_router::route::escrow::amount").into_bytes();
+        let route_payload = format!("payment_router::route::escrow::amount").into_bytes();
         let encoded = encode_payload(shared[0], &route_payload);
         let decoded = decode_payload(shared[0], &encoded)?;
         if decoded != route_payload {
@@ -508,9 +492,7 @@ impl InteroperabilitySuite {
             let snapshot_b = reducer_b.snapshot();
 
             if snapshot_a != snapshot_b {
-                return Err(
-                    "settlement state consistency check failed".to_string(),
-                );
+                return Err("settlement state consistency check failed".to_string());
             }
         }
 
@@ -545,14 +527,12 @@ impl InteroperabilitySuite {
 
         let shared = shared_formats(medical_records, audit);
         if shared.is_empty() {
-            return Err(
-                "medical_records and audit_forensics share no data format".to_string(),
-            );
+            return Err("medical_records and audit_forensics share no data format".to_string());
         }
 
         // Phase 1: Medical records logs an access event to audit forensics
         let access_payload =
-            format!("medical_record::access::audit_forensics::log").into_bytes();
+            format!("{}::{}::request", medical_records.name, audit.name).into_bytes();
         let call = CrossContractCall::new(
             &medical_records.name,
             &audit.name,
@@ -572,9 +552,7 @@ impl InteroperabilitySuite {
         let encoded = encode_payload(shared[0], &archive_payload);
         let decoded = decode_payload(shared[0], &encoded)?;
         if decoded != archive_payload {
-            return Err(
-                "audit_forensics archive payload roundtrip mismatch".to_string(),
-            );
+            return Err("audit_forensics archive payload roundtrip mismatch".to_string());
         }
 
         // Phase 3: Event subscription delivery check
@@ -582,17 +560,15 @@ impl InteroperabilitySuite {
         if !medical_records.supported_events.contains(topic)
             || !audit.supported_events.contains(topic)
         {
-            return Err(
-                "medical_records or audit_forensics missing interop events".to_string(),
-            );
+            return Err("medical_records or audit_forensics missing interop events".to_string());
         }
         let mut bus = EventBus::default();
         bus.subscribe(&medical_records.name, &audit.name, topic);
         let payload = format!("audit_event:{}->{}", medical_records.name, audit.name).into_bytes();
         let deliveries = bus.publish(&medical_records.name, topic, payload.clone());
-        let delivered = deliveries.iter().any(|d| {
-            d.subscriber == audit.name && d.payload == payload
-        });
+        let delivered = deliveries
+            .iter()
+            .any(|d| d.subscriber == audit.name && d.payload == payload);
         if !delivered {
             return Err(
                 "audit event delivery from medical_records to audit_forensics failed".to_string(),
@@ -630,14 +606,12 @@ impl InteroperabilitySuite {
 
         let shared = shared_formats(cross_chain, medical_records);
         if shared.is_empty() {
-            return Err(
-                "cross_chain_access and medical_records share no data format".to_string(),
-            );
+            return Err("cross_chain_access and medical_records share no data format".to_string());
         }
 
         // Phase 1: Cross-chain access issues a grant
         let grant_payload =
-            format!("cross_chain::issue_grant::medical_records::record_id").into_bytes();
+            format!("{}::{}::request", cross_chain.name, medical_records.name).into_bytes();
         let call = CrossContractCall::new(
             &cross_chain.name,
             &medical_records.name,
@@ -652,14 +626,11 @@ impl InteroperabilitySuite {
         }
 
         // Phase 2: Medical records validates the grant authorization
-        let auth_payload =
-            format!("medical_records::authorize::cross_chain::grant").into_bytes();
+        let auth_payload = format!("medical_records::authorize::cross_chain::grant").into_bytes();
         let encoded = encode_payload(shared[0], &auth_payload);
         let decoded = decode_payload(shared[0], &encoded)?;
         if decoded != auth_payload {
-            return Err(
-                "authorization payload roundtrip mismatch".to_string(),
-            );
+            return Err("authorization payload roundtrip mismatch".to_string());
         }
 
         // Phase 3: Verify state consistency for the grant lifecycle
@@ -675,9 +646,7 @@ impl InteroperabilitySuite {
             reducer_b.apply(&op);
         }
         if reducer_a.snapshot() != reducer_b.snapshot() {
-            return Err(
-                "cross-chain grant authorization state mismatch".to_string(),
-            );
+            return Err("cross-chain grant authorization state mismatch".to_string());
         }
 
         let pair = ContractPair::new(&cross_chain.name, &medical_records.name);
@@ -886,13 +855,12 @@ impl InteroperabilitySuite {
 
     pub fn assert_governor_timelock_covered(&self) -> Result<(), String> {
         let pair = ContractPair::new("governor", "timelock");
-        let coverage = self.coverage.get(&pair).ok_or_else(|| {
-            "governor <-> timelock pair not found in coverage matrix".to_string()
-        })?;
+        let coverage = self
+            .coverage
+            .get(&pair)
+            .ok_or_else(|| "governor <-> timelock pair not found in coverage matrix".to_string())?;
         if !coverage.governor_timelock_proposal {
-            return Err(
-                "governor <-> timelock proposal workflow not covered".to_string(),
-            );
+            return Err("governor <-> timelock proposal workflow not covered".to_string());
         }
         Ok(())
     }
@@ -913,22 +881,22 @@ impl InteroperabilitySuite {
 
     pub fn assert_escrow_payment_router_covered(&self) -> Result<(), String> {
         let pair = ContractPair::new("escrow", "payment_router");
-        let coverage = self.coverage.get(&pair).ok_or_else(|| {
-            "escrow <-> payment_router pair not found".to_string()
-        })?;
+        let coverage = self
+            .coverage
+            .get(&pair)
+            .ok_or_else(|| "escrow <-> payment_router pair not found".to_string())?;
         if !coverage.escrow_payment_router_settlement {
-            return Err(
-                "escrow <-> payment_router settlement workflow not covered".to_string(),
-            );
+            return Err("escrow <-> payment_router settlement workflow not covered".to_string());
         }
         Ok(())
     }
 
     pub fn assert_medical_records_audit_covered(&self) -> Result<(), String> {
         let pair = ContractPair::new("medical_records", "audit_forensics");
-        let coverage = self.coverage.get(&pair).ok_or_else(|| {
-            "medical_records <-> audit_forensics pair not found".to_string()
-        })?;
+        let coverage = self
+            .coverage
+            .get(&pair)
+            .ok_or_else(|| "medical_records <-> audit_forensics pair not found".to_string())?;
         if !coverage.medical_records_audit_forensics_logging {
             return Err(
                 "medical_records <-> audit_forensics logging workflow not covered".to_string(),
@@ -939,9 +907,10 @@ impl InteroperabilitySuite {
 
     pub fn assert_cross_chain_access_covered(&self) -> Result<(), String> {
         let pair = ContractPair::new("cross_chain_access", "medical_records");
-        let coverage = self.coverage.get(&pair).ok_or_else(|| {
-            "cross_chain_access <-> medical_records pair not found".to_string()
-        })?;
+        let coverage = self
+            .coverage
+            .get(&pair)
+            .ok_or_else(|| "cross_chain_access <-> medical_records pair not found".to_string())?;
         if !coverage.cross_chain_access_grant_authorization {
             return Err(
                 "cross_chain_access <-> medical_records grant workflow not covered".to_string(),
