@@ -294,6 +294,11 @@ impl HealthcareReputationSystem {
             ))
             .ok_or(Error::CredentialNotFound)?;
 
+        // Reject verification of expired credentials
+        if credential.expiration_date <= env.ledger().timestamp() {
+            return Err(Error::CredentialExpired);
+        }
+
         credential.verification_status = if verified {
             VerificationStatus::Verified
         } else {
@@ -311,6 +316,64 @@ impl HealthcareReputationSystem {
         env.events().publish(
             (symbol_short!("HLTHREP"), symbol_short!("CRED_VER")),
             (provider, credential_id, verified),
+        );
+
+        Ok(())
+    }
+
+    // Renew an expired or active credential with a new expiration date
+    pub fn renew_credential(
+        env: Env,
+        issuer: Address,
+        provider: Address,
+        credential_id: BytesN<32>,
+        new_expiration_date: u64,
+    ) -> Result<(), Error> {
+        issuer.require_auth();
+        Self::require_initialized(&env)?;
+
+        let mut credential: ProviderCredential = env
+            .storage()
+            .persistent()
+            .get(&DataKey::ProviderCredential(
+                provider.clone(),
+                credential_id.clone(),
+            ))
+            .ok_or(Error::CredentialNotFound)?;
+
+        // Only the original issuer can renew
+        if credential.issuer != issuer {
+            return Err(Error::NotAuthorized);
+        }
+
+        // New expiration must be in the future
+        if new_expiration_date <= env.ledger().timestamp() {
+            return Err(Error::CredentialExpired);
+        }
+
+        let old_expiration = credential.expiration_date;
+        credential.expiration_date = new_expiration_date;
+        credential.is_active = true;
+
+        // Restore verification status if it was expired
+        if credential.verification_status == VerificationStatus::Expired {
+            credential.verification_status = VerificationStatus::Pending;
+        }
+
+        env.storage().persistent().set(
+            &DataKey::ProviderCredential(provider.clone(), credential_id.clone()),
+            &credential,
+        );
+
+        // Update expiration notification
+        env.storage().persistent().set(
+            &DataKey::ExpirationNotification(provider.clone(), new_expiration_date),
+            &credential_id,
+        );
+
+        env.events().publish(
+            (symbol_short!("HLTHREP"), symbol_short!("CRED_REN")),
+            (provider, credential_id, old_expiration, new_expiration_date),
         );
 
         Ok(())
@@ -926,5 +989,143 @@ impl HealthcareReputationSystem {
         } else {
             Err(Error::NotAuthorized)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+    use soroban_sdk::testutils::{Address as _, Ledger};
+
+    fn setup() -> (Env, HealthcareReputationSystemClient<'static>, Address, Address, Address) {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().set_timestamp(1_000_000);
+
+        let admin = Address::generate(&env);
+        let provider = Address::generate(&env);
+        let issuer = Address::generate(&env);
+        let contract_id = env.register_contract(None, HealthcareReputationSystem);
+        let client = HealthcareReputationSystemClient::new(&env, &contract_id);
+        client.initialize(&admin);
+        (env, client, admin, provider, issuer)
+    }
+
+    fn add_test_credential(
+        client: &HealthcareReputationSystemClient,
+        provider: &Address,
+        issuer: &Address,
+        expiration_date: u64,
+    ) -> BytesN<32> {
+        let credential_id = BytesN::from_array(&client.env, &[1u8; 32]);
+        client.add_credential(
+            provider,
+            &credential_id,
+            &CredentialType::MedicalLicense,
+            issuer,
+            &1_000_000,
+            &expiration_date,
+            &BytesN::from_array(&client.env, &[2u8; 32]),
+        );
+        credential_id
+    }
+
+    fn get_credential_status(
+        client: &HealthcareReputationSystemClient,
+        provider: &Address,
+        cred_id: &BytesN<32>,
+    ) -> VerificationStatus {
+        let credentials = client.get_provider_credentials(provider);
+        for c in credentials.iter() {
+            if c.credential_id == *cred_id {
+                return c.verification_status;
+            }
+        }
+        panic!("credential not found");
+    }
+
+    #[test]
+    fn verify_credential_before_expiry_succeeds() {
+        let (_env, client, admin, provider, issuer) = setup();
+
+        // Credential expires at T+500_000
+        let cred_id = add_test_credential(&client, &provider, &issuer, 1_500_000);
+
+        // Verify at T=1_000_000 (before expiry) should succeed
+        let result = client.try_verify_credential(&admin, &provider, &cred_id, &true);
+        assert!(result.is_ok());
+
+        let status = get_credential_status(&client, &provider, &cred_id);
+        assert_eq!(status, VerificationStatus::Verified);
+    }
+
+    #[test]
+    fn verify_credential_after_expiry_fails() {
+        let (env, client, admin, provider, issuer) = setup();
+
+        // Credential expires at T+100_000 (just after setup time)
+        let cred_id = add_test_credential(&client, &provider, &issuer, 1_100_000);
+
+        // Advance time past expiry
+        env.ledger().set_timestamp(1_200_000);
+
+        // Verify after expiry should fail with CredentialExpired
+        let result = client.try_verify_credential(&admin, &provider, &cred_id, &true);
+        assert_eq!(result, Err(Ok(Error::CredentialExpired)));
+
+        // Status remains Pending (state changes are rolled back on error)
+        let status = get_credential_status(&client, &provider, &cred_id);
+        assert_eq!(status, VerificationStatus::Pending);
+    }
+
+    #[test]
+    fn renew_credential_extends_expiry() {
+        let (env, client, admin, provider, issuer) = setup();
+
+        // Credential expires at T+100_000
+        let cred_id = add_test_credential(&client, &provider, &issuer, 1_100_000);
+
+        // Advance time past expiry
+        env.ledger().set_timestamp(1_200_000);
+
+        // Verify fails (expired)
+        let result = client.try_verify_credential(&admin, &provider, &cred_id, &true);
+        assert_eq!(result, Err(Ok(Error::CredentialExpired)));
+
+        // Renew the credential with a new expiry far in the future
+        let result = client.try_renew_credential(&issuer, &provider, &cred_id, &3_000_000);
+        assert!(result.is_ok());
+
+        // Now verification should succeed
+        env.ledger().set_timestamp(1_300_000);
+        let result = client.try_verify_credential(&admin, &provider, &cred_id, &true);
+        assert!(result.is_ok());
+
+        let status = get_credential_status(&client, &provider, &cred_id);
+        assert_eq!(status, VerificationStatus::Verified);
+    }
+
+    #[test]
+    fn renew_credential_rejects_non_issuer() {
+        let (_env, client, _admin, provider, issuer) = setup();
+
+        let cred_id = add_test_credential(&client, &provider, &issuer, 1_500_000);
+
+        let random_address = Address::generate(&env);
+        let result = client.try_renew_credential(&random_address, &provider, &cred_id, &3_000_000);
+        assert_eq!(result, Err(Ok(Error::NotAuthorized)));
+    }
+
+    #[test]
+    fn renew_credential_rejects_past_expiry() {
+        let (_env, client, _admin, provider, issuer) = setup();
+
+        let cred_id = add_test_credential(&client, &provider, &issuer, 1_500_000);
+
+        // Try to renew with a date in the past
+        let result = client.try_renew_credential(&issuer, &provider, &cred_id, &500_000);
+        assert_eq!(result, Err(Ok(Error::CredentialExpired)));
     }
 }
