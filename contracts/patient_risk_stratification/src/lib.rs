@@ -598,7 +598,10 @@ mod test {
         assert_eq!(assessment_id, 1);
 
         // Get assessment (as patient)
-        let assessment = client.mock_all_auths().get_risk_assessment(&patient, &assessment_id).unwrap();
+        let assessment = client
+            .mock_all_auths()
+            .get_risk_assessment(&patient, &assessment_id)
+            .unwrap();
         assert_eq!(assessment.patient, patient);
         assert_eq!(assessment.risk_score_bps, 6500);
         assert_eq!(assessment.confidence_bps, 8500);
@@ -734,27 +737,43 @@ mod test {
         assert!(result.is_err());
 
         // Unauthorized caller can read masked assessment (auth required but no role check)
-        let masked = client.mock_all_auths().get_masked_assessment(&unauthorized, &assessment_id);
+        let masked = client
+            .mock_all_auths()
+            .get_masked_assessment(&unauthorized, &assessment_id);
         assert_eq!(masked.risk_tier, String::from_str(&env, "high"));
 
         // Patient can read full assessment
-        let result = client.mock_all_auths().try_get_risk_assessment(&patient, &assessment_id);
+        let result = client
+            .mock_all_auths()
+            .try_get_risk_assessment(&patient, &assessment_id);
         assert!(result.is_ok() && result.unwrap().is_ok());
 
         // Provider can read full assessment
-        let result = client.mock_all_auths().try_get_risk_assessment(&provider, &assessment_id);
+        let result = client
+            .mock_all_auths()
+            .try_get_risk_assessment(&provider, &assessment_id);
         assert!(result.is_ok() && result.unwrap().is_ok());
 
         // Admin can read full assessment
-        let result = client.mock_all_auths().try_get_risk_assessment(&admin, &assessment_id);
+        let result = client
+            .mock_all_auths()
+            .try_get_risk_assessment(&admin, &assessment_id);
         assert!(result.is_ok() && result.unwrap().is_ok());
 
         // Unauthorized caller cannot read risk factors
-        let result = client.try_get_patient_risk_factors(&unauthorized, &patient, &String::from_str(&env, "cardiology"));
+        let result = client.try_get_patient_risk_factors(
+            &unauthorized,
+            &patient,
+            &String::from_str(&env, "cardiology"),
+        );
         assert!(result.is_err());
 
         // Patient can read own risk factors
-        let result = client.mock_all_auths().try_get_patient_risk_factors(&patient, &patient, &String::from_str(&env, "cardiology"));
+        let result = client.mock_all_auths().try_get_patient_risk_factors(
+            &patient,
+            &patient,
+            &String::from_str(&env, "cardiology"),
+        );
         assert!(result.is_ok() && result.unwrap().is_ok());
 
         // Unauthorized caller cannot read interventions
@@ -762,7 +781,9 @@ mod test {
         assert!(result.is_err());
 
         // Patient can read own interventions
-        let result = client.mock_all_auths().try_get_intervention_recommendations(&patient, &patient);
+        let result = client
+            .mock_all_auths()
+            .try_get_intervention_recommendations(&patient, &patient);
         assert!(result.is_ok() && result.unwrap().is_ok());
     }
 }
