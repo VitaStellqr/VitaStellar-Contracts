@@ -2515,7 +2515,7 @@ mod tests {
         env.mock_all_auths();
 
         // Weight = 100 is OK
-        let _ = client.add_recovery_guardian(&subject, &guardian, &100);
+        client.add_recovery_guardian(&subject, &guardian, &100);
 
         // Weight = 101 is NOT OK
         let result = client.try_add_recovery_guardian(&subject, &guardian, &101);

@@ -1004,6 +1004,9 @@ name = "iot_device_management"
 version = "0.1.0"
 dependencies = [
  "access-utils",
+ "crypto_registry",
+ "ed25519-dalek",
+ "rand",
  "soroban-sdk",
 ]
 
@@ -2115,6 +2118,7 @@ dependencies = [
 name = "vitastellar-tests"
 version = "0.1.0"
 dependencies = [
+ "healthcare_reputation",
  "reputation",
  "soroban-sdk",
  "sut_token",

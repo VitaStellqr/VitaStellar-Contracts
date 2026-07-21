@@ -8,6 +8,12 @@ license = "MIT"
 [dependencies]
 soroban-sdk = { workspace = true }
 access_utils = { workspace = true }
+# Direct workspace dep on `crypto_registry` so `iot_device_management` can
+# call its on-chain manufacturer-signing-key lookup without round-tripping
+# through `contractimport!` (which only accepts pre-built WASM modules).
+# We disable the default `testutils` feature here because the crypto_registry
+# contract is consumed from cdylib wasm builds where testutils isn't useful.
+crypto_registry = { path = "../crypto_registry", default-features = false }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }

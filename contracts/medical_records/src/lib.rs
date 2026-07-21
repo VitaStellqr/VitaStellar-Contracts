@@ -1,6 +1,5 @@
 #![no_std]
 
-use access_utils;
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String, Symbol,
 };

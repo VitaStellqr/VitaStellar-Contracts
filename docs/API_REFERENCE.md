@@ -3,7 +3,7 @@
 > Auto-generated from contract source code. Do not edit manually.
 
 - **API version**: `1.0.0`
-- **Generated**: `2026-07-20T15:26:53.086Z`
+- **Generated**: `2026-07-21T10:18:12.527Z`
 - **Contracts documented**: 58
 
 ## Table of Contents
@@ -4527,6 +4527,7 @@ let (env, _, client) = setup();
 | `get_devices_by_manufacturer` | `env: Env, manufacturer_id: BytesN<32>` | `Vec<BytesN<32>>` | — |
 | `get_manufacturer_count` | `env: Env` | `u32` | — |
 | `get_crypto_registry_contract` | `env: Env` | `Option<Address>` | Return the configured crypto_registry contract address, if any. |
+| `get_manufacturer_crypto_owner` | `env: Env, manufacturer_id: BytesN<32>` | `Option<Address>` | Return the linked crypto_registry owner address for a manufacturer (if any). |
 
 ### Types
 
@@ -4618,6 +4619,23 @@ let (env, _, client) = setup();
 | `total_downtime_secs` | `u64` | — |
 | `encryption_key_hash` | `BytesN<32>` | — |
 | `metadata_ref` | `String` | — |
+
+#### `struct DeviceRegistrationInfo`
+
+| Field | Type | Description |
+|---|---|---|
+| `model` | `String` | — |
+| `serial_number` | `String` | — |
+| `location` | `String` | — |
+| `encryption_key_hash` | `BytesN<32>` | — |
+| `metadata_ref` | `String` | — |
+
+#### `struct FirmwareAttestation`
+
+| Field | Type | Description |
+|---|---|---|
+| `firmware_hash` | `BytesN<32>` | — |
+| `firmware_signature` | `BytesN<64>` | — |
 
 #### `struct FirmwareVersion`
 

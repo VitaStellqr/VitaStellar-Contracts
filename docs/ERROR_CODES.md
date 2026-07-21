@@ -470,6 +470,11 @@
 | 440 | ChannelNotFound | Generated from contract source |
 | 602 | InvalidEncryptionKey | Generated from contract source |
 | 603 | KeyRotationTooFrequent | Generated from contract source |
+| 604 | CryptoRegistryNotConfigured | The crypto_registry contract address has not been configured on this contract instance. Operators cannot register firmware-authenticated devices until the cross-contract dependency is wired up. |
+| 605 | ManufacturerCryptoOwnerNotSet | The manufacturer has no crypto_owner address linked to it, so its signing public key cannot be resolved via crypto_registry. |
+| 606 | InvalidFirmwareSignature | The Ed25519 signature provided with a device registration did not verify against the manufacturer's active signing public key. The most common cause is a tampered firmware hash or replay of a stolen signature. |
+| 607 | CryptoKeyBundleNotFound | The crypto_owner address linked to a manufacturer has no published key bundle in the configured crypto_registry contract. |
+| 608 | InvalidSigningKeyAlgorithm | The key bundle stored for a manufacturer uses a non-Ed25519 signing algorithm. This contract only authenticates against Ed25519 signatures. |
 | 820 | DeviceDecommissioned | Generated from contract source |
 | 821 | FirmwareNotApproved | Generated from contract source |
 | 822 | HeartbeatTooFrequent | Generated from contract source |

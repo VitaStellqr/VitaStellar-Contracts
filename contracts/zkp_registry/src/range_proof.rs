@@ -60,6 +60,9 @@ pub fn verify_range_proof(env: &Env, proof: &RangeProof) -> Result<(), Error> {
 }
 
 /// Builds a valid proof_data for a RangeProof (for use in tests and client code).
+#[allow(dead_code)] // Test-only call sites in `tests/` cannot be picked up by
+                    // `cargo clippy --all-targets -D warnings` for production builds;
+                    // kept as a public test-fixture factory.
 pub fn make_range_proof_data(env: &Env, proof: &RangeProof) -> Bytes {
     let commitment = range_commitment(env, proof);
     let mut data = Bytes::from_slice(env, &PROOF_VERSION);

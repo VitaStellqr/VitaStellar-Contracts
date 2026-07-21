@@ -3,7 +3,7 @@
 > **Single source of truth.** Generated from `/// ` doc comments and `pub fn` signatures in each contract's `src/lib.rs`.
 > Do not edit manually — run `make docs` to regenerate.
 
-- **Generated**: `2026-07-20T15:26:53.518Z`
+- **Generated**: `2026-07-21T10:18:12.621Z`
 - **Contracts**: 58
 
 ## Table of Contents
@@ -2521,7 +2521,7 @@ pub fn deactivate_manufacturer( env: Env, admin: Address, manufacturer_id: Bytes
 ```
 
 ```rust
-pub fn register_device( env: Env, operator: Address, device_id: BytesN<32>, manufacturer_id: BytesN<32>, device_type: DeviceType, model: String, serial_number: String, location: String, encryption_key_hash: BytesN<32>, firmware_hash: BytesN<32>, firmware_signature: BytesN<64>, metadata_ref: String, ) -> Result<(), Error>
+pub fn register_device( env: Env, operator: Address, device_id: BytesN<32>, manufacturer_id: BytesN<32>, device_type: DeviceType, info: DeviceRegistrationInfo, firmware: FirmwareAttestation, ) -> Result<(), Error>
 ```
 
 ```rust
@@ -2657,7 +2657,7 @@ pub fn set_manufacturer_crypto_owner( env: Env, admin: Address, manufacturer_id:
 > (if any).
 
 ```rust
-pub fn get_manufacturer_crypto_owner( env: Env, manufacturer_id: BytesN<32>, ) -> Option<Address>
+pub fn get_manufacturer_crypto_owner(env: Env, manufacturer_id: BytesN<32>) -> Option<Address>
 ```
 
 ---

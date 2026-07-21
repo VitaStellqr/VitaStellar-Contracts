@@ -28,6 +28,10 @@ where
 /// Initialize a contract by writing an admin address under the given
 /// instance-storage key. Returns `Err(())` if the key already exists
 /// (contract already initialized).
+#[allow(clippy::result_unit_err)] // `Result<(), ()>` is the established contract signal across the
+                                  // workspace; every caller pattern-matches on `Err(())` for the
+                                  // "already initialized" branch, so the unit-typed error variant
+                                  // is intentional and not a placeholder.
 pub fn init_admin<K>(env: &Env, key: &K, admin: &Address) -> Result<(), ()>
 where
     K: soroban_sdk::IntoVal<Env, soroban_sdk::Val>,

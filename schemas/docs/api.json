@@ -15715,6 +15715,12 @@
         "params": "env: Env",
         "returns": "Option<Address>",
         "description": "Return the configured crypto_registry contract address, if any."
+      },
+      {
+        "name": "get_manufacturer_crypto_owner",
+        "params": "env: Env, manufacturer_id: BytesN<32>",
+        "returns": "Option<Address>",
+        "description": "Return the linked crypto_registry owner address for a manufacturer (if any)."
       }
     ],
     "types": [
@@ -16026,6 +16032,53 @@
           {
             "name": "metadata_ref",
             "type": "String",
+            "description": "—"
+          }
+        ]
+      },
+      {
+        "kind": "struct",
+        "name": "DeviceRegistrationInfo",
+        "fields": [
+          {
+            "name": "model",
+            "type": "String",
+            "description": "—"
+          },
+          {
+            "name": "serial_number",
+            "type": "String",
+            "description": "—"
+          },
+          {
+            "name": "location",
+            "type": "String",
+            "description": "—"
+          },
+          {
+            "name": "encryption_key_hash",
+            "type": "BytesN<32>",
+            "description": "—"
+          },
+          {
+            "name": "metadata_ref",
+            "type": "String",
+            "description": "—"
+          }
+        ]
+      },
+      {
+        "kind": "struct",
+        "name": "FirmwareAttestation",
+        "fields": [
+          {
+            "name": "firmware_hash",
+            "type": "BytesN<32>",
+            "description": "—"
+          },
+          {
+            "name": "firmware_signature",
+            "type": "BytesN<64>",
             "description": "—"
           }
         ]
@@ -17049,15 +17102,15 @@
       },
       {
         "name": "test_register_device",
-        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _admin_key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n\n    let device_id =\n        register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _admin_key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n    let device = iot_client.get_device(&device_id);"
       },
       {
         "name": "test_register_device_requires_crypto_registry_configured",
-        "code": "let env = Env::default();\n    let (iot_client, admin) = setup(&env);\n    iot_client.initialize(&admin);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &iot_client, &admin, 1);\n\n    // Build params without configuring crypto_registry.\n    let device_id = make_bytes32(&env, 10);"
+        "code": "let env = Env::default();\n    let (iot_client, admin) = setup(&env);\n    iot_client.initialize(&admin);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let mfr_id = register_manufacturer(&env, &iot_client, &admin, 1);\n\n    let device_id = make_bytes32(&env, 10);\n    let info = DeviceRegistrationInfo {"
       },
       {
         "name": "test_register_device_requires_manufacturer_crypto_owner",
-        "code": "let env = Env::default();\n    let (iot_client, _crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    // Do NOT link manufacturer crypto owner.\n    let mfr_id = register_manufacturer(&env, &iot_client, &admin, 1);\n\n    let device_id = make_bytes32(&env, 10);\n    let firmware_hash = make_firmware_hash(&env, 10);"
+        "code": "let env = Env::default();\n    let (iot_client, _crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    // Do NOT link manufacturer crypto owner.\n    let mfr_id = register_manufacturer(&env, &iot_client, &admin, 1);\n\n    let device_id = make_bytes32(&env, 10);\n    let info = DeviceRegistrationInfo {"
       },
       {
         "name": "test_register_device_rejects_invalid_signature",
@@ -17065,11 +17118,11 @@
       },
       {
         "name": "test_register_device_rejects_missing_key_bundle",
-        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n\n    // Manufacturer registered but link points to an address with NO key\n    // bundle in crypto_registry.\n    let empty_owner = Address::generate(&env);\n    let mfr_id = make_bytes32(&env, 1);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n\n    // Wiring is in place: iot points at the deployed crypto_registry.\n    assert!(iot_client.get_crypto_registry_contract().is_some());\n    let _ = crypto_client.address;"
       },
       {
         "name": "test_register_device_duplicate",
-        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n\n    let device_id_dup = make_bytes32(&env, 10);"
+        "code": "let env = Env::default();\n    let (iot_client, crypto_client, admin, _key) = setup_with_crypto(&env);\n    let operator = Address::generate(&env);\n    iot_client.set_role(&admin, &operator, &Role::Operator);\n    let (mfr_id, mfr_key) =\n        register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);\n    let _device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);\n\n    let device_id_dup = make_bytes32(&env, 10);"
       },
       {
         "name": "test_set_crypto_registry_contract_admin_only",

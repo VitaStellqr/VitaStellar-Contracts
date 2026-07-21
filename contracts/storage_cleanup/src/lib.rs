@@ -502,7 +502,7 @@ impl StorageCleanup {
         }
 
         // Update count
-        let new_count = kept_indices.len() as u32;
+        let new_count = kept_indices.len();
         env.storage()
             .persistent()
             .set(&DataKey::CategoryCount(category), &new_count);

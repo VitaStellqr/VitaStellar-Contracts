@@ -44,6 +44,9 @@ pub fn verify_recursive_step(env: &Env, proof: &RecursiveProof) -> Result<(), Er
 }
 
 /// Builds valid `aggregated_vk` bytes for a RecursiveProof (for tests and client code).
+#[allow(dead_code)] // Test-only call sites in `tests/` cannot be picked up by
+                    // `cargo clippy --all-targets -D warnings` for production builds;
+                    // kept as a public test-fixture factory.
 pub fn make_aggregated_vk(env: &Env, proof: &RecursiveProof) -> Bytes {
     let commitment = recursive_commitment(env, proof);
     Bytes::from_slice(env, &commitment.to_array())
@@ -54,6 +57,8 @@ pub fn make_aggregated_vk(env: &Env, proof: &RecursiveProof) -> Bytes {
 ///
 /// `base_ids` is a Vec of N base-proof IDs (first = outermost link).
 /// Returns `Err(Error::InvalidProof)` if any link is invalid.
+#[allow(dead_code)] // Reserved for future recursion-side checks after the TD-001 / TD-003 verifier
+                    // upgrade. Not currently called; was scaffolding for a recursive chain check.
 pub fn verify_recursive_chain(
     env: &Env,
     proof: &RecursiveProof,

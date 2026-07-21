@@ -30,7 +30,11 @@ pub fn emit_firmware_signature_verified(
 ) {
     env.events().publish(
         ("IoT", symbol_short!("fw_sig")),
-        (device_id.clone(), firmware_hash.clone(), manufacturer_id.clone()),
+        (
+            device_id.clone(),
+            firmware_hash.clone(),
+            manufacturer_id.clone(),
+        ),
     );
 }
 

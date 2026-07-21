@@ -7,7 +7,11 @@ license.workspace = true
 repository.workspace = true
 
 [lib]
-crate-type = ["cdylib"]
+# Production builds emit a Soroban WASM (`cdylib`). `rlib` is included so the
+# contract types are reachable from the Rust integration test crate at
+# `tests/` -- without it, `use healthcare_reputation::...` fails with
+# "unlinked crate" because `cdylib` alone produces no Rust-callable artifact.
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 soroban-sdk.workspace = true

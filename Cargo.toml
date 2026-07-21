@@ -39,7 +39,14 @@ debug = 0
 strip = "symbols"
 debug-assertions = false
 codegen-units = 1
-lto = true
+# `lto = "thin"` keeps per-crate LTO (so each contract is still size-tuned)
+# but avoids the cross-crate bitcode read that fat LTO performs. Fat LTO
+# (`lto = true`) breaks `iot_device_management` → `crypto_registry`
+# compilation because `crypto_registry` builds as both `["cdylib", "rlib"]`
+# and rustc fails to load the dep's bitcode during the final cdylib link.
+# Cargo does not allow `lto` in `[profile.release.package."*"]` overrides,
+# so a global switch to thin is the minimum-blast-radius fix.
+lto = "thin"
 
 [profile.release-with-logs]
 inherits = "release"

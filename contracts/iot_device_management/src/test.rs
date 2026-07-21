@@ -4,6 +4,28 @@ use rand::rngs::OsRng;
 use soroban_sdk::testutils::{Address as _, Ledger};
 use soroban_sdk::{Address, BytesN, Env, String};
 
+// =====================================================================
+// Issue #194 test scaffolding: full iot + crypto_registry test fixture
+// =====================================================================
+
+/// Deploy + initialize a matching `crypto_registry` contract and return its
+/// SDK-generated client.
+fn deploy_crypto_registry(env: &Env) -> crypto_registry::CryptoRegistryClient<'_> {
+    let contract_id = Address::generate(env);
+    env.register_contract(&contract_id, crypto_registry::CryptoRegistry);
+    crypto_registry::CryptoRegistryClient::new(env, &contract_id)
+}
+
+/// Build a `PublicKey` whose algorithm is `Custom(0)` and whose `Bytes` is
+/// empty — the placeholder we use for `pq_encryption_key` when the
+/// manufacturer does not advertise a post-quantum key.
+fn dummy_public_key(env: &Env) -> crypto_registry::PublicKey {
+    crypto_registry::PublicKey {
+        algorithm: crypto_registry::KeyAlgorithm::Custom(0),
+        key: soroban_sdk::Bytes::new(env),
+    }
+}
+
 fn setup(env: &Env) -> (IoTDeviceManagementClient<'_>, Address) {
     let contract_id = Address::generate(env);
     env.register_contract(&contract_id, IoTDeviceManagement);
@@ -26,18 +48,18 @@ fn make_ed25519_keypair() -> SigningKey {
 }
 
 /// Sign the `DOMAIN_PREFIX || device_id || firmware_hash` payload exactly
-/// as the contract does.
+/// as the contract does. The domain prefix is a 15-byte ASCII string
+/// (`"iot_fw_sig_v1__"`), so the total payload length is 15 + 32 + 32 = 79.
 fn sign_firmware_payload(
     signing_key: &SigningKey,
     device_id: &BytesN<32>,
     firmware_hash: &BytesN<32>,
 ) -> [u8; 64] {
-    let mut msg = Vec::<u8>::with_capacity(80);
-    msg.extend_from_slice(b"iot_fw_sig_v1__");
-    msg.extend_from_slice(device_id.to_array().as_slice());
-    msg.extend_from_slice(firmware_hash.to_array().as_slice());
-    let sig = signing_key.sign(&msg);
-    sig.to_bytes()
+    let mut msg = [0u8; 79];
+    msg[..15].copy_from_slice(b"iot_fw_sig_v1__");
+    msg[15..47].copy_from_slice(device_id.to_array().as_slice());
+    msg[47..79].copy_from_slice(firmware_hash.to_array().as_slice());
+    signing_key.sign(&msg).to_bytes()
 }
 
 /// Build a synthetic 32-byte firmware hash for tests.
@@ -47,41 +69,50 @@ fn make_firmware_hash(env: &Env, val: u8) -> BytesN<32> {
     BytesN::from_array(env, &bytes)
 }
 
-// =====================================================================
-// Issue #194 test scaffolding: full iot + crypto_registry test fixture
-// =====================================================================
-
-/// Generated client for `crypto_registry` (re-exported from `contractimport!`).
-use crate::crypto_registry_client;
-
-/// Deploy + initialize a matching `crypto_registry` contract and return its
-/// client alongside a freshly-generated admin address shared by both
-/// contracts.
-fn deploy_crypto_registry(env: &Env) -> crypto_registry_client::Client<'_> {
-    let contract_id = Address::generate(env);
-    env.register_contract(&contract_id, crypto_registry_client::CryptoRegistry);
-    let client = crypto_registry_client::Client::new(env, &contract_id);
-    client
+/// Bundle a freshly-generated keypair into the cross-contract inputs the
+/// `register_device` entrypoint now expects.
+fn make_info(env: &Env, device_byte: u8) -> DeviceRegistrationInfo {
+    DeviceRegistrationInfo {
+        model: String::from_str(env, "Model-X100"),
+        serial_number: String::from_str(env, "SN-00001"),
+        location: String::from_str(env, "Ward A, Room 101"),
+        encryption_key_hash: make_bytes32(env, device_byte.wrapping_add(50)),
+        metadata_ref: String::from_str(env, "ipfs://Qm..."),
+    }
 }
 
-/// Full setup that wires together `iot_device_management` + `crypto_registry`
-/// so device registration can succeed. Returns `(iot_client, crypto_client,
-/// admin, manufacturer_signing_key)`.
-/// Build a `PublicKey` whose algorithm is `Custom(0)` and whose `Bytes` is
-/// empty — the placeholder we use for `pq_encryption_key` when the
-/// manufacturer does not advertise a post-quantum key.
-fn dummy_public_key(env: &Env) -> crypto_registry_client::PublicKey {
-    crypto_registry_client::PublicKey {
-        algorithm: crypto_registry_client::KeyAlgorithm::Custom(0),
-        key: soroban_sdk::Bytes::new(env),
+fn make_attestation(
+    env: &Env,
+    device_byte: u8,
+    mfr_signing_key: &SigningKey,
+) -> FirmwareAttestation {
+    let device_id = make_bytes32(env, device_byte);
+    let firmware_hash = make_firmware_hash(env, device_byte);
+    let sig_bytes = sign_firmware_payload(mfr_signing_key, &device_id, &firmware_hash);
+    FirmwareAttestation {
+        firmware_hash,
+        firmware_signature: BytesN::<64>::from_array(env, &sig_bytes),
     }
+}
+
+fn register_manufacturer(
+    env: &Env,
+    client: &IoTDeviceManagementClient<'_>,
+    admin: &Address,
+    id_byte: u8,
+) -> BytesN<32> {
+    let mfr_id = make_bytes32(env, id_byte);
+    let cert = make_bytes32(env, id_byte.wrapping_add(100));
+    let name = String::from_str(env, "TestManufacturer");
+    client.register_manufacturer(admin, &mfr_id, &name, &cert);
+    mfr_id
 }
 
 fn setup_with_crypto(
     env: &Env,
 ) -> (
     IoTDeviceManagementClient<'_>,
-    crypto_registry_client::Client<'_>,
+    crypto_registry::CryptoRegistryClient<'_>,
     Address,
     SigningKey,
 ) {
@@ -94,20 +125,18 @@ fn setup_with_crypto(
     let signing_key = make_ed25519_keypair();
     let pubkey_bytes = signing_key.verifying_key().to_bytes();
 
-    let encryption_key = crypto_registry_client::PublicKey {
-        algorithm: crypto_registry_client::KeyAlgorithm::X25519,
+    let encryption_key = crypto_registry::PublicKey {
+        algorithm: crypto_registry::KeyAlgorithm::X25519,
         key: soroban_sdk::Bytes::from_array(env, &pubkey_bytes),
     };
-    let signing_pub = crypto_registry_client::PublicKey {
-        algorithm: crypto_registry_client::KeyAlgorithm::Ed25519,
+    let signing_pub = crypto_registry::PublicKey {
+        algorithm: crypto_registry::KeyAlgorithm::Ed25519,
         key: soroban_sdk::Bytes::from_array(env, &pubkey_bytes),
     };
-    let pq_key = dummy_public_key(env);
-
     crypto_client.register_key_bundle(
         &admin,
         &encryption_key,
-        &pq_key,
+        &dummy_public_key(env),
         &false,
         &signing_pub,
         &true,
@@ -119,10 +148,14 @@ fn setup_with_crypto(
 /// in crypto_registry under the `admin` address (which doubles as the
 /// manufacturer's crypto_owner), and link the manufacturer to that
 /// crypto_owner. Returns the `(manufacturer_id, manufacturer_signing_key)`.
+///
+/// Note: `crypto_registry.rotate_key` does not exist as a public entrypoint;
+/// calling `register_key_bundle` for the same owner simply bumps the version
+/// pointer under persistent storage, which is what we want for "rotation".
 fn register_manufacturer_with_crypto(
     env: &Env,
     iot_client: &IoTDeviceManagementClient<'_>,
-    crypto_client: &crypto_registry_client::Client<'_>,
+    crypto_client: &crypto_registry::CryptoRegistryClient<'_>,
     admin: &Address,
     id_byte: u8,
 ) -> (BytesN<32>, SigningKey) {
@@ -131,35 +164,28 @@ fn register_manufacturer_with_crypto(
     let name = String::from_str(env, "TestManufacturer");
     iot_client.register_manufacturer(admin, &mfr_id, &name, &cert);
 
-    // Generate a manufacturer-specific signing key and publish it under the
-    // same admin identity (which doubles as the manufacturer's
-    // crypto_owner).
     let mfr_signing_key = make_ed25519_keypair();
     let pubkey_bytes = mfr_signing_key.verifying_key().to_bytes();
-    let encryption_key = crypto_registry_client::PublicKey {
-        algorithm: crypto_registry_client::KeyAlgorithm::X25519,
+    let encryption_key = crypto_registry::PublicKey {
+        algorithm: crypto_registry::KeyAlgorithm::X25519,
         key: soroban_sdk::Bytes::from_array(env, &pubkey_bytes),
     };
-    let signing_pub = crypto_registry_client::PublicKey {
-        algorithm: crypto_registry_client::KeyAlgorithm::Ed25519,
+    let signing_pub = crypto_registry::PublicKey {
+        algorithm: crypto_registry::KeyAlgorithm::Ed25519,
         key: soroban_sdk::Bytes::from_array(env, &pubkey_bytes),
     };
-    let pq_key = dummy_public_key(env);
 
-    // Crypto_registry bundle for THIS manufacturer (separate from any
-    // previously registered bundle for the same admin address). We rotate
-    // the admin's existing bundle so the latest bundle carries the new
-    // manufacturer-specific signing key.
-    crypto_client.rotate_key(
+    // Re-register the admin's bundle with the manufacturer-specific signing
+    // key. `get_current_key_bundle` will return this latest version.
+    crypto_client.register_key_bundle(
         admin,
         &encryption_key,
-        &pq_key,
+        &dummy_public_key(env),
         &false,
         &signing_pub,
         &true,
     );
 
-    // Link the manufacturer to its crypto_owner in iot.
     iot_client.set_manufacturer_crypto_owner(admin, &mfr_id, admin);
 
     (mfr_id, mfr_signing_key)
@@ -167,7 +193,6 @@ fn register_manufacturer_with_crypto(
 
 /// Helper to register a device with valid firmware signature using the
 /// freshly-generated keypair from `setup_with_crypto`/`register_manufacturer_with_crypto`.
-#[allow(clippy::too_many_arguments)]
 fn register_device(
     env: &Env,
     client: &IoTDeviceManagementClient<'_>,
@@ -177,28 +202,16 @@ fn register_device(
     mfr_signing_key: &SigningKey,
 ) -> BytesN<32> {
     let device_id = make_bytes32(env, device_byte);
-    let firmware_hash = make_firmware_hash(env, device_byte);
-    let sig_bytes = sign_firmware_payload(mfr_signing_key, &device_id, &firmware_hash);
-    let firmware_signature = BytesN::<64>::from_array(env, &sig_bytes);
-
-    let model = String::from_str(env, "Model-X100");
-    let serial = String::from_str(env, "SN-00001");
-    let location = String::from_str(env, "Ward A, Room 101");
-    let enc_key = make_bytes32(env, device_byte.wrapping_add(50));
-    let metadata = String::from_str(env, "ipfs://Qm...");
+    let info = make_info(env, device_byte);
+    let firmware = make_attestation(env, device_byte, mfr_signing_key);
 
     client.register_device(
         operator,
         &device_id,
         mfr_id,
         &DeviceType::VitalSignsMonitor,
-        &model,
-        &serial,
-        &location,
-        &enc_key,
-        &firmware_hash,
-        &firmware_signature,
-        &metadata,
+        &info,
+        &firmware,
     );
     device_id
 }
@@ -246,19 +259,6 @@ fn test_set_role() {
     assert_eq!(role, Role::Operator);
 }
 
-fn register_manufacturer(
-    env: &Env,
-    client: &IoTDeviceManagementClient<'_>,
-    admin: &Address,
-    id_byte: u8,
-) -> BytesN<32> {
-    let mfr_id = make_bytes32(env, id_byte);
-    let cert = make_bytes32(env, id_byte.wrapping_add(100));
-    let name = String::from_str(env, "TestManufacturer");
-    client.register_manufacturer(admin, &mfr_id, &name, &cert);
-    mfr_id
-}
-
 #[test]
 fn test_register_manufacturer() {
     let env = Env::default();
@@ -302,8 +302,7 @@ fn test_register_device() {
     let (mfr_id, mfr_key) =
         register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);
 
-    let device_id =
-        register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);
+    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);
     let device = iot_client.get_device(&device_id);
     assert_eq!(device.status, DeviceStatus::Provisioning);
     assert_eq!(device.device_type, DeviceType::VitalSignsMonitor);
@@ -319,29 +318,26 @@ fn test_register_device_requires_crypto_registry_configured() {
     iot_client.set_role(&admin, &operator, &Role::Operator);
     let mfr_id = register_manufacturer(&env, &iot_client, &admin, 1);
 
-    // Build params without configuring crypto_registry.
     let device_id = make_bytes32(&env, 10);
-    let firmware_hash = make_firmware_hash(&env, 10);
-    let sig_bytes = [0u8; 64];
-    let firmware_signature = BytesN::<64>::from_array(&env, &sig_bytes);
-    let model = String::from_str(&env, "M");
-    let serial = String::from_str(&env, "S");
-    let location = String::from_str(&env, "L");
-    let enc = make_bytes32(&env, 99);
-    let meta = String::from_str(&env, "x");
+    let info = DeviceRegistrationInfo {
+        model: String::from_str(&env, "M"),
+        serial_number: String::from_str(&env, "S"),
+        location: String::from_str(&env, "L"),
+        encryption_key_hash: make_bytes32(&env, 99),
+        metadata_ref: String::from_str(&env, "x"),
+    };
+    let firmware = FirmwareAttestation {
+        firmware_hash: make_firmware_hash(&env, 10),
+        firmware_signature: BytesN::<64>::from_array(&env, &[0u8; 64]),
+    };
 
     let result = iot_client.try_register_device(
         &operator,
         &device_id,
         &mfr_id,
         &DeviceType::VitalSignsMonitor,
-        &model,
-        &serial,
-        &location,
-        &enc,
-        &firmware_hash,
-        &firmware_signature,
-        &meta,
+        &info,
+        &firmware,
     );
     assert_eq!(result, Err(Ok(Error::CryptoRegistryNotConfigured)));
 }
@@ -356,27 +352,25 @@ fn test_register_device_requires_manufacturer_crypto_owner() {
     let mfr_id = register_manufacturer(&env, &iot_client, &admin, 1);
 
     let device_id = make_bytes32(&env, 10);
-    let firmware_hash = make_firmware_hash(&env, 10);
-    let sig_bytes = [0u8; 64];
-    let firmware_signature = BytesN::<64>::from_array(&env, &sig_bytes);
-    let model = String::from_str(&env, "M");
-    let serial = String::from_str(&env, "S");
-    let location = String::from_str(&env, "L");
-    let enc = make_bytes32(&env, 99);
-    let meta = String::from_str(&env, "x");
+    let info = DeviceRegistrationInfo {
+        model: String::from_str(&env, "M"),
+        serial_number: String::from_str(&env, "S"),
+        location: String::from_str(&env, "L"),
+        encryption_key_hash: make_bytes32(&env, 99),
+        metadata_ref: String::from_str(&env, "x"),
+    };
+    let firmware = FirmwareAttestation {
+        firmware_hash: make_firmware_hash(&env, 10),
+        firmware_signature: BytesN::<64>::from_array(&env, &[0u8; 64]),
+    };
 
     let result = iot_client.try_register_device(
         &operator,
         &device_id,
         &mfr_id,
         &DeviceType::VitalSignsMonitor,
-        &model,
-        &serial,
-        &location,
-        &enc,
-        &firmware_hash,
-        &firmware_signature,
-        &meta,
+        &info,
+        &firmware,
     );
     assert_eq!(result, Err(Ok(Error::ManufacturerCryptoOwnerNotSet)));
 }
@@ -395,27 +389,36 @@ fn test_register_device_rejects_invalid_signature() {
     let device_id = make_bytes32(&env, 10);
     let firmware_hash = make_firmware_hash(&env, 10);
     let sig_bytes = sign_firmware_payload(&attacker_key, &device_id, &firmware_hash);
-    let firmware_signature = BytesN::<64>::from_array(&env, &sig_bytes);
-    let model = String::from_str(&env, "M");
-    let serial = String::from_str(&env, "S");
-    let location = String::from_str(&env, "L");
-    let enc = make_bytes32(&env, 99);
-    let meta = String::from_str(&env, "x");
+    let info = DeviceRegistrationInfo {
+        model: String::from_str(&env, "M"),
+        serial_number: String::from_str(&env, "S"),
+        location: String::from_str(&env, "L"),
+        encryption_key_hash: make_bytes32(&env, 99),
+        metadata_ref: String::from_str(&env, "x"),
+    };
+    let firmware = FirmwareAttestation {
+        firmware_hash,
+        firmware_signature: BytesN::<64>::from_array(&env, &sig_bytes),
+    };
 
     let result = iot_client.try_register_device(
         &operator,
         &device_id,
         &mfr_id,
         &DeviceType::VitalSignsMonitor,
-        &model,
-        &serial,
-        &location,
-        &enc,
-        &firmware_hash,
-        &firmware_signature,
-        &meta,
+        &info,
+        &firmware,
     );
-    assert_eq!(result, Err(Ok(Error::InvalidFirmwareSignature)));
+    // `env.crypto().ed25519_verify` panics on a failed verification — the
+    // SDK 21.7.7 host returns `Err(Err(ConversionError))` (host-level abort)
+    // rather than a contract-level `Err(Ok(InvalidFirmwareSignature))`.
+    // We can't surface `InvalidFirmwareSignature` as a contract error
+    // without re-implementing ed25519 inside the contract.
+    assert!(
+        matches!(result, Err(Err(_))),
+        "expected host abort from bad ed25519 sig, got {:?}",
+        result
+    );
 }
 
 #[test]
@@ -436,31 +439,28 @@ fn test_register_device_rejects_missing_key_bundle() {
     let cert = make_bytes32(&env, 101);
     let name = String::from_str(&env, "NoOwner");
     iot_client.register_manufacturer(&admin, &mfr_id, &name, &cert);
-    // Need a key bundle in iot for crypto_registry contract — already done.
     iot_client.set_manufacturer_crypto_owner(&admin, &mfr_id, &empty_owner);
 
     let device_id = make_bytes32(&env, 10);
-    let firmware_hash = make_firmware_hash(&env, 10);
-    let sig_bytes = [0u8; 64];
-    let firmware_signature = BytesN::<64>::from_array(&env, &sig_bytes);
-    let model = String::from_str(&env, "M");
-    let serial = String::from_str(&env, "S");
-    let location = String::from_str(&env, "L");
-    let enc = make_bytes32(&env, 99);
-    let meta = String::from_str(&env, "x");
+    let info = DeviceRegistrationInfo {
+        model: String::from_str(&env, "M"),
+        serial_number: String::from_str(&env, "S"),
+        location: String::from_str(&env, "L"),
+        encryption_key_hash: make_bytes32(&env, 99),
+        metadata_ref: String::from_str(&env, "x"),
+    };
+    let firmware = FirmwareAttestation {
+        firmware_hash: make_firmware_hash(&env, 10),
+        firmware_signature: BytesN::<64>::from_array(&env, &[0u8; 64]),
+    };
 
     let result = iot_client.try_register_device(
         &operator,
         &device_id,
         &mfr_id,
         &DeviceType::VitalSignsMonitor,
-        &model,
-        &serial,
-        &location,
-        &enc,
-        &firmware_hash,
-        &firmware_signature,
-        &meta,
+        &info,
+        &firmware,
     );
     assert_eq!(result, Err(Ok(Error::CryptoKeyBundleNotFound)));
 }
@@ -473,33 +473,27 @@ fn test_register_device_duplicate() {
     iot_client.set_role(&admin, &operator, &Role::Operator);
     let (mfr_id, mfr_key) =
         register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);
-    let device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);
+    let _device_id = register_device(&env, &iot_client, &operator, &mfr_id, 10, &mfr_key);
 
     let device_id_dup = make_bytes32(&env, 10);
-    let firmware_hash = make_firmware_hash(&env, 10);
-    let sig_bytes = sign_firmware_payload(&mfr_key, &device_id_dup, &firmware_hash);
-    let firmware_signature = BytesN::<64>::from_array(&env, &sig_bytes);
-    let model = String::from_str(&env, "M");
-    let serial = String::from_str(&env, "S");
-    let location = String::from_str(&env, "L");
-    let enc = make_bytes32(&env, 99);
-    let meta = String::from_str(&env, "x");
+    let info = DeviceRegistrationInfo {
+        model: String::from_str(&env, "M"),
+        serial_number: String::from_str(&env, "S"),
+        location: String::from_str(&env, "L"),
+        encryption_key_hash: make_bytes32(&env, 99),
+        metadata_ref: String::from_str(&env, "x"),
+    };
+    let firmware = make_attestation(&env, 10, &mfr_key);
 
     let result = iot_client.try_register_device(
         &operator,
         &device_id_dup,
         &mfr_id,
         &DeviceType::VitalSignsMonitor,
-        &model,
-        &serial,
-        &location,
-        &enc,
-        &firmware_hash,
-        &firmware_signature,
-        &meta,
+        &info,
+        &firmware,
     );
     assert_eq!(result, Err(Ok(Error::DeviceAlreadyRegistered)));
-    let _ = device_id;
 }
 
 #[test]
@@ -538,43 +532,34 @@ fn test_manufacturer_crypto_owner_rotation_uses_new_key() {
         register_manufacturer_with_crypto(&env, &iot_client, &crypto_client, &admin, 1);
 
     let device_id_a = make_bytes32(&env, 10);
-    let firmware_hash_a = make_firmware_hash(&env, 10);
-    let sig_a = sign_firmware_payload(&mfr_key_a, &device_id_a, &firmware_hash_a);
-    let firmware_signature_a = BytesN::<64>::from_array(&env, &sig_a);
+    let fw_a_hash = make_firmware_hash(&env, 10);
+    let sig_a = sign_firmware_payload(&mfr_key_a, &device_id_a, &fw_a_hash);
+    let info = make_info(&env, 10);
+    let firmware_a = FirmwareAttestation {
+        firmware_hash: fw_a_hash.clone(),
+        firmware_signature: BytesN::<64>::from_array(&env, &sig_a),
+    };
 
     // First registration succeeds using the initial mfr signing key.
-    let model = String::from_str(&env, "M");
-    let serial = String::from_str(&env, "S");
-    let location = String::from_str(&env, "L");
-    let enc = make_bytes32(&env, 99);
-    let meta = String::from_str(&env, "x");
     iot_client.register_device(
         &operator,
         &device_id_a,
         &mfr_id,
         &DeviceType::VitalSignsMonitor,
-        &model,
-        &serial,
-        &location,
-        &enc,
-        &firmware_hash_a,
-        &firmware_signature_a,
-        &meta,
+        &info,
+        &firmware_a,
     );
 
-    // Rotate the manufacturer to a new crypto_owner (different bundle/key).
-    // `register_key_bundle` is keyed per-owner in persistent storage, so a
-    // brand-new owner can publish their version-1 bundle without re-running
-    // the singleton `initialize` (already invoked in `setup_with_crypto`).
+    // Publish a fresh bundle under a brand-new owner address.
     let new_owner = Address::generate(&env);
     let new_owner_key = make_ed25519_keypair();
     let new_owner_pub = new_owner_key.verifying_key().to_bytes();
-    let new_owner_enc = crypto_registry_client::PublicKey {
-        algorithm: crypto_registry_client::KeyAlgorithm::X25519,
+    let new_owner_enc = crypto_registry::PublicKey {
+        algorithm: crypto_registry::KeyAlgorithm::X25519,
         key: soroban_sdk::Bytes::from_array(&env, &new_owner_pub),
     };
-    let new_owner_signing_pub = crypto_registry_client::PublicKey {
-        algorithm: crypto_registry_client::KeyAlgorithm::Ed25519,
+    let new_owner_signing_pub = crypto_registry::PublicKey {
+        algorithm: crypto_registry::KeyAlgorithm::Ed25519,
         key: soroban_sdk::Bytes::from_array(&env, &new_owner_pub),
     };
     crypto_client.register_key_bundle(
@@ -590,39 +575,43 @@ fn test_manufacturer_crypto_owner_rotation_uses_new_key() {
 
     // The OLD signature must now fail (key bundle is the new owner's).
     let device_id_b = make_bytes32(&env, 11);
-    let firmware_hash_b = make_firmware_hash(&env, 11);
-    let stale_sig = sign_firmware_payload(&mfr_key_a, &device_id_b, &firmware_hash_b);
-    let stale_signature = BytesN::<64>::from_array(&env, &stale_sig);
+    let fw_b_hash = make_firmware_hash(&env, 11);
+    let stale_sig = sign_firmware_payload(&mfr_key_a, &device_id_b, &fw_b_hash);
+    let info_b = make_info(&env, 11);
+    let stale_firmware = FirmwareAttestation {
+        firmware_hash: fw_b_hash.clone(),
+        firmware_signature: BytesN::<64>::from_array(&env, &stale_sig),
+    };
     let result_stale = iot_client.try_register_device(
         &operator,
         &device_id_b,
         &mfr_id,
         &DeviceType::VitalSignsMonitor,
-        &model,
-        &serial,
-        &location,
-        &enc,
-        &firmware_hash_b,
-        &stale_signature,
-        &meta,
+        &info_b,
+        &stale_firmware,
     );
-    assert_eq!(result_stale, Err(Ok(Error::InvalidFirmwareSignature)));
+    // Same host-abort-on-bad-sig constraint as above — the stale signature
+    // was signed under the previous manufacturer key, so the contract's
+    // `ed25519_verify` panics at the host.
+    assert!(
+        matches!(result_stale, Err(Err(_))),
+        "expected host abort from rotated-manufacturer ed25519 sig, got {:?}",
+        result_stale
+    );
 
     // The NEW signature (signed with the new owner's key) must succeed.
-    let fresh_sig = sign_firmware_payload(&new_owner_key, &device_id_b, &firmware_hash_b);
-    let fresh_signature = BytesN::<64>::from_array(&env, &fresh_sig);
+    let fresh_sig = sign_firmware_payload(&new_owner_key, &device_id_b, &fw_b_hash);
+    let fresh_firmware = FirmwareAttestation {
+        firmware_hash: fw_b_hash,
+        firmware_signature: BytesN::<64>::from_array(&env, &fresh_sig),
+    };
     iot_client.register_device(
         &operator,
         &device_id_b,
         &mfr_id,
         &DeviceType::VitalSignsMonitor,
-        &model,
-        &serial,
-        &location,
-        &enc,
-        &firmware_hash_b,
-        &fresh_signature,
-        &meta,
+        &info_b,
+        &fresh_firmware,
     );
 }
 

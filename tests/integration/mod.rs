@@ -28,4 +28,10 @@ mod medical_records;
 // These exercise the real Soroban contract via `soroban_sdk::Env::default()`
 // and replace the previously-mocked Python suite at
 // `tests/healthcare_reputation_test.py`. See tests/FRAMEWORK.md for rationale.
-mod healthcare_reputation;
+//
+// The module is named `healthcare_reputation_tests` (not `healthcare_reputation`)
+// to avoid shadowing the external `healthcare_reputation` contract crate
+// imported via `tests/Cargo.toml`. With the original name, the bare
+// `healthcare_reputation::...` path resolved to the local file itself, causing
+// a circular import the compiler cannot satisfy.
+mod healthcare_reputation_tests;
