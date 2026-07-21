@@ -16,7 +16,7 @@ pub use types::{
     NotificationTemplate, NotificationType,
 };
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Map, String, Vec};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Bytes, BytesN, Env, Map, String, Vec};
 
 // ==================== Storage Keys ====================
 
@@ -246,6 +246,9 @@ impl NotificationContract {
         Self::validate_title(&title)?;
         Self::validate_message(&message)?;
 
+        let title_hash = Self::hash_content(&env, &title);
+        let message_hash = Self::hash_content(&env, &message);
+
         let notif_id = Self::next_notif_id(&env);
         let status = Self::resolve_status(&env, &recipient, notif_type, priority);
 
@@ -256,8 +259,8 @@ impl NotificationContract {
             notif_type,
             priority,
             status,
-            title,
-            message,
+            title_hash,
+            message_hash,
             reference_id,
             created_at: env.ledger().timestamp(),
             read_at: None,
@@ -307,6 +310,9 @@ impl NotificationContract {
         Self::validate_title(&title)?;
         Self::validate_message(&message)?;
 
+        let title_hash = Self::hash_content(&env, &title);
+        let message_hash = Self::hash_content(&env, &message);
+
         let mut ids = Vec::new(&env);
         let timestamp = env.ledger().timestamp();
 
@@ -320,8 +326,8 @@ impl NotificationContract {
                 notif_type,
                 priority,
                 status,
-                title: title.clone(),
-                message: message.clone(),
+                title_hash: title_hash.clone(),
+                message_hash: message_hash.clone(),
                 reference_id,
                 created_at: timestamp,
                 read_at: None,
@@ -737,6 +743,9 @@ impl NotificationContract {
         let message = custom_message.unwrap_or_else(|| rule.name.clone());
         Self::validate_message(&message)?;
 
+        let title_hash = Self::hash_content(&env, &rule.name);
+        let message_hash = Self::hash_content(&env, &message);
+
         let mut ids = Vec::new(&env);
         let timestamp = env.ledger().timestamp();
         let recipient_count = rule.recipients.len();
@@ -752,8 +761,8 @@ impl NotificationContract {
                 notif_type: NotificationType::Custom,
                 priority: rule.priority,
                 status,
-                title: rule.name.clone(),
-                message: message.clone(),
+                title_hash: title_hash.clone(),
+                message_hash: message_hash.clone(),
                 reference_id,
                 created_at: timestamp,
                 read_at: None,
@@ -1261,5 +1270,13 @@ impl NotificationContract {
             return Err(Error::MessageTooLong);
         }
         Ok(())
+    }
+
+    fn hash_content(env: &Env, content: &String) -> BytesN<32> {
+        let len = content.len() as usize;
+        let mut buf = [0u8; 500];
+        content.copy_into_slice(&mut buf[..len]);
+        let bytes = Bytes::from_slice(env, &buf[..len]);
+        env.crypto().sha256(&bytes).into()
     }
 }
