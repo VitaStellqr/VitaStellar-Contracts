@@ -265,3 +265,112 @@ fn key_management_rotation_and_cost_optimization() {
     let optimized_cost = client.estimate_operation_cost(&ctx, &6, &2048);
     assert!(optimized_cost < base_cost);
 }
+
+#[test]
+fn ciphertext_size_limit_enforced() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, _id) = setup(&env);
+
+    let admin = Address::generate(&env);
+    let submitter = Address::generate(&env);
+    client.initialize(&admin);
+
+    let ctx_id = BytesN::from_array(&env, &[51u8; 32]);
+    client.register_context(
+        &admin,
+        &ctx_id,
+        &HEScheme::CKKS,
+        &String::from_str(&env, "ipfs://he/ckks/params"),
+        &BytesN::from_array(&env, &[52u8; 32]),
+    );
+
+    // Default limit is 64 KB.
+    let limit = client.get_ciphertext_limit();
+    assert_eq!(limit, 65536);
+
+    // Reduce limit to minimum (1024 bytes).
+    client.set_ciphertext_limit(&admin, &1024);
+
+    // 3 slots * 16 = 48 bytes = well under the limit.
+    let mut values_ok = Vec::new(&env);
+    values_ok.push_back(100);
+    values_ok.push_back(200);
+    values_ok.push_back(300);
+    let ct_id = BytesN::from_array(&env, &[53u8; 32]);
+    client.encrypt_ckks_vector(&submitter, &ct_id, &ctx_id, &values_ok, &2);
+    assert!(client.get_ciphertext(&ct_id).is_some(), "ciphertext under the limit should be stored");
+
+    // Now set a very tight limit: 48 bytes (3 slots exactly).
+    client.set_ciphertext_limit(&admin, &48);
+
+    // 3 slots * 16 = 48 bytes = exactly at the limit.
+    let mut values_at = Vec::new(&env);
+    values_at.push_back(10);
+    values_at.push_back(20);
+    values_at.push_back(30);
+    let ct_id_at = BytesN::from_array(&env, &[55u8; 32]);
+    client.encrypt_ckks_vector(&submitter, &ct_id_at, &ctx_id, &values_at, &2);
+    assert!(client.get_ciphertext(&ct_id_at).is_some(), "ciphertext at exactly the limit should be stored");
+
+    // 4 slots * 16 = 64 bytes = over the limit.
+    let mut values_over = Vec::new(&env);
+    values_over.push_back(10);
+    values_over.push_back(20);
+    values_over.push_back(30);
+    values_over.push_back(40);
+    let ct_id_over = BytesN::from_array(&env, &[54u8; 32]);
+    let result = client.try_encrypt_ckks_vector(&submitter, &ct_id_over, &ctx_id, &values_over, &2);
+    assert!(result.is_err(), "ciphertext over the limit should be rejected");
+}
+
+#[test]
+fn ciphertext_limit_admin_configurable() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, _id) = setup(&env);
+
+    let admin = Address::generate(&env);
+    let submitter = Address::generate(&env);
+    client.initialize(&admin);
+
+    let ctx_id = BytesN::from_array(&env, &[61u8; 32]);
+    client.register_context(
+        &admin,
+        &ctx_id,
+        &HEScheme::CKKS,
+        &String::from_str(&env, "ipfs://he/ckks/params"),
+        &BytesN::from_array(&env, &[62u8; 32]),
+    );
+
+    // Set limit to 48 bytes (3 slots exactly).
+    client.set_ciphertext_limit(&admin, &48);
+    assert_eq!(client.get_ciphertext_limit(), 48);
+
+    // 3 slots * 16 = 48 bytes = exactly at the limit.
+    let mut values_at_limit = Vec::new(&env);
+    values_at_limit.push_back(1);
+    values_at_limit.push_back(2);
+    values_at_limit.push_back(3);
+    let ct_id = BytesN::from_array(&env, &[63u8; 32]);
+    client.encrypt_ckks_vector(&submitter, &ct_id, &ctx_id, &values_at_limit, &2);
+    assert!(client.get_ciphertext(&ct_id).is_some());
+
+    // 4 slots * 16 = 64 bytes = over the limit.
+    let mut values_over = Vec::new(&env);
+    values_over.push_back(1);
+    values_over.push_back(2);
+    values_over.push_back(3);
+    values_over.push_back(4);
+    let ct_id_over = BytesN::from_array(&env, &[64u8; 32]);
+    let result = client.try_encrypt_ckks_vector(&submitter, &ct_id_over, &ctx_id, &values_over, &2);
+    assert!(result.is_err(), "over the reduced limit should be rejected");
+
+    // Limit below minimum (48 bytes) should fail.
+    let result = client.try_set_ciphertext_limit(&admin, &32);
+    assert!(result.is_err(), "limit below minimum should be rejected");
+
+    // Limit above maximum (128 KB) should fail.
+    let result = client.try_set_ciphertext_limit(&admin, &200_000);
+    assert!(result.is_err(), "limit above 128 KB should be rejected");
+}

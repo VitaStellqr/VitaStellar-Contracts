@@ -118,6 +118,7 @@ pub enum DataKey {
     ActiveKey(BytesN<32>),
     Ciphertext(BytesN<32>),
     Profile(BytesN<32>),
+    CiphertextLimit,
 }
 
 const ADMIN: Symbol = symbol_short!("ADMIN");
@@ -144,6 +145,7 @@ pub enum Error {
     NoiseBudgetExhausted = 12,
     ArithmeticOverflow = 13,
     KeyNotFound = 14,
+    CiphertextTooLarge = 15,
 }
 
 // =============================================================================
@@ -156,6 +158,9 @@ pub struct HomomorphicRegistry;
 #[contractimpl]
 impl HomomorphicRegistry {
     const DEFAULT_NOISE_BUDGET: u32 = 64;
+    const DEFAULT_MAX_CIPHERTEXT_BYTES: u32 = 65_536; // 64 KB
+    const MIN_CIPHERTEXT_LIMIT: u32 = 48; // Minimum practical limit (3 slots)
+    const MAX_CIPHERTEXT_LIMIT: u32 = 131_072; // 128 KB
 
     pub fn initialize(env: Env, admin: Address) -> Result<(), Error> {
         admin.require_auth();
@@ -619,6 +624,38 @@ impl HomomorphicRegistry {
         Ok(cost)
     }
 
+    pub fn set_ciphertext_limit(
+        env: Env,
+        admin: Address,
+        max_bytes: u32,
+    ) -> Result<(), Error> {
+        admin.require_auth();
+        Self::require_initialized(&env)?;
+        Self::require_admin(&env, &admin)?;
+
+        if !(Self::MIN_CIPHERTEXT_LIMIT..=Self::MAX_CIPHERTEXT_LIMIT).contains(&max_bytes) {
+            return Err(Error::InvalidInput);
+        }
+
+        env.storage()
+            .instance()
+            .set(&DataKey::CiphertextLimit, &max_bytes);
+        env.events().publish(
+            (symbol_short!("he"), symbol_short!("ct_lim")),
+            max_bytes,
+        );
+        Ok(())
+    }
+
+    pub fn get_ciphertext_limit(env: Env) -> Result<u32, Error> {
+        Self::require_initialized(&env)?;
+        Ok(env
+            .storage()
+            .instance()
+            .get(&DataKey::CiphertextLimit)
+            .unwrap_or(Self::DEFAULT_MAX_CIPHERTEXT_BYTES))
+    }
+
     pub fn register_context(
         env: Env,
         admin: Address,
@@ -818,6 +855,16 @@ impl HomomorphicRegistry {
         }
         if noise_budget == 0 {
             return Err(Error::NoiseBudgetExhausted);
+        }
+
+        let max_bytes: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::CiphertextLimit)
+            .unwrap_or(Self::DEFAULT_MAX_CIPHERTEXT_BYTES);
+        let estimated_bytes = slots.len().checked_mul(16).ok_or(Error::ArithmeticOverflow)?;
+        if estimated_bytes > max_bytes {
+            return Err(Error::CiphertextTooLarge);
         }
 
         let ct = EncryptedVector {
