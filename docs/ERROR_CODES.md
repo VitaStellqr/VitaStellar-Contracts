@@ -635,6 +635,7 @@
 | 7 | ShipmentNotFound | Generated from contract source |
 | 8 | InvalidInput | Generated from contract source |
 | 9 | BatchAlreadyExists | Generated from contract source |
+| 10 | ColdChainNotVerified | Generated from contract source |
 
 ### predictive_analytics
 

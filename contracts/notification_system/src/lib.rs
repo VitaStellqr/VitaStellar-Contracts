@@ -16,7 +16,9 @@ pub use types::{
     NotificationTemplate, NotificationType,
 };
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Bytes, BytesN, Env, Map, String, Vec};
+use soroban_sdk::{
+    contract, contractimpl, contracttype, Address, Bytes, BytesN, Env, Map, String, Vec,
+};
 
 // ==================== Storage Keys ====================
 
