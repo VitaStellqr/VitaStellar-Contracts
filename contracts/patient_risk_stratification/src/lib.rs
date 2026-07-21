@@ -31,6 +31,7 @@ pub struct RiskModel {
 pub struct RiskAssessment {
     pub assessment_id: u64,
     pub patient: Address,
+    pub provider: Address, // Ordering provider who created the assessment
     pub model_id: BytesN<32>,
     pub risk_score_bps: u32, // 0-10000 basis points
     pub confidence_bps: u32,
@@ -82,6 +83,19 @@ pub struct SpecialtyRiskSummary {
     pub avg_risk_score_bps: u32,
     pub high_risk_count: u32,
     pub last_assessment_date: u64,
+}
+
+/// Masked assessment returned to partially-authorized callers.
+/// Contains only the risk tier, hiding raw scores, factors, and interventions.
+#[derive(Clone)]
+#[contracttype]
+pub struct MaskedRiskAssessment {
+    pub assessment_id: u64,
+    pub patient: Address,
+    pub risk_tier: String, // "low", "medium", "high", "critical"
+    pub assessment_date: u64,
+    pub prediction_horizon_days: u32,
+    pub specialty: String,
 }
 
 #[derive(Clone)]
@@ -201,6 +215,7 @@ impl PatientRiskStratificationContract {
         env: Env,
         caller: Address,
         patient: Address,
+        provider: Address,
         model_id: BytesN<32>,
         risk_score_bps: u32,
         confidence_bps: u32,
@@ -235,6 +250,7 @@ impl PatientRiskStratificationContract {
         let assessment = RiskAssessment {
             assessment_id,
             patient: patient.clone(),
+            provider: provider.clone(),
             model_id: model_id.clone(),
             risk_score_bps,
             confidence_bps,
@@ -337,10 +353,64 @@ impl PatientRiskStratificationContract {
             .set(&DataKey::PatientProfile(patient.clone()), &profile);
     }
 
-    pub fn get_risk_assessment(env: Env, assessment_id: u64) -> Option<RiskAssessment> {
-        env.storage()
+    pub fn get_risk_assessment(
+        env: Env,
+        caller: Address,
+        assessment_id: u64,
+    ) -> Result<Option<RiskAssessment>, Error> {
+        caller.require_auth();
+
+        let assessment: RiskAssessment = env
+            .storage()
             .instance()
             .get(&DataKey::Assessment(assessment_id))
+            .ok_or(Error::AssessmentNotFound)?;
+
+        // Only the patient, ordering provider, or admin can read the full assessment
+        let is_patient = assessment.patient == caller;
+        let is_provider = assessment.provider == caller;
+        let is_admin = Self::ensure_admin(&env, &caller).is_ok();
+
+        if !is_patient && !is_provider && !is_admin {
+            return Err(Error::NotAuthorized);
+        }
+
+        Ok(Some(assessment))
+    }
+
+    /// Returns a masked assessment with only the risk tier, for partially-authorized callers.
+    /// Requires authentication but does not require patient/provider/admin role.
+    pub fn get_masked_assessment(
+        env: Env,
+        caller: Address,
+        assessment_id: u64,
+    ) -> Result<MaskedRiskAssessment, Error> {
+        caller.require_auth();
+
+        let assessment: RiskAssessment = env
+            .storage()
+            .instance()
+            .get(&DataKey::Assessment(assessment_id))
+            .ok_or(Error::AssessmentNotFound)?;
+
+        let risk_tier = if assessment.risk_score_bps >= 7500 {
+            String::from_str(&env, "critical")
+        } else if assessment.risk_score_bps >= 5000 {
+            String::from_str(&env, "high")
+        } else if assessment.risk_score_bps >= 2500 {
+            String::from_str(&env, "medium")
+        } else {
+            String::from_str(&env, "low")
+        };
+
+        Ok(MaskedRiskAssessment {
+            assessment_id,
+            patient: assessment.patient,
+            risk_tier,
+            assessment_date: assessment.assessment_date,
+            prediction_horizon_days: assessment.prediction_horizon_days,
+            specialty: assessment.specialty,
+        })
     }
 
     pub fn get_patient_risk_profile(env: Env, patient: Address) -> Option<PatientRiskProfile> {
@@ -355,16 +425,26 @@ impl PatientRiskStratificationContract {
 
     pub fn get_patient_risk_factors(
         env: Env,
+        caller: Address,
         patient: Address,
         specialty: String,
-    ) -> Vec<RiskFactor> {
+    ) -> Result<Vec<RiskFactor>, Error> {
+        caller.require_auth();
+
+        // Only the patient, admin, or caller can read risk factors
+        let is_patient = patient == caller;
+        let is_admin = Self::ensure_admin(&env, &caller).is_ok();
+        if !is_patient && !is_admin {
+            return Err(Error::NotAuthorized);
+        }
+
         let profile: Option<PatientRiskProfile> = env
             .storage()
             .instance()
             .get(&DataKey::PatientProfile(patient));
         let profile = match profile {
             Some(p) => p,
-            None => return Vec::new(&env),
+            None => return Ok(Vec::new(&env)),
         };
 
         let assessment: Option<RiskAssessment> = env
@@ -373,27 +453,37 @@ impl PatientRiskStratificationContract {
             .get(&DataKey::Assessment(profile.latest_assessment_id));
         let assessment = match assessment {
             Some(a) => a,
-            None => return Vec::new(&env),
+            None => return Ok(Vec::new(&env)),
         };
 
         if assessment.specialty != specialty {
-            return Vec::new(&env);
+            return Ok(Vec::new(&env));
         }
 
-        assessment.risk_factors
+        Ok(assessment.risk_factors)
     }
 
     pub fn get_intervention_recommendations(
         env: Env,
+        caller: Address,
         patient: Address,
-    ) -> Vec<InterventionRecommendation> {
+    ) -> Result<Vec<InterventionRecommendation>, Error> {
+        caller.require_auth();
+
+        // Only the patient or admin can read intervention recommendations
+        let is_patient = patient == caller;
+        let is_admin = Self::ensure_admin(&env, &caller).is_ok();
+        if !is_patient && !is_admin {
+            return Err(Error::NotAuthorized);
+        }
+
         let profile: Option<PatientRiskProfile> = env
             .storage()
             .instance()
             .get(&DataKey::PatientProfile(patient));
         let profile = match profile {
             Some(p) => p,
-            None => return Vec::new(&env),
+            None => return Ok(Vec::new(&env)),
         };
 
         let assessment: Option<RiskAssessment> = env
@@ -402,10 +492,10 @@ impl PatientRiskStratificationContract {
             .get(&DataKey::Assessment(profile.latest_assessment_id));
         let assessment = match assessment {
             Some(a) => a,
-            None => return Vec::new(&env),
+            None => return Ok(Vec::new(&env)),
         };
 
-        assessment.interventions
+        Ok(assessment.interventions)
     }
 
     pub fn update_model_status(
@@ -495,6 +585,7 @@ mod test {
         let assessment_id = client.mock_all_auths().perform_risk_assessment(
             &assessor,
             &patient,
+            &assessor, // provider is the assessor
             &model_id,
             &6500, // 65% risk score
             &8500, // 85% confidence
@@ -506,11 +597,12 @@ mod test {
 
         assert_eq!(assessment_id, 1);
 
-        // Get assessment
-        let assessment = client.get_risk_assessment(&assessment_id).unwrap();
+        // Get assessment (as patient)
+        let assessment = client.mock_all_auths().get_risk_assessment(&patient, &assessment_id).unwrap();
         assert_eq!(assessment.patient, patient);
         assert_eq!(assessment.risk_score_bps, 6500);
         assert_eq!(assessment.confidence_bps, 8500);
+        assert_eq!(assessment.provider, assessor);
 
         // Get patient profile
         let profile = client.get_patient_risk_profile(&patient).unwrap();
@@ -576,5 +668,101 @@ mod test {
 
         let model3 = client.get_risk_model(&complications_model).unwrap();
         assert_eq!(model3.model_type, RiskModelType::Complications);
+    }
+
+    #[test]
+    fn test_unauthorized_read_returns_error() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, PatientRiskStratificationContract);
+        let client = PatientRiskStratificationContractClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let provider = Address::generate(&env);
+        let patient = Address::generate(&env);
+        let unauthorized = Address::generate(&env);
+
+        client.mock_all_auths().initialize(&admin);
+
+        let model_id = BytesN::from_array(&env, &[1u8; 32]);
+        client.mock_all_auths().register_risk_model(
+            &admin,
+            &model_id,
+            &RiskModelType::Readmission,
+            &String::from_str(&env, "cardiology"),
+            &String::from_str(&env, "v1.0"),
+            &500,
+            &String::from_str(&env, "model"),
+        );
+
+        let risk_factors = vec![
+            &env,
+            RiskFactor {
+                factor_name: String::from_str(&env, "age"),
+                contribution_bps: 500,
+                importance_bps: 800,
+                category: String::from_str(&env, "demo"),
+                explanation: String::from_str(&env, "Age factor"),
+            },
+        ];
+        let interventions = vec![
+            &env,
+            InterventionRecommendation {
+                intervention_type: String::from_str(&env, "follow_up"),
+                priority: 3,
+                description: String::from_str(&env, "Follow up"),
+                expected_impact_bps: 300,
+                timeframe_days: 7,
+                resources_needed: vec![&env, String::from_str(&env, "nurse")],
+            },
+        ];
+
+        let assessment_id = client.mock_all_auths().perform_risk_assessment(
+            &provider,
+            &patient,
+            &provider,
+            &model_id,
+            &6500,
+            &8500,
+            &30,
+            &risk_factors,
+            &interventions,
+            &8700,
+        );
+
+        // Unauthorized caller cannot read full assessment
+        let result = client.try_get_risk_assessment(&unauthorized, &assessment_id);
+        assert!(result.is_err());
+
+        // Unauthorized caller can read masked assessment (auth required but no role check)
+        let masked = client.mock_all_auths().get_masked_assessment(&unauthorized, &assessment_id);
+        assert_eq!(masked.risk_tier, String::from_str(&env, "high"));
+
+        // Patient can read full assessment
+        let result = client.mock_all_auths().try_get_risk_assessment(&patient, &assessment_id);
+        assert!(result.is_ok() && result.unwrap().is_ok());
+
+        // Provider can read full assessment
+        let result = client.mock_all_auths().try_get_risk_assessment(&provider, &assessment_id);
+        assert!(result.is_ok() && result.unwrap().is_ok());
+
+        // Admin can read full assessment
+        let result = client.mock_all_auths().try_get_risk_assessment(&admin, &assessment_id);
+        assert!(result.is_ok() && result.unwrap().is_ok());
+
+        // Unauthorized caller cannot read risk factors
+        let result = client.try_get_patient_risk_factors(&unauthorized, &patient, &String::from_str(&env, "cardiology"));
+        assert!(result.is_err());
+
+        // Patient can read own risk factors
+        let result = client.mock_all_auths().try_get_patient_risk_factors(&patient, &patient, &String::from_str(&env, "cardiology"));
+        assert!(result.is_ok() && result.unwrap().is_ok());
+
+        // Unauthorized caller cannot read interventions
+        let result = client.try_get_intervention_recommendations(&unauthorized, &patient);
+        assert!(result.is_err());
+
+        // Patient can read own interventions
+        let result = client.mock_all_auths().try_get_intervention_recommendations(&patient, &patient);
+        assert!(result.is_ok() && result.unwrap().is_ok());
     }
 }
