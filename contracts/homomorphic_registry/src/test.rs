@@ -299,7 +299,10 @@ fn ciphertext_size_limit_enforced() {
     values_ok.push_back(300);
     let ct_id = BytesN::from_array(&env, &[53u8; 32]);
     client.encrypt_ckks_vector(&submitter, &ct_id, &ctx_id, &values_ok, &2);
-    assert!(client.get_ciphertext(&ct_id).is_some(), "ciphertext under the limit should be stored");
+    assert!(
+        client.get_ciphertext(&ct_id).is_some(),
+        "ciphertext under the limit should be stored"
+    );
 
     // Now set a very tight limit: 48 bytes (3 slots exactly).
     client.set_ciphertext_limit(&admin, &48);
@@ -311,7 +314,10 @@ fn ciphertext_size_limit_enforced() {
     values_at.push_back(30);
     let ct_id_at = BytesN::from_array(&env, &[55u8; 32]);
     client.encrypt_ckks_vector(&submitter, &ct_id_at, &ctx_id, &values_at, &2);
-    assert!(client.get_ciphertext(&ct_id_at).is_some(), "ciphertext at exactly the limit should be stored");
+    assert!(
+        client.get_ciphertext(&ct_id_at).is_some(),
+        "ciphertext at exactly the limit should be stored"
+    );
 
     // 4 slots * 16 = 64 bytes = over the limit.
     let mut values_over = Vec::new(&env);
@@ -321,7 +327,10 @@ fn ciphertext_size_limit_enforced() {
     values_over.push_back(40);
     let ct_id_over = BytesN::from_array(&env, &[54u8; 32]);
     let result = client.try_encrypt_ckks_vector(&submitter, &ct_id_over, &ctx_id, &values_over, &2);
-    assert!(result.is_err(), "ciphertext over the limit should be rejected");
+    assert!(
+        result.is_err(),
+        "ciphertext over the limit should be rejected"
+    );
 }
 
 #[test]

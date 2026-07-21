@@ -624,11 +624,7 @@ impl HomomorphicRegistry {
         Ok(cost)
     }
 
-    pub fn set_ciphertext_limit(
-        env: Env,
-        admin: Address,
-        max_bytes: u32,
-    ) -> Result<(), Error> {
+    pub fn set_ciphertext_limit(env: Env, admin: Address, max_bytes: u32) -> Result<(), Error> {
         admin.require_auth();
         Self::require_initialized(&env)?;
         Self::require_admin(&env, &admin)?;
@@ -640,10 +636,8 @@ impl HomomorphicRegistry {
         env.storage()
             .instance()
             .set(&DataKey::CiphertextLimit, &max_bytes);
-        env.events().publish(
-            (symbol_short!("he"), symbol_short!("ct_lim")),
-            max_bytes,
-        );
+        env.events()
+            .publish((symbol_short!("he"), symbol_short!("ct_lim")), max_bytes);
         Ok(())
     }
 
@@ -862,7 +856,10 @@ impl HomomorphicRegistry {
             .instance()
             .get(&DataKey::CiphertextLimit)
             .unwrap_or(Self::DEFAULT_MAX_CIPHERTEXT_BYTES);
-        let estimated_bytes = slots.len().checked_mul(16).ok_or(Error::ArithmeticOverflow)?;
+        let estimated_bytes = slots
+            .len()
+            .checked_mul(16)
+            .ok_or(Error::ArithmeticOverflow)?;
         if estimated_bytes > max_bytes {
             return Err(Error::CiphertextTooLarge);
         }
