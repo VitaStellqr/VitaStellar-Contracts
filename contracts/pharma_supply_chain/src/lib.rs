@@ -17,6 +17,7 @@ pub enum Error {
     ShipmentNotFound = 7,
     InvalidInput = 8,
     BatchAlreadyExists = 9,
+    ColdChainNotVerified = 10,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -89,6 +90,7 @@ pub struct Shipment {
     pub latitude_e6: i32,
     pub longitude_e6: i32,
     pub compliance_ok: bool,
+    pub has_temperature_log: bool,
     pub created_at: u64,
     pub delivered_at: u64,
 }
@@ -349,6 +351,7 @@ impl PharmaSupplyChainContract {
             latitude_e6: 0,
             longitude_e6: 0,
             compliance_ok: true,
+            has_temperature_log: false,
             created_at: env.ledger().timestamp(),
             delivered_at: 0,
         };
@@ -396,6 +399,7 @@ impl PharmaSupplyChainContract {
         shipment.latest_humidity_bps = humidity_bps;
         shipment.latitude_e6 = latitude_e6;
         shipment.longitude_e6 = longitude_e6;
+        shipment.has_temperature_log = true;
 
         if medication.requires_cold_chain
             && (temperature_c < medication.min_temp_c || temperature_c > medication.max_temp_c)
@@ -435,6 +439,17 @@ impl PharmaSupplyChainContract {
             .persistent()
             .get(&DataKey::Batch(shipment.batch_id))
             .ok_or(Error::BatchNotFound)?;
+
+        let medication: Medication = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Medication(batch.medication_id))
+            .ok_or(Error::MedicationNotFound)?;
+
+        if medication.requires_cold_chain && !shipment.has_temperature_log {
+            return Err(Error::ColdChainNotVerified);
+        }
+
         shipment.delivered_at = env.ledger().timestamp();
         shipment.status = if verified && shipment.compliance_ok {
             ShipmentStatus::Delivered
@@ -712,5 +727,68 @@ mod test {
         let shipment = client.get_shipment(&shipment_id);
         assert_eq!(shipment.status, ShipmentStatus::Flagged);
         assert!(!client.run_compliance_check(&batch_id));
+    }
+
+    #[test]
+    fn test_cold_chain_batch_transfer_requires_temperature_log() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, PharmaSupplyChainContract);
+        let client = PharmaSupplyChainContractClient::new(&env, &contract_id);
+        env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let manufacturer_operator = Address::generate(&env);
+        let pharmacy = Address::generate(&env);
+
+        client.initialize(&admin);
+        let manufacturer_id = client.register_manufacturer(
+            &admin,
+            &manufacturer_operator,
+            &String::from_str(&env, "VitaStellar Pharma"),
+            &String::from_str(&env, "FDA-001"),
+        );
+        let medication_id = client.register_medication(
+            &manufacturer_operator,
+            &manufacturer_id,
+            &String::from_str(&env, "Insulin"),
+            &String::from_str(&env, "NDC-001"),
+            &true,
+            &2i32,
+            &8i32,
+            &String::from_str(&env, "FDA"),
+        );
+        let batch_id = client.create_batch(
+            &manufacturer_operator,
+            &medication_id,
+            &String::from_str(&env, "LOT-COLD-1"),
+            &100u32,
+            &BytesN::from_array(&env, &[7u8; 32]),
+            &9_999_999u64,
+        );
+        let shipment_id = client.create_shipment(
+            &manufacturer_operator,
+            &batch_id,
+            &pharmacy,
+            &String::from_str(&env, "SHIP-COLD-1"),
+        );
+
+        let result = client.try_complete_shipment(&pharmacy, &shipment_id, &true);
+        assert_eq!(result, Err(Ok(Error::ColdChainNotVerified)));
+
+        client.log_condition_data(
+            &manufacturer_operator,
+            &shipment_id,
+            &5i32,
+            &6000u32,
+            &4000000,
+            &-74000000,
+        );
+
+        let result = client.try_complete_shipment(&pharmacy, &shipment_id, &true);
+        assert!(result.is_ok() && result.unwrap().is_ok());
+
+        let batch = client.get_batch(&batch_id);
+        assert_eq!(batch.current_owner, pharmacy);
+        assert_eq!(batch.status, BatchStatus::Delivered);
     }
 }
