@@ -119,6 +119,16 @@ Applies to all contracts in `contracts/*` and all deployments built using the Vi
 4. Avoid storing large medical record payloads directly in contract state; use off-chain storage references instead.
 5. Split large workflows into smaller transactions to stay within operation and size limits.
 
+## 8. Homomorphic Registry Limits
+
+The `homomorphic_registry` contract enforces a configurable ciphertext size limit to prevent storage DoS attacks.
+
+- **Default maximum ciphertext size:** 65,536 bytes (64 KB)
+- **Configurable range:** 48 bytes (minimum) to 131,072 bytes (128 KB)
+- **Enforcement:** All ciphertext registration calls (`encrypt_ckks_vector`, `encrypt_bgv_vector`, `fhe_add`, `fhe_multiply`, `encrypted_linear_inference`) validate that the estimated ciphertext size (slot count × 16 bytes) does not exceed the configured limit
+- **Admin control:** The admin can update the limit at any time via `set_ciphertext_limit`
+- **Error:** `CiphertextTooLarge` is returned when a ciphertext exceeds the configured limit
+
 ## 8. Notes
 
 - These limits are based on current Stellar/Soroban runtime constraints and the repository's deployment practices.

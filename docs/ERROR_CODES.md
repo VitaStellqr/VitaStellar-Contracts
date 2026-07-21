@@ -390,6 +390,7 @@
 | 12 | NoiseBudgetExhausted | Generated from contract source |
 | 13 | ArithmeticOverflow | Generated from contract source |
 | 14 | KeyNotFound | Generated from contract source |
+| 15 | CiphertextTooLarge | Generated from contract source |
 
 ### identity_registry
 
