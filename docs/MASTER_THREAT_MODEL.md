@@ -21,7 +21,7 @@ emr_integration: 2141
 governor: 452
 homomorphic_registry: 1311
 identity_registry: 4017
-medical_record_backup: 1566
+medical_record_backup: 1879
 mpc_manager: 1133
 zk_verifier: 726
 ```
