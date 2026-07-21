@@ -6,7 +6,7 @@ mod test;
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env,
-    IntoVal, String, Symbol, Val, Vec,
+    IntoVal, String, Symbol, Vec,
 };
 
 const ROLE_OPERATOR: u32 = 1;
@@ -789,13 +789,20 @@ impl MedicalRecordBackupContract {
         )
             .into_val(&env);
 
-        let result: Result<Val, soroban_sdk::Error> = env.try_invoke_contract(
+        // try_invoke_contract returns Result<Result<T, E>, InvokeError>.
+        // T = () for write_record's Ok variant, E = soroban_sdk::Error.
+        // Outer: invocation setup success/failure.
+        // Inner: contract call success/failure.
+        let invoke_result = env.try_invoke_contract::<(), soroban_sdk::Error>(
             &target_contract,
             &Symbol::new(&env, "write_record"),
             args,
         );
 
-        let success = result.is_ok();
+        let success = match &invoke_result {
+            Ok(inner_result) => inner_result.is_ok(),
+            Err(_) => false,
+        };
         if !success {
             // Log the restore failure but don't fail the function — the caller
             // should check the result via get_restored_record.
@@ -843,13 +850,7 @@ impl MedicalRecordBackupContract {
         // Emit record_restored event
         env.events().publish(
             (BKP_RSTR,),
-            (
-                restore_id,
-                backup_id,
-                target_contract,
-                caller,
-                success,
-            ),
+            (restore_id, backup_id, target_contract, caller, success),
         );
 
         Ok(restore_id)
