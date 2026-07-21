@@ -999,7 +999,13 @@ mod tests {
     use super::*;
     use soroban_sdk::testutils::{Address as _, Ledger};
 
-    fn setup() -> (Env, HealthcareReputationSystemClient<'static>, Address, Address, Address) {
+    fn setup() -> (
+        Env,
+        HealthcareReputationSystemClient<'static>,
+        Address,
+        Address,
+        Address,
+    ) {
         let env = Env::default();
         env.mock_all_auths();
         env.ledger().set_timestamp(1_000_000);
@@ -1109,7 +1115,7 @@ mod tests {
 
     #[test]
     fn renew_credential_rejects_non_issuer() {
-        let (_env, client, _admin, provider, issuer) = setup();
+        let (env, client, _admin, provider, issuer) = setup();
 
         let cred_id = add_test_credential(&client, &provider, &issuer, 1_500_000);
 
