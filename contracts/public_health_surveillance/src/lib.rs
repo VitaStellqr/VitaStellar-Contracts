@@ -333,6 +333,8 @@ pub enum DataKey {
     InterventionCounter,
     CollaborationCounter,
     PrivacyBudget(Address),
+    // Consent tracking for GDPR/HIPAA compliance
+    PatientConsent(Address),
 }
 
 const ADMIN: Symbol = symbol_short!("ADMIN");
@@ -360,6 +362,7 @@ pub enum Error {
     CollaborationNotFound = 13,
     InvalidTimeRange = 14,
     InvalidRegion = 15,
+    ConsentNotGranted = 16,
 }
 
 // =============================================================================
@@ -383,6 +386,54 @@ impl PublicHealthSurveillance {
         env.events()
             .publish((symbol_short!("phs"), symbol_short!("init")), admin);
         Ok(())
+    }
+
+    // ========================================================================
+    // CONSENT MANAGEMENT (GDPR/HIPAA Compliance)
+    // ========================================================================
+
+    /// Grant consent for public health data aggregation.
+    /// Patients must explicitly consent before their data can be included in
+    /// public health aggregates (GDPR Article 9, HIPAA research exemptions).
+    pub fn grant_consent(env: Env, patient: Address) -> Result<(), Error> {
+        patient.require_auth();
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::PatientConsent(patient.clone()), &true);
+
+        env.events().publish(
+            (symbol_short!("phs"), symbol_short!("consent")),
+            (patient, true),
+        );
+
+        Ok(())
+    }
+
+    /// Revoke consent for public health data aggregation.
+    /// Patients can revoke consent at any time. Their data will be excluded
+    /// from future aggregates.
+    pub fn revoke_consent(env: Env, patient: Address) -> Result<(), Error> {
+        patient.require_auth();
+
+        env.storage()
+            .persistent()
+            .remove(&DataKey::PatientConsent(patient.clone()));
+
+        env.events().publish(
+            (symbol_short!("phs"), symbol_short!("consent")),
+            (patient, false),
+        );
+
+        Ok(())
+    }
+
+    /// Check if a patient has granted consent for public health data aggregation.
+    pub fn has_consent(env: Env, patient: Address) -> bool {
+        env.storage()
+            .persistent()
+            .get(&DataKey::PatientConsent(patient))
+            .unwrap_or(false)
     }
 
     /// Report outbreak data with privacy preservation
