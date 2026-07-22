@@ -507,11 +507,11 @@ mod test {
         let (client, _, payer, payee, token) = setup_contract(&env);
 
         // Cost of escrow #1 in a fresh contract.
-        env.cost_estimate().budget().reset_default();
+        env.budget().reset_default();
         client
             .mock_all_auths()
             .create_escrow(&1u64, &payer, &payee, &10i128, &token);
-        let cost_first = env.cost_estimate().budget().cpu_instruction_cost();
+        let cost_first = env.budget().cpu_instruction_cost();
 
         // Fill up to escrow #999 (unmeasured).
         for i in 2..1000u64 {
@@ -521,11 +521,11 @@ mod test {
         }
 
         // Cost of escrow #1000.
-        env.cost_estimate().budget().reset_default();
+        env.budget().reset_default();
         client
             .mock_all_auths()
             .create_escrow(&1000u64, &payer, &payee, &10i128, &token);
-        let cost_thousandth = env.cost_estimate().budget().cpu_instruction_cost();
+        let cost_thousandth = env.budget().cpu_instruction_cost();
 
         // With per-item keys, cost should stay roughly constant (O(1)),
         // not grow linearly with the number of stored escrows (O(n)).

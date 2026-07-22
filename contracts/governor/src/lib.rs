@@ -543,13 +543,13 @@ mod test {
         token_client.set_bal(&voter, &1_000_000);
 
         // Cost of proposal #1 in a fresh contract.
-        env.cost_estimate().budget().reset_default();
+        env.budget().reset_default();
         gov_client.propose(
             &voter,
             &Bytes::from_array(&env, &[1]),
             &Bytes::from_array(&env, &[0]),
         );
-        let cost_first = env.cost_estimate().budget().cpu_instruction_cost();
+        let cost_first = env.budget().cpu_instruction_cost();
 
         // Fill up to proposal #999 (unmeasured).
         for _ in 0..998 {
@@ -561,13 +561,13 @@ mod test {
         }
 
         // Cost of proposal #1000.
-        env.cost_estimate().budget().reset_default();
+        env.budget().reset_default();
         gov_client.propose(
             &voter,
             &Bytes::from_array(&env, &[1]),
             &Bytes::from_array(&env, &[0]),
         );
-        let cost_thousandth = env.cost_estimate().budget().cpu_instruction_cost();
+        let cost_thousandth = env.budget().cpu_instruction_cost();
 
         // With per-item keys, cost should stay roughly constant (O(1)),
         // not grow linearly with the number of stored proposals (O(n)).
