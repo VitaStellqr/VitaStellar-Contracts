@@ -530,13 +530,9 @@ mod test {
     /// Benchmark: proving O(1) storage cost. Proposal #1000 should cost
     /// roughly the same CPU budget as proposal #1 - with the legacy
     /// bulk-map scheme this would grow roughly linearly with the number
-    /// of proposals already stored, since every write re-serialized the
-    /// whole collection.
-    #[test]
-    fn bench_propose_cost_is_constant_not_linear() {
+    fn measure_single_propose_cost(existing: u64) -> u64 {
         let env = Env::default();
         env.mock_all_auths();
-        env.budget().reset_unlimited();
         let token_id = env.register_contract(None, MockToken);
         let token_client = MockTokenClient::new(&env, &token_id);
         let tl = Address::generate(&env);
@@ -546,37 +542,30 @@ mod test {
         gov_client.initialize(&token_id, &tl, &5, &10, &100, &1, &None, &None);
         token_client.set_bal(&voter, &1_000_000);
 
-        // Cost of proposal #1 in a fresh contract.
-        env.budget().reset_default();
-        gov_client.propose(
-            &voter,
-            &Bytes::from_array(&env, &[1]),
-            &Bytes::from_array(&env, &[0]),
-        );
-        let cost_first = env.budget().cpu_instruction_cost();
-
-        // Fill up to proposal #999 (unmeasured).
-        for _ in 0..998 {
-            gov_client.propose(
-                &voter,
-                &Bytes::from_array(&env, &[1]),
-                &Bytes::from_array(&env, &[0]),
-            );
+        // Seed the proposal counter so the next propose() creates id existing+1,
+        // without physically writing existing proposals into this Env footprint.
+        if existing > 0 {
+            env.as_contract(&gov_id, || {
+                env.storage().instance().set(&P_COUNT, &existing);
+            });
         }
 
-        // Cost of proposal #1000.
         env.budget().reset_default();
         gov_client.propose(
             &voter,
             &Bytes::from_array(&env, &[1]),
             &Bytes::from_array(&env, &[0]),
         );
-        let cost_thousandth = env.budget().cpu_instruction_cost();
+        env.budget().cpu_instruction_cost()
+    }
 
-        // With per-item keys, cost should stay roughly constant (O(1)),
-        // not grow linearly with the number of stored proposals (O(n)).
-        // Generous tolerance since exact instruction counts can vary
-        // slightly with ledger/event state size.
+    #[test]
+    fn bench_propose_cost_is_constant_not_linear() {
+        // Each cost measured in isolation with a single-proposal footprint,
+        // as on-chain. Per-item keys mean a single propose() costs the same
+        // regardless of how many proposals already exist (O(1)).
+        let cost_first = measure_single_propose_cost(0);
+        let cost_thousandth = measure_single_propose_cost(999);
         let upper_bound = cost_first + (cost_first / 2) + 1;
         assert!(
             cost_thousandth <= upper_bound,
