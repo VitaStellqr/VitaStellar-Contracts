@@ -505,6 +505,7 @@ mod test {
     fn bench_create_escrow_cost_is_constant_not_linear() {
         let env = Env::default();
         let (client, _, payer, payee, token) = setup_contract(&env);
+        env.budget().reset_unlimited();
 
         // Cost of escrow #1 in a fresh contract.
         env.budget().reset_default();

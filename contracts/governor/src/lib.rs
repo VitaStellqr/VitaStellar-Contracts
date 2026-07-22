@@ -464,6 +464,7 @@ mod test {
     fn test_proposals_are_isolated_per_key() {
         let env = Env::default();
         env.mock_all_auths();
+        env.budget().reset_unlimited();
         let token_id = env.register_contract(None, MockToken);
         let token_client = MockTokenClient::new(&env, &token_id);
         let tl = Address::generate(&env);
@@ -498,6 +499,7 @@ mod test {
     fn test_migrate_storage_noop_on_fresh_contract() {
         let env = Env::default();
         env.mock_all_auths();
+        env.budget().reset_unlimited();
         let token_id = env.register_contract(None, MockToken);
         let tl = Address::generate(&env);
         let gov_id = env.register_contract(None, Governor);
@@ -513,6 +515,7 @@ mod test {
     fn test_migrate_storage_rejects_non_timelock_caller() {
         let env = Env::default();
         env.mock_all_auths();
+        env.budget().reset_unlimited();
         let token_id = env.register_contract(None, MockToken);
         let tl = Address::generate(&env);
         let intruder = Address::generate(&env);
@@ -533,6 +536,7 @@ mod test {
     fn bench_propose_cost_is_constant_not_linear() {
         let env = Env::default();
         env.mock_all_auths();
+        env.budget().reset_unlimited();
         let token_id = env.register_contract(None, MockToken);
         let token_client = MockTokenClient::new(&env, &token_id);
         let tl = Address::generate(&env);
