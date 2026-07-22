@@ -20,7 +20,7 @@ mod types;
 
 pub use errors::Error;
 
-use soroban_sdk::{contract, contractimpl, Address, Env, String};
+use soroban_sdk::{contract, contractimpl, symbol_short, Address, Env, String, Symbol};
 use types::ContractData;
 
 // ---------------------------------------------------------------------------
@@ -28,6 +28,7 @@ use types::ContractData;
 // ---------------------------------------------------------------------------
 const KEY_ADMIN: &str = "Admin";
 const KEY_DATA: &str = "Data";
+const KEY_PAUSED: Symbol = symbol_short!("PAUSED");
 
 // ---------------------------------------------------------------------------
 // Contract
@@ -47,11 +48,8 @@ impl ContractTemplate {
     /// # Auth
     /// No auth required — the deployer becomes the admin.
     pub fn initialize(env: Env, admin: Address) -> Result<(), Error> {
-        if env.storage().instance().has(&KEY_ADMIN) {
-            return Err(Error::AlreadyInitialized);
-        }
-
-        env.storage().instance().set(&KEY_ADMIN, &admin);
+        access_utils::init_admin(&env, &KEY_ADMIN, &admin)
+            .map_err(|_| Error::AlreadyInitialized)?;
         events::emit_initialized(&env, &admin);
 
         Ok(())
@@ -89,6 +87,9 @@ impl ContractTemplate {
     /// # Auth
     /// Requires auth from the admin.
     pub fn update_data(env: Env, caller: Address, data: String) -> Result<(), Error> {
+        // 0. Reject calls when the contract is paused by the system controller.
+        Self::require_not_paused(&env)?;
+
         // 1. Authenticate the caller first.
         caller.require_auth();
 
@@ -137,5 +138,30 @@ impl ContractTemplate {
     /// Return the stored data, if any.
     pub fn get_data(env: Env) -> Option<ContractData> {
         env.storage().persistent().get(&KEY_DATA)
+    }
+
+    // -----------------------------------------------------------------------
+    // Pause support (Issue #204 — PauseController integration)
+    // -----------------------------------------------------------------------
+
+    /// Set the paused flag. Called by the system-wide PauseController via
+    /// `invoke_contract`.
+    ///
+    /// # Auth
+    /// The caller must be the admin (enforced by the PauseController).
+    pub fn set_paused(env: Env, _caller: Address, paused: bool) {
+        env.storage().instance().set(&KEY_PAUSED, &paused);
+    }
+
+    /// Returns `true` when the contract is paused.
+    pub fn is_paused(env: Env) -> bool {
+        storage::read_or_default(&env, &KEY_PAUSED)
+    }
+
+    fn require_not_paused(env: &Env) -> Result<(), Error> {
+        if Self::is_paused(env.clone()) {
+            return Err(Error::ContractPaused);
+        }
+        Ok(())
     }
 }

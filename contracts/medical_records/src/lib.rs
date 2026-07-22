@@ -1,11 +1,14 @@
 #![no_std]
 
+use access_utils;
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String,
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, String, Symbol,
 };
 
 mod crypto;
 mod validation;
+
+const ADMIN_KEY: Symbol = symbol_short!("admin");
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -25,6 +28,8 @@ pub enum RecordError {
     Unauthorized = 2,
     RecordNotFound = 3,
     EncryptionFailed = 4,
+    NotInitialized = 5,
+    AlreadyInitialized = 6,
 }
 
 #[contracttype]
@@ -38,6 +43,16 @@ pub struct MedicalRecords;
 
 #[contractimpl]
 impl MedicalRecords {
+    pub fn initialize(env: Env, admin: Address) -> Result<(), RecordError> {
+        access_utils::init_admin(&env, &ADMIN_KEY, &admin)
+            .map_err(|_| RecordError::AlreadyInitialized)?;
+        Ok(())
+    }
+
+    pub fn get_admin(env: Env) -> Option<Address> {
+        env.storage().instance().get(&ADMIN_KEY)
+    }
+
     pub fn write_record(
         env: Env,
         owner: Address,
@@ -74,8 +89,26 @@ impl MedicalRecords {
         Ok(())
     }
 
-    pub fn get_record(env: Env, record_id: u64) -> Option<Record> {
-        env.storage().persistent().get(&DataKey::Record(record_id))
+    pub fn get_record(env: Env, record_id: u64, caller: Address) -> Result<Record, RecordError> {
+        let record: Record = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Record(record_id))
+            .ok_or(RecordError::RecordNotFound)?;
+
+        // Owner can always read their own record
+        if record.owner == caller {
+            return Ok(record);
+        }
+
+        // Admin can read any record
+        if let Some(admin) = Self::get_admin(env.clone()) {
+            if admin == caller {
+                return Ok(record);
+            }
+        }
+
+        Err(RecordError::Unauthorized)
     }
 }
 
@@ -133,5 +166,112 @@ mod tests {
         });
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_record_owner_can_read() {
+        let env = Env::default();
+        let owner = Address::generate(&env);
+
+        let patient_id = String::from_str(&env, "p1");
+        let record_type = String::from_str(&env, "type1");
+        let content = String::from_str(&env, "content");
+        let timestamp = 1234567890u64;
+
+        let contract_id = env.register_contract(None, MedicalRecords);
+        let admin = Address::generate(&env);
+        env.mock_all_auths();
+        let _: Result<(), RecordError> = env.as_contract(&contract_id, || {
+            MedicalRecords::initialize(env.clone(), admin)
+        });
+
+        let _: Result<(), RecordError> = env.as_contract(&contract_id, || {
+            MedicalRecords::write_record(
+                env.clone(),
+                owner.clone(),
+                patient_id,
+                record_type,
+                content,
+                timestamp,
+            )
+        });
+
+        let result: Result<Record, RecordError> = env.as_contract(&contract_id, || {
+            MedicalRecords::get_record(env.clone(), 0, owner)
+        });
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_record_unauthorized_caller() {
+        let env = Env::default();
+        let owner = Address::generate(&env);
+        let unauthorized = Address::generate(&env);
+
+        let patient_id = String::from_str(&env, "p1");
+        let record_type = String::from_str(&env, "type1");
+        let content = String::from_str(&env, "content");
+        let timestamp = 1234567890u64;
+
+        let contract_id = env.register_contract(None, MedicalRecords);
+        let admin = Address::generate(&env);
+        env.mock_all_auths();
+        let _: Result<(), RecordError> = env.as_contract(&contract_id, || {
+            MedicalRecords::initialize(env.clone(), admin)
+        });
+
+        let _: Result<(), RecordError> = env.as_contract(&contract_id, || {
+            MedicalRecords::write_record(
+                env.clone(),
+                owner,
+                patient_id,
+                record_type,
+                content,
+                timestamp,
+            )
+        });
+
+        let result: Result<Record, RecordError> = env.as_contract(&contract_id, || {
+            MedicalRecords::get_record(env.clone(), 0, unauthorized)
+        });
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), RecordError::Unauthorized);
+    }
+
+    #[test]
+    fn test_get_record_admin_can_read() {
+        let env = Env::default();
+        let owner = Address::generate(&env);
+        let admin = Address::generate(&env);
+
+        let patient_id = String::from_str(&env, "p1");
+        let record_type = String::from_str(&env, "type1");
+        let content = String::from_str(&env, "content");
+        let timestamp = 1234567890u64;
+
+        let contract_id = env.register_contract(None, MedicalRecords);
+        env.mock_all_auths();
+        let _: Result<(), RecordError> = env.as_contract(&contract_id, || {
+            MedicalRecords::initialize(env.clone(), admin.clone())
+        });
+
+        let _: Result<(), RecordError> = env.as_contract(&contract_id, || {
+            MedicalRecords::write_record(
+                env.clone(),
+                owner,
+                patient_id,
+                record_type,
+                content,
+                timestamp,
+            )
+        });
+
+        let result: Result<Record, RecordError> = env.as_contract(&contract_id, || {
+            MedicalRecords::get_record(env.clone(), 0, admin)
+        });
+
+        assert!(result.is_ok());
     }
 }

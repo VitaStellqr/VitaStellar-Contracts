@@ -232,7 +232,8 @@ pub struct LoggingConfig {
 
 - **Patients**: Can only view their own access logs (require auth from patient)
 - **Accessors**: Can log their own access (require auth from accessor)
-- **Admin**: Can update configuration (require auth from admin)
+- **Admin**: Can update configuration and manage authorized loggers (require auth from admin)
+- **Authorized Loggers**: Only contracts listed in `authorized_loggers` (set at initialization) may call `log_event` to record access entries. Unauthorized contracts receive an `Unauthorized` error. The admin can add new authorized loggers via `add_authorized_logger`.
 
 ## Storage Optimization
 

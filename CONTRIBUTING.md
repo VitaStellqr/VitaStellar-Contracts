@@ -2,6 +2,10 @@
 
 Thank you for your interest in contributing to VitaStellar Contracts! This document provides guidelines and standards for contributing to the project.
 
+## Security
+
+**Found a vulnerability?** Do not open a public issue. Please read our [Security Policy](./.github/SECURITY.md) for the responsible disclosure process, severity classification matrix, response SLAs, and bug bounty program. Report vulnerabilities to **security@vitastellar.io** or via [GitHub Private Security Advisory](https://github.com/0xVida/VitaStellar-Contracts/security/advisories/new).
+
 ## Development Workflow
 
 1. **Fork the repository** and create a feature branch
@@ -85,6 +89,7 @@ Closes #43
 - [ ] No new Clippy warnings
 - [ ] Code is properly formatted
 - [ ] Contract review checklist items have been considered for correctness, safety, and testing
+- [ ] If the change touches authentication, access control, cryptography, or financial logic, confirm no new vulnerabilities are introduced (see [Security Policy](./.github/SECURITY.md))
 
 ## Contract Review Checklist
 Use the shared contract review checklist for all smart contract and contract-related pull requests: [docs/contract-review-checklist.md](./docs/contract-review-checklist.md)

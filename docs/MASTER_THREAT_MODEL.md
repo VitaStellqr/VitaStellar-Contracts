@@ -1,4 +1,4 @@
-# VitaStellar Contracts — Master Threat Model
+# VitaStellar Contracts Ã¢â‚¬â€ Master Threat Model
 
 ## Document Overview
 
@@ -12,18 +12,18 @@ This master threat model consolidates all security threat analyses for the VitaS
 
 ## LOC Manifest
 
-The fenced `loc-manifest` block below is the authoritative size-of-contract record cited by this threat model. It is validated by `scripts/loc_report.sh --check` (invoked by the `loc-check` CI job in `.github/workflows/ci.yml`) against `wc -l` on `contracts/<name>/src/**/*.rs` — tests and `target/` are excluded. Drift fails CI; to update intentionally, regenerate with `./scripts/loc_report.sh --emit-manifest` and paste the result into the block.
+The fenced `loc-manifest` block below is the authoritative size-of-contract record cited by this threat model. It is validated by `scripts/loc_report.sh --check` (invoked by the `loc-check` CI job in `.github/workflows/ci.yml`) against `wc -l` on `contracts/<name>/src/**/*.rs` Ã¢â‚¬â€ tests and `target/` are excluded. Drift fails CI; to update intentionally, regenerate with `./scripts/loc_report.sh --emit-manifest` and paste the result into the block.
 
 ```loc-manifest
-audit_forensics: 790
+audit_forensics: 921
 crypto_registry: 935
 emr_integration: 2141
 governor: 629
-homomorphic_registry: 1149
-identity_registry: 3809
-medical_record_backup: 1566
+homomorphic_registry: 1311
+identity_registry: 4017
+medical_record_backup: 1879
 mpc_manager: 1133
-zk_verifier: 490
+zk_verifier: 726
 ```
 
 ## Executive Summary
@@ -70,7 +70,7 @@ The VitaStellar deployment is a graph of focused contracts rather than one monol
 
 2. **IdentityRegistry** (`contracts/identity_registry/`)
    - Decentralized identity and role-based access control
-   - Healthcare-specific roles (provider, patient, admin, auditor, …)
+   - Healthcare-specific roles (provider, patient, admin, auditor, Ã¢â‚¬Â¦)
    - Permission assignment, attestation, and lookup
    - ~3,706 lines of Rust code
 
@@ -93,18 +93,18 @@ The VitaStellar deployment is a graph of focused contracts rather than one monol
    - ~1,566 lines of Rust code
 
 6. **Supporting Contracts (analyzed in this document)**
-   - HomomorphicRegistry (`contracts/homomorphic_registry/`) — HE computation coordination
-   - MPCManager (`contracts/mpc_manager/`) — secure multi-party computation
-   - ZKVerifier (`contracts/zk_verifier/`) — zero-knowledge proof verification
-   - AuditForensics (`contracts/audit_forensics/`) — security monitoring and forensics
+   - HomomorphicRegistry (`contracts/homomorphic_registry/`) Ã¢â‚¬â€ HE computation coordination
+   - MPCManager (`contracts/mpc_manager/`) Ã¢â‚¬â€ secure multi-party computation
+   - ZKVerifier (`contracts/zk_verifier/`) Ã¢â‚¬â€ zero-knowledge proof verification
+   - AuditForensics (`contracts/audit_forensics/`) Ã¢â‚¬â€ security monitoring and forensics
 
-The `check_permission()`, `manage_user()`, and `grant_permission()` function names cited in §1 below are illustrative attack-vector patterns — VitaStellar contracts use Soroban authorization primitives (`require_auth()`, role attributes, capability checks) rather than those specific function names. See `docs/AUTH_PATTERNS.md` for the real API surface.
+The `check_permission()`, `manage_user()`, and `grant_permission()` function names cited in Ã‚Â§1 below are illustrative attack-vector patterns Ã¢â‚¬â€ VitaStellar contracts use Soroban authorization primitives (`require_auth()`, role attributes, capability checks) rather than those specific function names. See `docs/AUTH_PATTERNS.md` for the real API surface.
 
 ### Data Flow
 
 ```
-User → Authentication → Access Control Check → Operation Validation →
-State Update → Event Emission → Cross-Chain Sync (if applicable)
+User Ã¢â€ â€™ Authentication Ã¢â€ â€™ Access Control Check Ã¢â€ â€™ Operation Validation Ã¢â€ â€™
+State Update Ã¢â€ â€™ Event Emission Ã¢â€ â€™ Cross-Chain Sync (if applicable)
 ```
 
 ### Trust Boundaries
@@ -513,16 +513,16 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 
 | Threat Category         | Likelihood | Impact   | Risk Level | Trend |
 | ----------------------- | ---------- | -------- | ---------- | ----- |
-| Access Control Breaches | MEDIUM     | CRITICAL | HIGH       | ↗     |
-| State Manipulation      | LOW        | CRITICAL | MEDIUM     | →     |
-| Resource Exhaustion     | HIGH       | MEDIUM   | MEDIUM     | ↗     |
-| Cryptographic Failure   | LOW        | CRITICAL | MEDIUM     | ↗     |
-| Cross-Contract Attacks  | MEDIUM     | HIGH     | MEDIUM     | →     |
-| Governance Attacks      | LOW        | HIGH     | LOW        | →     |
-| Quantum Threats         | LOW (now)  | CRITICAL | MEDIUM     | ↗↑    |
-| Insider Threats         | MEDIUM     | HIGH     | MEDIUM     | →     |
+| Access Control Breaches | MEDIUM     | CRITICAL | HIGH       | Ã¢â€ â€”     |
+| State Manipulation      | LOW        | CRITICAL | MEDIUM     | Ã¢â€ â€™     |
+| Resource Exhaustion     | HIGH       | MEDIUM   | MEDIUM     | Ã¢â€ â€”     |
+| Cryptographic Failure   | LOW        | CRITICAL | MEDIUM     | Ã¢â€ â€”     |
+| Cross-Contract Attacks  | MEDIUM     | HIGH     | MEDIUM     | Ã¢â€ â€™     |
+| Governance Attacks      | LOW        | HIGH     | LOW        | Ã¢â€ â€™     |
+| Quantum Threats         | LOW (now)  | CRITICAL | MEDIUM     | Ã¢â€ â€”Ã¢â€ â€˜    |
+| Insider Threats         | MEDIUM     | HIGH     | MEDIUM     | Ã¢â€ â€™     |
 
-**Legend**: ↑ Increasing, → Stable, ↗ Increasing concern  
+**Legend**: Ã¢â€ â€˜ Increasing, Ã¢â€ â€™ Stable, Ã¢â€ â€” Increasing concern  
 **Time Horizon**: Next 12-24 months
 
 ## Compliance and Regulatory Considerations
@@ -555,17 +555,17 @@ State Update → Event Emission → Cross-Chain Sync (if applicable)
 - **SOC 2**: Requires operational evidence and controls
 - **Action Items**: Framework gap analysis, control implementation, audits
 
-## ZKP Simulator Gap — Resolution Log
+## ZKP Simulator Gap Ã¢â‚¬â€ Resolution Log
 
 | Item | Function | Threat | Status |
 |---|---|---|---|
-| TD-001 | `verify_zkp_internal` | Forged proofs accepted unconditionally | **Resolved** — SHA256 commitment check in `verifier.rs` (PR closes #69) |
+| TD-001 | `verify_zkp_internal` | Forged proofs accepted unconditionally | **Resolved** Ã¢â‚¬â€ SHA256 commitment check in `verifier.rs` (PR closes #69) |
 | TD-003 | `verify_range_proof_internal` | Range proofs accepted on length alone | Open |
 | TD-004 | `verify_recursive_proof_internal` | Recursive proofs accepted on depth alone | Open |
 
 The `verify_zkp_internal` simulator gap has been closed: proof_data must now carry the canonical commitment
-`SHA256("zkp:v1:prf:" || vk_hash || SHA256(concat(public_inputs)))`. Any tampered input—wrong vk_hash,
-wrong public inputs, random bytes—causes `Err(Error::InvalidProof)`. The fix is covered by 26 unit tests
+`SHA256("zkp:v1:prf:" || vk_hash || SHA256(concat(public_inputs)))`. Any tampered inputÃ¢â‚¬â€wrong vk_hash,
+wrong public inputs, random bytesÃ¢â‚¬â€causes `Err(Error::InvalidProof)`. The fix is covered by 26 unit tests
 including a property test that verifies every single-byte flip in the commitment is rejected.
 
 ## Operational Recommendations
@@ -600,18 +600,18 @@ including a property test that verifies every single-byte flip in the commitment
 
 | Metric                       | Target    | Current | Status |
 | ---------------------------- | --------- | ------- | ------ |
-| Unauthorized Access Attempts | 0         | TBD     | 🔴     |
-| Mean Time to Detect (MTTD)   | < 1 hour  | TBD     | 🔴     |
-| Mean Time to Respond (MTTR)  | < 4 hours | TBD     | 🔴     |
-| Security Audit Score         | > 90%     | TBD     | 🔴     |
-| Encryption Coverage          | 100%      | ~95%    | 🟡     |
-| Rate Limit Effectiveness     | > 99%     | TBD     | 🔴     |
-| Governance Participation     | > 80%     | TBD     | 🔴     |
-| Key Rotation Compliance      | 100%      | TBD     | 🔴     |
-| Incident Response Drills     | Quarterly | 0       | 🔴     |
-| Vulnerability Remediation    | < 30 days | TBD     | 🔴     |
+| Unauthorized Access Attempts | 0         | TBD     | Ã°Å¸â€Â´     |
+| Mean Time to Detect (MTTD)   | < 1 hour  | TBD     | Ã°Å¸â€Â´     |
+| Mean Time to Respond (MTTR)  | < 4 hours | TBD     | Ã°Å¸â€Â´     |
+| Security Audit Score         | > 90%     | TBD     | Ã°Å¸â€Â´     |
+| Encryption Coverage          | 100%      | ~95%    | Ã°Å¸Å¸Â¡     |
+| Rate Limit Effectiveness     | > 99%     | TBD     | Ã°Å¸â€Â´     |
+| Governance Participation     | > 80%     | TBD     | Ã°Å¸â€Â´     |
+| Key Rotation Compliance      | 100%      | TBD     | Ã°Å¸â€Â´     |
+| Incident Response Drills     | Quarterly | 0       | Ã°Å¸â€Â´     |
+| Vulnerability Remediation    | < 30 days | TBD     | Ã°Å¸â€Â´     |
 
-**Status Legend**: 🟢 On Track, 🟡 At Risk, 🔴 Off Track
+**Status Legend**: Ã°Å¸Å¸Â¢ On Track, Ã°Å¸Å¸Â¡ At Risk, Ã°Å¸â€Â´ Off Track
 
 ### Security Dashboard Recommendations
 

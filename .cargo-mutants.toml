@@ -1,0 +1,17 @@
+# cargo-mutants configuration
+# https://mutants.rs/extra-config.html
+
+# Timeout per mutant in seconds
+timeout = 120
+
+# Exclude auto-generated or test-only code
+exclude_re = [
+    "tests/",
+    "contract_optimizer/",
+    "src/test",
+    "#[cfg(test)]",
+]
+
+# Target only the 5 key contracts
+# Use `cargo mutants -p <package>` to target individual contracts
+# The Makefile `mutation-test` target runs all 5 sequentially

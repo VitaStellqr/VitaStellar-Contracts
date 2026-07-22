@@ -1,14 +1,15 @@
 #[cfg(test)]
 mod test {
     use crate::{
-        AccessCondition, AccessControl, DataType, GranularPermissions, PatientConsentToken,
-        PatientConsentTokenClient, PermissionLevel,
+        AccessCondition, AccessControl, ContractError, DataType, GranularPermissions,
+        PatientConsentToken, PatientConsentTokenClient, PermissionLevel,
     };
     use soroban_sdk::{testutils::Address as _, Address, Env, Map, String, Vec};
 
     #[test]
     fn test_initialize_and_add_issuer() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -24,6 +25,7 @@ mod test {
     #[test]
     fn test_mint_consent() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -47,6 +49,7 @@ mod test {
     #[test]
     fn test_revoke_consent() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -71,6 +74,7 @@ mod test {
     #[should_panic]
     fn test_transfer_revoked_fails() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -93,6 +97,7 @@ mod test {
     #[test]
     fn test_update_metadata() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -121,6 +126,7 @@ mod test {
     #[test]
     fn test_granular_permissions() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -146,7 +152,7 @@ mod test {
 
         client.set_granular_permissions(&patient, &token_id, &permissions);
 
-        let retrieved_permissions = client.get_granular_permissions(&token_id).unwrap();
+        let retrieved_permissions = client.get_granular_permissions(&token_id);
         assert_eq!(
             retrieved_permissions
                 .permissions
@@ -159,6 +165,7 @@ mod test {
     #[test]
     fn test_access_controls() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -191,13 +198,14 @@ mod test {
         client.set_access_controls(&token_id, &access_control);
 
         let requester = Address::generate(&env);
-        let allowed = client.check_access_allowed(&token_id, &requester).unwrap();
+        let allowed = client.check_access_allowed(&token_id, &requester);
         assert!(allowed);
     }
 
     #[test]
     fn test_delegation() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -231,6 +239,7 @@ mod test {
     #[test]
     fn test_emergency_override() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -248,9 +257,7 @@ mod test {
         let token_id = client.mint_consent(&issuer, &patient, &metadata_uri, &consent_type, &0);
 
         let reason = String::from_str(&env, "Life-threatening emergency");
-        let override_id = client
-            .emergency_override(&emergency_auth, &token_id, &reason, &0)
-            .unwrap();
+        let override_id = client.emergency_override(&emergency_auth, &token_id, &reason, &0);
 
         assert!(override_id >= 0);
     }
@@ -258,6 +265,7 @@ mod test {
     #[test]
     fn test_dynamic_consent_update() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -287,6 +295,7 @@ mod test {
     #[test]
     fn test_analytics() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -309,6 +318,7 @@ mod test {
     #[test]
     fn test_consent_report() {
         let env = Env::default();
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, PatientConsentToken);
         let client = PatientConsentTokenClient::new(&env, &contract_id);
 
@@ -326,5 +336,67 @@ mod test {
         let report = client.generate_consent_report(&patient);
         assert_eq!(report.len(), 1);
         assert_eq!(report.get(0).unwrap(), token_id);
+    }
+
+    #[test]
+    fn test_transfer_always_fails_soulbound() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, PatientConsentToken);
+        let client = PatientConsentTokenClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let issuer = Address::generate(&env);
+        let patient = Address::generate(&env);
+        let recipient = Address::generate(&env);
+
+        client.initialize(&admin);
+        client.add_issuer(&issuer);
+
+        let metadata_uri = String::from_str(&env, "ipfs://QmXxx...");
+        let consent_type = String::from_str(&env, "treatment");
+
+        let token_id = client.mint_consent(&issuer, &patient, &metadata_uri, &consent_type, &0);
+
+        // Transfer should always fail, even for non-revoked tokens (soul-bound)
+        let result = client.try_transfer(&patient, &recipient, &token_id);
+        assert_eq!(result, Err(Ok(ContractError::TransferNotAllowed)));
+
+        // Owner should remain unchanged
+        assert_eq!(client.owner_of(&token_id), patient);
+    }
+
+    #[test]
+    fn test_revocation_denies_cross_chain_access() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, PatientConsentToken);
+        let client = PatientConsentTokenClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let issuer = Address::generate(&env);
+        let patient = Address::generate(&env);
+
+        client.initialize(&admin);
+        client.add_issuer(&issuer);
+
+        let metadata_uri = String::from_str(&env, "ipfs://QmXxx...");
+        let consent_type = String::from_str(&env, "treatment");
+
+        let token_id = client.mint_consent(&issuer, &patient, &metadata_uri, &consent_type, &0);
+
+        // Before revocation: cross_chain_access should succeed
+        let has_access = client.cross_chain_access(&patient, &patient, &consent_type);
+        assert!(has_access);
+
+        // Patient revokes consent
+        client.revoke_consent(&token_id);
+
+        // After revocation: cross_chain_access should deny
+        let has_access = client.cross_chain_access(&patient, &patient, &consent_type);
+        assert!(!has_access);
+
+        // Token should be revoked
+        assert!(client.is_revoked(&token_id));
     }
 }

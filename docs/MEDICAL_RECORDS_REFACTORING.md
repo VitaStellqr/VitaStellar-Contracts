@@ -137,12 +137,12 @@ pub fn persist_and_emit(
 
 | Error | Code | Meaning |
 |-------|------|---------|
-| `NotInitialized` | 1 | Contract not initialized |
-| `AlreadyInitialized` | 2 | Contract already initialized |
-| `Unauthorized` | 3 | Caller is not authorized |
-| `ValidationFailed` | 4 | Input validation failed |
-| `CryptoFailed` | 5 | Encryption or persistence failed |
-| `RecordNotFound` | 6 | Record ID not found in storage |
+| `InvalidInput` | 1 | Input validation failed |
+| `Unauthorized` | 2 | Caller is not authorized |
+| `RecordNotFound` | 3 | Record ID not found in storage |
+| `EncryptionFailed` | 4 | Encryption or persistence failed |
+| `NotInitialized` | 5 | Contract not initialized |
+| `AlreadyInitialized` | 6 | Contract already initialized |
 
 ### ValidationError (validation.rs)
 
@@ -268,6 +268,79 @@ fn test_full_write_record_flow() {
 | `src/crypto.rs` | ~170 | Encryption and persistence, crypto tests |
 | `Cargo.toml` | ~18 | Package manifest |
 | **Total** | ~598 | Complete refactored implementation |
+
+## Init Admin Migration
+
+### Problem
+
+Every contract in the workspace duplicated the initialization guard pattern:
+
+```rust
+if env.storage().instance().has(&KEY) {
+    return Err(Error::AlreadyInitialized);
+}
+env.storage().instance().set(&KEY, &admin);
+```
+
+57 instances of this pattern meant any bug fix had to be applied 57 times.
+
+### Solution
+
+Two generic helpers in `libs/access_utils`:
+
+```rust
+// Check if a storage key exists (initialization guard)
+pub fn is_initialized<K>(env: &Env, key: &K) -> bool
+
+// Initialize with admin address, returns Err(()) if already initialized
+pub fn init_admin<K>(env: &Env, key: &K, admin: &Address) -> Result<(), ()>
+```
+
+### Migration Guide
+
+For any contract that follows the standard init pattern:
+
+1. **Add `access_utils` dependency** to `Cargo.toml`:
+   ```toml
+   access_utils = { workspace = true }
+   ```
+
+2. **Replace the init guard + assignment** with:
+   ```rust
+   access_utils::init_admin(&env, &KEY, &admin).map_err(|_| Error::AlreadyInitialized)?;
+   ```
+
+   If the contract uses a different error variant (e.g., escrow uses `Unauthorized`):
+   ```rust
+   access_utils::init_admin(&env, &ADMIN, &admin).map_err(|_| Error::Unauthorized)?;
+   ```
+
+3. **For contracts storing a config struct** (e.g., governor, timelock), use
+   `is_initialized` as a standalone guard:
+   ```rust
+   if access_utils::is_initialized(&env, &CFG) {
+       return Err(Error::AlreadyInitialized);
+   }
+   // ... continue with config struct setup
+   ```
+
+### Migrated Contracts (Proof-of-Concept)
+
+| Contract | Pattern Used | Error on Re-init |
+|----------|-------------|-----------------|
+| `contract_template` | `init_admin` | `AlreadyInitialized` |
+| `medical_records` | `init_admin` | `AlreadyInitialized` |
+| `escrow` | `init_admin` | `Unauthorized` |
+| `governor` | `is_initialized` guard + manual config | `AlreadyInitialized` |
+| `timelock` | `is_initialized` guard + manual config | `AlreadyInitialized` |
+
+### Design Decisions
+
+- **Generic key type** (`K: IntoVal<Env, Val>`) allows any storage key (Symbol, &str, enum, etc.)
+- **`init_admin` returns `Result<(), ()>`** so each contract maps to its own error type
+- **`is_initialized` returns `bool`** for contracts that need a standalone guard before setting non-admin data
+- **Instance storage** is used exclusively (cheaper than persistent for frequently-read admin data)
+- **No breaking changes** to existing public API or test behavior
 
 ## Future Enhancements
 

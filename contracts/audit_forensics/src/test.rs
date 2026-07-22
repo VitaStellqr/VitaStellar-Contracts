@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)] // Allowed in test/benchmark harness where unwrap is acceptable
-    use crate::{AuditAction, AuditForensicsContract, AuditForensicsContractClient};
+    use crate::{AuditAction, AuditError, AuditForensicsContract, AuditForensicsContractClient};
     use soroban_sdk::testutils::Address as _;
     use soroban_sdk::{vec, Address, BytesN, Env, Map, String};
 
@@ -12,7 +12,8 @@ mod tests {
         let client = AuditForensicsContractClient::new(&env, &contract_id);
 
         let admin = Address::generate(&env);
-        client.initialize(&admin);
+        let authorized_logger = Address::generate(&env);
+        client.initialize(&admin, &vec![&env, authorized_logger.clone()]);
 
         let doctor = Address::generate(&env);
         let record_id = 101u64;
@@ -23,23 +24,22 @@ mod tests {
             String::from_str(&env, "192.168.1.1"),
         );
 
-        // Log an event
         client.mock_all_auths().log_event(
             &doctor,
+            &authorized_logger,
             &AuditAction::RecordCreated,
             &Some(record_id),
             &details_hash,
             &metadata,
         );
 
-        // Analyze timeline
         let timeline = client.analyze_timeline(&record_id);
         assert_eq!(timeline.len(), 1);
         let entry = timeline.get(0).unwrap();
         assert_eq!(entry.actor, doctor);
         assert_eq!(entry.action, AuditAction::RecordCreated);
+        assert_eq!(entry.caller_contract, authorized_logger);
 
-        // Investigate user
         let user_history = client.investigate_user(&doctor);
         assert_eq!(user_history.len(), 1);
     }
@@ -51,13 +51,15 @@ mod tests {
         let client = AuditForensicsContractClient::new(&env, &contract_id);
 
         let admin = Address::generate(&env);
-        client.initialize(&admin);
+        let authorized_logger = Address::generate(&env);
+        client.initialize(&admin, &vec![&env, authorized_logger.clone()]);
 
         let doctor = Address::generate(&env);
         env.mock_all_auths();
 
         client.log_event(
             &doctor,
+            &authorized_logger,
             &AuditAction::RecordAccess,
             &Some(1),
             &BytesN::from_array(&env, &[0u8; 32]),
@@ -65,6 +67,7 @@ mod tests {
         );
         client.log_event(
             &doctor,
+            &authorized_logger,
             &AuditAction::RecordAccess,
             &Some(2),
             &BytesN::from_array(&env, &[0u8; 32]),
@@ -72,6 +75,7 @@ mod tests {
         );
         client.log_event(
             &doctor,
+            &authorized_logger,
             &AuditAction::RecordUpdate,
             &Some(1),
             &BytesN::from_array(&env, &[0u8; 32]),
@@ -90,8 +94,9 @@ mod tests {
         let client = AuditForensicsContractClient::new(&env, &contract_id);
 
         let admin = Address::generate(&env);
+        let authorized_logger = Address::generate(&env);
         env.mock_all_auths();
-        client.initialize(&admin);
+        client.initialize(&admin, &vec![&env, authorized_logger]);
 
         let reentrancy_rule = client.configure_audit_rule(
             &admin,
@@ -143,5 +148,91 @@ mod tests {
         ));
         let formal = client.get_formal_verification(&execution_id).unwrap();
         assert!(formal.proved);
+    }
+
+    #[test]
+    fn test_authorized_logger_can_write() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, AuditForensicsContract);
+        let client = AuditForensicsContractClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let authorized_logger = Address::generate(&env);
+        client.initialize(&admin, &vec![&env, authorized_logger.clone()]);
+
+        let user = Address::generate(&env);
+        env.mock_all_auths();
+
+        let result = client.try_log_event(
+            &user,
+            &authorized_logger,
+            &AuditAction::RecordAccess,
+            &Some(1),
+            &BytesN::from_array(&env, &[0u8; 32]),
+            &Map::new(&env),
+        );
+        assert_eq!(result, Ok(Ok(0)));
+    }
+
+    #[test]
+    fn test_unauthorized_logger_rejected() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, AuditForensicsContract);
+        let client = AuditForensicsContractClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let authorized_logger = Address::generate(&env);
+        client.initialize(&admin, &vec![&env, authorized_logger]);
+
+        let user = Address::generate(&env);
+        let unauthorized_logger = Address::generate(&env);
+        env.mock_all_auths();
+
+        let result = client.try_log_event(
+            &user,
+            &unauthorized_logger,
+            &AuditAction::RecordAccess,
+            &Some(1),
+            &BytesN::from_array(&env, &[0u8; 32]),
+            &Map::new(&env),
+        );
+        assert_eq!(result, Err(Ok(AuditError::Unauthorized)));
+    }
+
+    #[test]
+    fn test_add_authorized_logger() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, AuditForensicsContract);
+        let client = AuditForensicsContractClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let initial_logger = Address::generate(&env);
+        client.initialize(&admin, &vec![&env, initial_logger]);
+
+        let new_logger = Address::generate(&env);
+        env.mock_all_auths();
+
+        let user = Address::generate(&env);
+        let result = client.try_log_event(
+            &user,
+            &new_logger,
+            &AuditAction::RecordAccess,
+            &Some(1),
+            &BytesN::from_array(&env, &[0u8; 32]),
+            &Map::new(&env),
+        );
+        assert_eq!(result, Err(Ok(AuditError::Unauthorized)));
+
+        client.add_authorized_logger(&admin, &new_logger);
+
+        let result = client.try_log_event(
+            &user,
+            &new_logger,
+            &AuditAction::RecordAccess,
+            &Some(1),
+            &BytesN::from_array(&env, &[0u8; 32]),
+            &Map::new(&env),
+        );
+        assert_eq!(result, Ok(Ok(0)));
     }
 }

@@ -47,6 +47,8 @@ pub enum DataKey {
     VerifyingKey(u32),
     Attestation(BytesN<32>),
     Nullifier(BytesN<32>),
+    MinimumAttestors,
+    ProofAttestationCount(BytesN<32>),
 }
 
 const MAX_DEFAULT_TTL: u64 = 86_400;
@@ -187,7 +189,29 @@ impl ZkVerifierContract {
             .unwrap_or(0)
     }
 
-    #[allow(clippy::too_many_arguments)] // Contract/API entrypoint requires explicit parameters for Soroban ABI
+    pub fn set_minimum_attestors(env: Env, caller: Address, min: u32) -> Result<bool, Error> {
+        caller.require_auth();
+        Self::require_initialized(&env)?;
+        Self::require_admin(&env, &caller)?;
+        if min == 0 {
+            return Err(Error::InvalidInput);
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::MinimumAttestors, &min);
+        env.events()
+            .publish((symbol_short!("ZKVER"), symbol_short!("MINATT")), min);
+        Ok(true)
+    }
+
+    pub fn get_minimum_attestors(env: Env) -> u32 {
+        env.storage()
+            .instance()
+            .get(&DataKey::MinimumAttestors)
+            .unwrap_or(1)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn submit_attestation(
         env: Env,
         attestor: Address,
@@ -216,17 +240,41 @@ impl ZkVerifierContract {
             }
         };
 
+        let attestation_key = Self::compute_attestation_key(
+            &env,
+            vk_version,
+            &public_inputs_hash,
+            &proof_hash,
+            &attestor,
+        );
+
+        // Track per-proof attestation count (unique attestors)
+        let proof_key = Self::compute_proof_key(&env, &public_inputs_hash, &proof_hash);
+        let is_new_attestor = !env
+            .storage()
+            .persistent()
+            .has(&DataKey::Attestation(attestation_key.clone()));
+        if is_new_attestor {
+            let count: u32 = env
+                .storage()
+                .persistent()
+                .get(&DataKey::ProofAttestationCount(proof_key.clone()))
+                .unwrap_or(0);
+            env.storage().persistent().set(
+                &DataKey::ProofAttestationCount(proof_key),
+                &(count.saturating_add(1)),
+            );
+        }
+
         let attestation = ProofAttestation {
             vk_version,
-            public_inputs_hash: public_inputs_hash.clone(),
-            proof_hash: proof_hash.clone(),
+            public_inputs_hash,
+            proof_hash,
             verified,
             attestor,
             created_at: env.ledger().timestamp(),
             expires_at: env.ledger().timestamp().saturating_add(effective_ttl),
         };
-        let attestation_key =
-            Self::compute_attestation_key(&env, vk_version, &public_inputs_hash, &proof_hash);
         env.storage()
             .persistent()
             .set(&DataKey::Attestation(attestation_key), &attestation);
@@ -261,24 +309,32 @@ impl ZkVerifierContract {
         }
 
         let proof_hash: BytesN<32> = env.crypto().sha256(&proof).into();
-        let attestation_key =
-            Self::compute_attestation_key(&env, vk_version, &public_inputs_hash, &proof_hash);
-        let attestation: ProofAttestation = match env
+        let min_attestors: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::MinimumAttestors)
+            .unwrap_or(1);
+
+        let proof_key = Self::compute_proof_key(&env, &public_inputs_hash, &proof_hash);
+        let attestation_count: u32 = env
             .storage()
             .persistent()
-            .get(&DataKey::Attestation(attestation_key))
-        {
-            Some(v) => v,
-            None => return false,
-        };
+            .get(&DataKey::ProofAttestationCount(proof_key))
+            .unwrap_or(0);
 
-        if !attestation.verified {
-            return false;
-        }
-        if attestation.expires_at <= env.ledger().timestamp() {
-            return false;
-        }
-        true
+        attestation_count >= min_attestors
+    }
+
+    pub fn get_attestation_count(
+        env: Env,
+        public_inputs_hash: BytesN<32>,
+        proof_hash: BytesN<32>,
+    ) -> u32 {
+        let proof_key = Self::compute_proof_key(&env, &public_inputs_hash, &proof_hash);
+        env.storage()
+            .persistent()
+            .get(&DataKey::ProofAttestationCount(proof_key))
+            .unwrap_or(0)
     }
 
     pub fn get_attestation(
@@ -286,8 +342,15 @@ impl ZkVerifierContract {
         vk_version: u32,
         public_inputs_hash: BytesN<32>,
         proof_hash: BytesN<32>,
+        attestor: Address,
     ) -> Option<ProofAttestation> {
-        let key = Self::compute_attestation_key(&env, vk_version, &public_inputs_hash, &proof_hash);
+        let key = Self::compute_attestation_key(
+            &env,
+            vk_version,
+            &public_inputs_hash,
+            &proof_hash,
+            &attestor,
+        );
         env.storage().persistent().get(&DataKey::Attestation(key))
     }
 
@@ -353,9 +416,25 @@ impl ZkVerifierContract {
         vk_version: u32,
         public_inputs_hash: &BytesN<32>,
         proof_hash: &BytesN<32>,
+        attestor: &Address,
     ) -> BytesN<32> {
         let mut payload = Bytes::new(env);
         payload.append(&Bytes::from_slice(env, &vk_version.to_be_bytes()));
+        Self::append_bytes32(env, &mut payload, public_inputs_hash);
+        Self::append_bytes32(env, &mut payload, proof_hash);
+        let addr_str = attestor.to_string();
+        let mut addr_buf = [0u8; 56];
+        addr_str.copy_into_slice(&mut addr_buf);
+        payload.append(&Bytes::from_slice(env, &addr_buf));
+        env.crypto().sha256(&payload).into()
+    }
+
+    fn compute_proof_key(
+        env: &Env,
+        public_inputs_hash: &BytesN<32>,
+        proof_hash: &BytesN<32>,
+    ) -> BytesN<32> {
+        let mut payload = Bytes::new(env);
         Self::append_bytes32(env, &mut payload, public_inputs_hash);
         Self::append_bytes32(env, &mut payload, proof_hash);
         env.crypto().sha256(&payload).into()
@@ -418,6 +497,7 @@ mod tests {
         assert_eq!(Error::VersionNotFound as u32, 430);
         assert_eq!(Error::InvalidProof as u32, 600);
         assert_eq!(Error::VerificationFailed as u32, 601);
+        assert_eq!(Error::InsufficientAttestors as u32, 700);
     }
 
     #[test]
@@ -444,5 +524,159 @@ mod tests {
             get_suggestion(Error::VerificationFailed),
             symbol_short!("CONTACT")
         );
+        assert_eq!(
+            get_suggestion(Error::InsufficientAttestors),
+            symbol_short!("NEED_MORE")
+        );
+    }
+
+    // ── Multi-attestor tests ───────────────────────────────────────────────
+
+    #[test]
+    fn test_default_minimum_attestors_is_one() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let admin = Address::generate(&env);
+        let contract_id = env.register_contract(None, ZkVerifierContract);
+        let client = ZkVerifierContractClient::new(&env, &contract_id);
+        client.initialize(&admin, &600);
+        assert_eq!(client.get_minimum_attestors(), 1);
+    }
+
+    #[test]
+    fn test_set_minimum_attestors() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let admin = Address::generate(&env);
+        let contract_id = env.register_contract(None, ZkVerifierContract);
+        let client = ZkVerifierContractClient::new(&env, &contract_id);
+        client.initialize(&admin, &600);
+        client.set_minimum_attestors(&admin, &3);
+        assert_eq!(client.get_minimum_attestors(), 3);
+    }
+
+    #[test]
+    fn test_set_minimum_attestors_zero_rejected() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let admin = Address::generate(&env);
+        let contract_id = env.register_contract(None, ZkVerifierContract);
+        let client = ZkVerifierContractClient::new(&env, &contract_id);
+        client.initialize(&admin, &600);
+        assert_eq!(
+            client.try_set_minimum_attestors(&admin, &0u32),
+            Err(Ok(Error::InvalidInput))
+        );
+    }
+
+    #[test]
+    fn test_non_admin_cannot_set_minimum_attestors() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let admin = Address::generate(&env);
+        let other = Address::generate(&env);
+        let contract_id = env.register_contract(None, ZkVerifierContract);
+        let client = ZkVerifierContractClient::new(&env, &contract_id);
+        client.initialize(&admin, &600);
+        assert_eq!(
+            client.try_set_minimum_attestors(&other, &2u32),
+            Err(Ok(Error::Unauthorized))
+        );
+    }
+
+    #[test]
+    fn test_multi_attestor_requires_threshold() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().with_mut(|li| {
+            li.timestamp = 1_000;
+            li.sequence_number = 11;
+        });
+
+        let admin = Address::generate(&env);
+        let attestor_a = Address::generate(&env);
+        let attestor_b = Address::generate(&env);
+        let contract_id = env.register_contract(None, ZkVerifierContract);
+        let client = ZkVerifierContractClient::new(&env, &contract_id);
+        client.initialize(&admin, &600);
+
+        // Set threshold to 2
+        client.set_minimum_attestors(&admin, &2);
+
+        // Register two verifying keys (one per attestor)
+        let vk_hash = BytesN::from_array(&env, &[1u8; 32]);
+        let circuit_id = BytesN::from_array(&env, &[2u8; 32]);
+        let metadata_hash = BytesN::from_array(&env, &[3u8; 32]);
+        client.register_verifying_key(&admin, &vk_hash, &circuit_id, &attestor_a, &metadata_hash);
+        client.register_verifying_key(&admin, &vk_hash, &circuit_id, &attestor_b, &metadata_hash);
+
+        let public_inputs_hash = BytesN::from_array(&env, &[4u8; 32]);
+        let proof = Bytes::from_slice(&env, b"proof-multi");
+        let proof_hash: BytesN<32> = env.crypto().sha256(&proof).into();
+
+        // Only 1 attestation — should fail
+        client.submit_attestation(
+            &attestor_a,
+            &1,
+            &public_inputs_hash,
+            &proof_hash,
+            &true,
+            &300,
+        );
+        assert!(!client.verify_proof(&1, &public_inputs_hash, &proof));
+        assert_eq!(
+            client.get_attestation_count(&public_inputs_hash, &proof_hash),
+            1
+        );
+
+        // Second attestation — should pass
+        client.submit_attestation(
+            &attestor_b,
+            &2,
+            &public_inputs_hash,
+            &proof_hash,
+            &true,
+            &300,
+        );
+        assert!(client.verify_proof(&1, &public_inputs_hash, &proof));
+        assert_eq!(
+            client.get_attestation_count(&public_inputs_hash, &proof_hash),
+            2
+        );
+    }
+
+    #[test]
+    fn test_duplicate_attestor_does_not_double_count() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().with_mut(|li| {
+            li.timestamp = 1_000;
+            li.sequence_number = 11;
+        });
+
+        let admin = Address::generate(&env);
+        let attestor = Address::generate(&env);
+        let contract_id = env.register_contract(None, ZkVerifierContract);
+        let client = ZkVerifierContractClient::new(&env, &contract_id);
+        client.initialize(&admin, &600);
+        client.set_minimum_attestors(&admin, &2);
+
+        let vk_hash = BytesN::from_array(&env, &[1u8; 32]);
+        let circuit_id = BytesN::from_array(&env, &[2u8; 32]);
+        let metadata_hash = BytesN::from_array(&env, &[3u8; 32]);
+        client.register_verifying_key(&admin, &vk_hash, &circuit_id, &attestor, &metadata_hash);
+
+        let public_inputs_hash = BytesN::from_array(&env, &[4u8; 32]);
+        let proof = Bytes::from_slice(&env, b"proof-dup");
+        let proof_hash: BytesN<32> = env.crypto().sha256(&proof).into();
+
+        // Same attestor submits twice — should still only count as 1
+        client.submit_attestation(&attestor, &1, &public_inputs_hash, &proof_hash, &true, &300);
+        client.submit_attestation(&attestor, &1, &public_inputs_hash, &proof_hash, &true, &300);
+        assert_eq!(
+            client.get_attestation_count(&public_inputs_hash, &proof_hash),
+            1
+        );
+        assert!(!client.verify_proof(&1, &public_inputs_hash, &proof));
     }
 }

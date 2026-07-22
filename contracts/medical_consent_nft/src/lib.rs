@@ -6,7 +6,7 @@
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Map, String,
-    Vec,
+    Symbol, Vec,
 };
 
 // Storage keys
@@ -51,6 +51,7 @@ pub enum ContractError {
     MarketplaceNotEnabled = 10,
     InvalidCondition = 11,
     InheritanceCycle = 12,
+    TransferNotAllowed = 13,
 }
 
 // Data type enum for granular permissions
@@ -570,81 +571,22 @@ impl PatientConsentToken {
         // Emit event
         env.events().publish(
             (symbol_short!("consent"), symbol_short!("revoked")),
-            (token_id, patient),
+            (token_id, patient.clone()),
         );
+        env.events()
+            .publish((Symbol::new(&env, "ConsentRevoked"),), (token_id, patient));
 
         Ok(())
     }
 
-    /// Transfer consent token (blocked if revoked)
+    /// Transfer consent token - always rejected (soul-bound NFT)
     pub fn transfer(
-        env: Env,
-        from: Address,
-        to: Address,
-        token_id: u64,
+        _env: Env,
+        _from: Address,
+        _to: Address,
+        _token_id: u64,
     ) -> Result<(), ContractError> {
-        from.require_auth();
-
-        let owner: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::TokenOwner(token_id))
-            .expect("Token does not exist");
-
-        if owner != from {
-            return Err(ContractError::NotTokenOwner);
-        }
-
-        let is_revoked: bool = env
-            .storage()
-            .instance()
-            .get(&DataKey::TokenRevoked(token_id))
-            .unwrap_or(false);
-
-        if is_revoked {
-            return Err(ContractError::ConsentRevoked);
-        }
-
-        // Update ownership
-        env.storage()
-            .instance()
-            .set(&DataKey::TokenOwner(token_id), &to);
-
-        // Update token lists
-        let from_key = DataKey::OwnerTokens(from.clone());
-        let from_tokens: Vec<u64> = env
-            .storage()
-            .instance()
-            .get(&from_key)
-            .unwrap_or(Vec::new(&env));
-
-        let mut new_from_tokens = Vec::new(&env);
-        for i in 0..from_tokens.len() {
-            if let Some(tid) = from_tokens.get(i) {
-                if tid != token_id {
-                    new_from_tokens.push_back(tid);
-                }
-            }
-        }
-        env.storage().instance().set(&from_key, &new_from_tokens);
-
-        let to_key = DataKey::OwnerTokens(to.clone());
-        let mut to_tokens: Vec<u64> = env
-            .storage()
-            .instance()
-            .get(&to_key)
-            .unwrap_or(Vec::new(&env));
-        to_tokens.push_back(token_id);
-        env.storage().instance().set(&to_key, &to_tokens);
-
-        // PatientConsents list unchanged - patient still tracks/revokes it
-
-        // Emit event
-        env.events().publish(
-            (symbol_short!("consent"), symbol_short!("transfer")),
-            (token_id, from, to),
-        );
-        Ok(())
+        Err(ContractError::TransferNotAllowed)
     }
 
     /// Get token owner
@@ -730,6 +672,28 @@ impl PatientConsentToken {
         }
 
         env.ledger().timestamp() < metadata.expiry_timestamp
+    }
+
+    /// Verify cross-chain access: checks for valid (non-revoked, non-expired) consent NFT
+    /// Returns true if the holder has a valid consent for the given patient and consent type
+    pub fn cross_chain_access(
+        env: Env,
+        patient: Address,
+        holder: Address,
+        consent_type: String,
+    ) -> Result<bool, ContractError> {
+        let tokens = Self::tokens_of_owner(env.clone(), holder);
+        for i in 0..tokens.len() {
+            let token_id = tokens.get(i).unwrap();
+            if !Self::is_valid(env.clone(), token_id) {
+                continue;
+            }
+            let metadata = Self::get_metadata(env.clone(), token_id);
+            if metadata.patient == patient && metadata.consent_type == consent_type {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     // ========== ADVANCED FEATURES ==========
@@ -1651,3 +1615,5 @@ impl PatientConsentToken {
 
 // Tests moved to test.rs module to avoid direct contract function calls
 // that cause storage access issues in test environment
+#[cfg(test)]
+mod test;
