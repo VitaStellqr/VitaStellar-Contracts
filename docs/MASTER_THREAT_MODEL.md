@@ -18,7 +18,7 @@ The fenced `loc-manifest` block below is the authoritative size-of-contract reco
 audit_forensics: 921
 crypto_registry: 935
 emr_integration: 2141
-governor: 633
+governor: 622
 homomorphic_registry: 1311
 identity_registry: 4017
 medical_record_backup: 1879
