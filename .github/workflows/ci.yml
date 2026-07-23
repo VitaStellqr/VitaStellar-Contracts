@@ -41,7 +41,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Run tests
-        run: cargo test --workspace
+        run: cargo test --workspace --locked
 
   coverage:
     name: Coverage
@@ -58,7 +58,7 @@ jobs:
         run: cargo install cargo-tarpaulin --locked
 
       - name: Generate coverage report
-        run: cargo tarpaulin --workspace --out Xml --out Html --timeout 1200
+        run: cargo tarpaulin --workspace --locked --out Xml --out Html --timeout 1200
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -116,15 +116,15 @@ jobs:
       - name: Check if docs/ERROR_CODES.md is up to date
         run: |
           if git diff --quiet docs/ERROR_CODES.md; then
-            echo "✓ docs/ERROR_CODES.md is in sync with contract source"
+            echo "âœ“ docs/ERROR_CODES.md is in sync with contract source"
           else
-            echo "✗ docs/ERROR_CODES.md is out of sync"
+            echo "âœ— docs/ERROR_CODES.md is out of sync"
             echo "Run: python3 scripts/generate_error_codes.py --write"
             git diff docs/ERROR_CODES.md
             exit 1
           fi
 
-  # WASM size monitoring — prevents bloat from merging undetected.
+  # WASM size monitoring â€” prevents bloat from merging undetected.
   # See docs/WASM_SIZE_MONITORING.md for details.
   wasm-size-check:
     name: WASM Size Check
@@ -183,7 +183,7 @@ jobs:
               fi
 
               if [ "$size" -gt "$STELLAR_LIMIT" ]; then
-                echo "WARN: $contract_name exceeds Stellar limit (size: ${size}B > ${STELLAR_LIMIT}B) — pre-existing, not a regression"
+                echo "WARN: $contract_name exceeds Stellar limit (size: ${size}B > ${STELLAR_LIMIT}B) â€” pre-existing, not a regression"
               elif [ "$size" -gt "$budget" ]; then
                 echo "FAIL: $contract_name exceeds budget! Size: ${size}B, Budget: ${budget}B"
                 exit_code=1

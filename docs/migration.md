@@ -58,3 +58,61 @@ If a release keeps a legacy function temporarily available, do not remove it imm
 4. Point callers to the replacement function and planned removal version.
 
 See [docs/deprecation_migration.md](./deprecation_migration.md) for the recommended pattern.
+
+## Governor & Escrow: Single-Key Storage Migration (2026-07)
+
+### Overview
+`Governor` and `EscrowContract` previously stored all proposals/escrows
+(and, for Governor, all votes) inside a single bulk `Map<u64, T>` under
+one persistent storage key (`props`/`votes` for Governor, `escrow` for
+EscrowContract). Every read or write of any single item deserialized
+and re-serialized the *entire* collection, making `propose`, `cast_vote`,
+and `create_escrow` scale O(n) with the number of items already stored -
+eventually hitting Soroban's per-invocation CPU/IO resource limits.
+
+### What changed
+Each proposal, vote, and escrow now lives under its own persistent
+storage key:
+
+- `Governor`: `DataKey::Proposal(id)`, `DataKey::Vote(proposal_id, voter)`
+- `EscrowContract`: `DataKey::Escrow(order_id)`
+
+This makes every read/write O(1) regardless of how many items exist.
+ID generation is unaffected: `Governor` already used a separate
+`P_COUNT` instance-storage counter (unchanged); `EscrowContract` accepts
+a caller-supplied `order_id` and did not need a counter.
+
+### Migrating an existing deployment
+Both contracts expose a `migrate_storage` entrypoint that copies every
+item out of the legacy bulk map into its new individual key, then
+removes the legacy bulk key. It is safe to call multiple times
+(idempotent) - once the legacy key is gone, further calls are a cheap
+no-op that return `0`.
+
+- `Governor::migrate_storage(caller)` - gated to the configured
+  `timelock` address (Governor has no separate admin role). Migrates
+  both the legacy `props` and `votes` maps.
+- `EscrowContract::migrate_storage(caller)` - gated to the contract
+  `admin`. Migrates the legacy `escrow` map.
+
+```bash
+soroban contract invoke \
+  --id <GOVERNOR_CONTRACT_ID> \
+  --source <TIMELOCK_SECRET> \
+  --network <NETWORK> \
+  -- \
+  migrate_storage \
+  --caller <TIMELOCK_ADDRESS>
+
+soroban contract invoke \
+  --id <ESCROW_CONTRACT_ID> \
+  --source <ADMIN_SECRET> \
+  --network <NETWORK> \
+  -- \
+  migrate_storage \
+  --caller <ADMIN_ADDRESS>
+```
+
+A freshly-initialized contract (no legacy data) can call
+`migrate_storage` safely too - it detects the absence of the legacy key
+and returns `0` immediately.

@@ -152,7 +152,7 @@ mod tests {
                 .set(&symbol_short!("relock"), &true);
         });
         // The original client contract is different so this just validates the guard constant
-        assert_eq!(crate::errors::Error::ReentrancyGuard as u32, 381);
+        assert_eq!(crate::errors::Error::ReentrancyRejected as u32, 381);
     }
 
     #[test]

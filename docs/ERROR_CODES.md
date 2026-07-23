@@ -315,6 +315,7 @@
 
 | Code | Symbol | Description |
 |------|--------|-------------|
+| 100 | Unauthorized | Generated from contract source |
 | 280 | InvalidVoteType | Generated from contract source |
 | 300 | NotInitialized | Generated from contract source |
 | 301 | AlreadyInitialized | Generated from contract source |
