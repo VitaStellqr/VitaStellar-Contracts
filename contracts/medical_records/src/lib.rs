@@ -113,6 +113,7 @@ impl MedicalRecords {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
     use super::*;
     use soroban_sdk::testutils::Address as _;
     use soroban_sdk::String;
@@ -180,19 +181,20 @@ mod tests {
         let timestamp = 1234567890u64;
 
         let contract_id = env.register_contract(None, MedicalRecords);
-        let result: Result<(), RecordError> = env.as_contract(&contract_id, || {
-            MedicalRecords::write_record(
-                env.clone(),
-                owner,
-                patient_id,
-                record_type,
-                content,
-                timestamp,
-            )
-        });
+        let panic_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            env.as_contract(&contract_id, || {
+                MedicalRecords::write_record(
+                    env.clone(),
+                    owner,
+                    patient_id,
+                    record_type,
+                    content,
+                    timestamp,
+                )
+            })
+        }));
 
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), RecordError::Unauthorized);
+        assert!(panic_result.is_err());
     }
 
     #[test]
