@@ -61,7 +61,6 @@ impl MedicalRecords {
         content: String,
         timestamp: u64,
     ) -> Result<(), RecordError> {
-        #[cfg(not(test))]
         owner.require_auth();
 
         validation::validate_record_fields(&env, &patient_id, &record_type, &content, timestamp)?;
@@ -129,6 +128,7 @@ mod tests {
         let timestamp = 1234567890u64;
 
         let contract_id = env.register_contract(None, MedicalRecords);
+        env.mock_all_auths();
         let result: Result<(), RecordError> = env.as_contract(&contract_id, || {
             MedicalRecords::write_record(
                 env.clone(),
@@ -154,6 +154,7 @@ mod tests {
         let timestamp = 1234567890u64;
 
         let contract_id = env.register_contract(None, MedicalRecords);
+        env.mock_all_auths();
         let result: Result<(), RecordError> = env.as_contract(&contract_id, || {
             MedicalRecords::write_record(
                 env.clone(),
@@ -166,6 +167,32 @@ mod tests {
         });
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_write_record_unauthorized() {
+        let env = Env::default();
+        let owner = Address::generate(&env);
+
+        let patient_id = String::from_str(&env, "p1");
+        let record_type = String::from_str(&env, "type1");
+        let content = String::from_str(&env, "content");
+        let timestamp = 1234567890u64;
+
+        let contract_id = env.register_contract(None, MedicalRecords);
+        let result: Result<(), RecordError> = env.as_contract(&contract_id, || {
+            MedicalRecords::write_record(
+                env.clone(),
+                owner,
+                patient_id,
+                record_type,
+                content,
+                timestamp,
+            )
+        });
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), RecordError::Unauthorized);
     }
 
     #[test]
