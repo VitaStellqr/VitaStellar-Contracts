@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-soroban-sdk = { version = "21.7.7" }
+soroban-sdk = { version = "27.0.3" }
 common_error = { path = "../common_error" }
 
 [dev-dependencies]
-soroban-sdk = { version = "21.7.7", features = ["testutils"] }
+soroban-sdk = { version = "27.0.3", features = ["testutils"] }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
