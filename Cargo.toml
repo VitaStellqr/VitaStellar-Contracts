@@ -19,7 +19,7 @@ soroban-cli = "=21.7.7"
 # (rand_core v0.6.x), causing a trait-bound compile error in testutils.rs.
 # The Cargo.lock committed in this repo pins these to known-good versions.
 ed25519-dalek = { version = "2", features = ["rand_core"] }
-rand = "0.8"
+rand = "0.10"
 rand_core = "0.6"
 
 [workspace.package]
